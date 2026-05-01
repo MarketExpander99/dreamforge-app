@@ -11,16 +11,21 @@ export default function OnboardingPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      setLoading(false)
+      try {
+        const supabase = createBrowserSupabaseClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
+      } catch (error) {
+        console.error('Supabase not configured:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     getUser()
-  }, [supabase.auth])
+  }, [])
 
   const handleContinue = () => {
     router.push('/')

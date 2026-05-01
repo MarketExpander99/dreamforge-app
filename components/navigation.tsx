@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -18,18 +19,24 @@ const navigation = [
 export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+    try {
+      const supabase = createBrowserSupabaseClient()
+      await supabase.auth.signOut()
+      router.push('/auth/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      // If Supabase is not configured, just redirect to login
+      router.push('/auth/login')
+    }
   }
 
   return (
     <>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex flex-col flex-grow bg-card border-r pt-5 pb-4 overflow-y-auto">
+        <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4 mb-8">
             <h1 className="text-2xl font-bold text-primary">KnowFeed</h1>
           </div>
@@ -73,7 +80,7 @@ export function Navigation() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <nav className="flex justify-around py-2">
           {navigation.map((item) => {
             const isActive = pathname === item.href

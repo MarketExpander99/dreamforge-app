@@ -16,13 +16,13 @@ export default function LoginPage() {
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
+      const supabase = createBrowserSupabaseClient()
       const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
@@ -33,7 +33,11 @@ export default function LoginPage() {
       router.push('/')
     } catch (error) {
       console.error('Login error:', error)
-      alert('Login failed. Please check your credentials.')
+      if (error instanceof Error && error.message.includes('Supabase environment variables not configured')) {
+        alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
+      } else {
+        alert('Login failed. Please check your credentials.')
+      }
     } finally {
       setLoading(false)
     }

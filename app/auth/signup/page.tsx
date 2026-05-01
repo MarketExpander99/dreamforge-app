@@ -21,7 +21,6 @@ export default function SignupPage() {
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
 
   const handleRoleSelect = (selectedRole: 'parent' | 'student') => {
     setRole(selectedRole)
@@ -33,6 +32,7 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
+      const supabase = createBrowserSupabaseClient()
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -54,7 +54,11 @@ export default function SignupPage() {
       router.push('/auth/onboarding')
     } catch (error) {
       console.error('Signup error:', error)
-      alert('Signup failed. Please try again.')
+      if (error instanceof Error && error.message.includes('Supabase environment variables not configured')) {
+        alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
+      } else {
+        alert('Signup failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
