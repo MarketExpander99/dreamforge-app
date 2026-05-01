@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
+import { updateUserProfileAction } from '@/lib/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, BookOpen, Users, Trophy } from 'lucide-react'
 
 export default function OnboardingPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -27,7 +28,24 @@ export default function OnboardingPage() {
     getUser()
   }, [])
 
-  const handleContinue = () => {
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/login')
+    }
+  }, [loading, user, router])
+
+  const handleContinue = async () => {
+    if (user) {
+      try {
+        // Update user profile with grade level
+        await updateUserProfileAction(user.id, {
+          grade_level: 'grade-3',
+          role: 'student'
+        })
+      } catch (error) {
+        console.error('Error updating profile:', error)
+      }
+    }
     router.push('/')
   }
 
@@ -40,7 +58,6 @@ export default function OnboardingPage() {
   }
 
   if (!user) {
-    router.push('/auth/login')
     return null
   }
 

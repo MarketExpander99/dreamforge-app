@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X } from 'lucide-react'
+import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck } from 'lucide-react'
 import { FeedCard as FeedCardType } from '@/lib/sample-content'
+import { useBookmarks } from '@/lib/bookmarks'
+import { clientData } from '@/lib/data'
 
 interface FeedCardProps {
   card: FeedCardType
@@ -14,12 +16,39 @@ interface FeedCardProps {
 
 export function FeedCard({ card }: FeedCardProps) {
   const [isLiked, setIsLiked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
+  const [bookmarkLoading, setBookmarkLoading] = useState(false)
+
+  const { toggleBookmark, checkStatus } = useBookmarks()
+
+  // Check bookmark status on component mount
+  useEffect(() => {
+    const checkBookmarkStatus = async () => {
+      const status = await checkStatus(card.id)
+      setIsBookmarked(status)
+    }
+    checkBookmarkStatus()
+  }, [card.id, checkStatus])
 
   const handleLike = () => {
     setIsLiked(!isLiked)
+  }
+
+  const handleBookmark = async () => {
+    setBookmarkLoading(true)
+    try {
+      const result = await toggleBookmark(card.id)
+      if (result.success) {
+        setIsBookmarked(result.isBookmarked || false)
+      }
+    } catch (error) {
+      console.error('Bookmark error:', error)
+    } finally {
+      setBookmarkLoading(false)
+    }
   }
 
   const handleQuizAnswer = (answerIndex: number) => {
@@ -39,6 +68,7 @@ export function FeedCard({ card }: FeedCardProps) {
                   src={card.imageUrl}
                   alt={card.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover"
                 />
               </div>
@@ -171,6 +201,20 @@ export function FeedCard({ card }: FeedCardProps) {
             <Button variant="ghost" size="sm">
               <MessageCircle className="h-4 w-4 mr-1" />
               {card.comments}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBookmark}
+              disabled={bookmarkLoading}
+              className={isBookmarked ? 'text-blue-500' : ''}
+            >
+              {isBookmarked ? (
+                <BookmarkCheck className="h-4 w-4 mr-1 fill-current" />
+              ) : (
+                <Bookmark className="h-4 w-4 mr-1" />
+              )}
+              {bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}
             </Button>
           </div>
         </div>

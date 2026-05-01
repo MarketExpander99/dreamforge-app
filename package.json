@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "echo 'To seed the database, make a POST request to /api/seed or visit the application and use the seed endpoint'"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

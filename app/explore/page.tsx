@@ -1,21 +1,42 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { sampleFeedContent } from '@/lib/sample-content'
-import { Search, Filter, TrendingUp, Star } from 'lucide-react'
+import { getCategories, getContentItems, Category, ContentItem } from '@/lib/data'
+import { Search, Filter, TrendingUp, Star, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-const categories = [
-  { id: 'all', name: 'All Topics', icon: '🌟', count: 10 },
-  { id: 'science', name: 'Science', icon: '🔬', count: 3 },
-  { id: 'history', name: 'History', icon: '🏛️', count: 2 },
-  { id: 'geography', name: 'Geography', icon: '🌍', count: 2 },
-  { id: 'daily-life', name: 'Daily Life', icon: '🏠', count: 3 },
-]
+interface ExplorePageProps {
+  searchParams: { [key: string]: string | string[] | undefined }
+}
 
-export default function ExplorePage() {
+export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  // Fetch data from database
+  const [categories, featuredContent, allContent] = await Promise.all([
+    getCategories(),
+    getContentItems({ featured: true, limit: 3 }),
+    getContentItems({ limit: 20 })
+  ])
+
+  // Create category stats (in real app, this would be calculated from database)
+  const categoryStats = categories.map(category => ({
+    ...category,
+    count: allContent.filter(content => content.category_id === category.id).length
+  }))
+
+  const allCategory = {
+    id: 'all',
+    name: 'All Topics',
+    description: 'All available learning content',
+    icon: '🌟',
+    color: 'blue',
+    created_at: new Date().toISOString(),
+    count: allContent.length
+  }
+
+  const displayCategories = [allCategory, ...categoryStats]
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Navigation />
@@ -50,7 +71,7 @@ export default function ExplorePage() {
 
               {/* Category Pills */}
               <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
+                {displayCategories.map((category) => (
                   <Button
                     key={category.id}
                     variant={category.id === 'all' ? 'default' : 'outline'}
@@ -73,35 +94,47 @@ export default function ExplorePage() {
                 <Star className="h-5 w-5 text-yellow-500" />
                 <h2 className="text-xl font-semibold">Featured Content</h2>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {sampleFeedContent.slice(0, 3).map((card) => (
-                  <Card key={card.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <Badge variant="secondary" className="text-xs">
-                          {card.category}
-                        </Badge>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <TrendingUp className="h-3 w-3" />
-                          {card.likes}
+              {featuredContent.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {featuredContent.map((item) => (
+                    <Card key={item.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <Badge variant="secondary" className="text-xs">
+                            {item.category?.name || 'General'}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <TrendingUp className="h-3 w-3" />
+                            {item.likes}
+                          </div>
                         </div>
-                      </div>
-                      <CardTitle className="text-lg line-clamp-2">{card.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {card.content}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{card.readTime} min read</span>
-                        <Button size="sm" variant="outline">
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+                        <CardDescription className="line-clamp-2">
+                          {item.content}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{item.read_time} min read</span>
+                          <Button size="sm" variant="outline">
+                            View Details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-semibold mb-2">No Featured Content Yet</h3>
+                    <p className="text-muted-foreground">
+                      Featured content will appear here once it's added to the platform.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* All Content */}
@@ -111,11 +144,38 @@ export default function ExplorePage() {
                 <h2 className="text-xl font-semibold">All Content</h2>
               </div>
 
-              <div className="space-y-6">
-                {sampleFeedContent.map((card) => (
-                  <FeedCard key={card.id} card={card} />
-                ))}
-              </div>
+              {allContent.length > 0 ? (
+                <div className="space-y-6">
+                  {allContent.map((item) => {
+                    // Convert database item to FeedCard format
+                    const feedCardItem = {
+                      id: item.id,
+                      type: item.type,
+                      title: item.title,
+                      content: item.content,
+                      imageUrl: item.image_url || undefined,
+                      videoUrl: item.video_url || undefined,
+                      audioUrl: item.audio_url || undefined,
+                      quiz: item.quiz || undefined,
+                      category: item.category?.name || 'General',
+                      readTime: item.read_time,
+                      likes: item.likes,
+                      comments: 0 // Not implemented yet
+                    }
+                    return <FeedCard key={item.id} card={feedCardItem} />
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-semibold mb-2">No Content Available</h3>
+                    <p className="text-muted-foreground">
+                      Learning content will appear here once it's added to the platform.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </main>
