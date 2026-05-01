@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Home, Search, BookOpen, User, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { createBrowserSupabaseClient } from '@/lib/supabase'
+import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
