@@ -1,4 +1,5 @@
 // Bookmark management utilities
+import { useCallback } from 'react'
 import { createBrowserSupabaseClient } from './supabase'
 import { useUser } from './user-context'
 
@@ -160,7 +161,7 @@ export const bookmarkUtils = {
 export function useBookmarks() {
   const { user } = useUser()
 
-  const toggleBookmark = async (contentId: string) => {
+  const toggleBookmark = useCallback(async (contentId: string) => {
     if (!user) {
       return {
         success: false,
@@ -240,9 +241,9 @@ export function useBookmarks() {
         error: 'An unexpected error occurred'
       }
     }
-  }
+  }, [user])
 
-  const checkStatus = async (contentId: string) => {
+  const checkStatus = useCallback(async (contentId: string) => {
     if (!user) return false
 
     try {
@@ -265,9 +266,9 @@ export function useBookmarks() {
       console.error('Bookmark status check error:', error)
       return false
     }
-  }
+  }, [user])
 
-  const getBookmarks = async () => {
+  const getBookmarks = useCallback(async () => {
     if (!user) return []
 
     try {
@@ -292,7 +293,7 @@ export function useBookmarks() {
       console.error('Get user bookmarks error:', error)
       return []
     }
-  }
+  }, [user])
 
   return {
     toggleBookmark,

@@ -6,22 +6,39 @@ import { BookOpen } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
 export default async function Home() {
-  // Get current user
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
   let contentItems: ContentItem[] = []
 
-  if (user) {
-    // Get user profile to determine grade level
-    const userProfile = await getUserProfile(user.id)
-    const gradeLevel = userProfile?.grade_level || 'grade-3'
+  try {
+    // Get current user with timeout
+    const supabase = await createClient()
+    const authPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth timeout')), 3000)
+    )
 
-    // Fetch content filtered by grade level
-    contentItems = await getContentByGradeLevel(gradeLevel, { limit: 10 })
-  } else {
-    // Fallback for non-authenticated users
-    contentItems = await getContentItems({ limit: 10 })
+    const { data: { user } } = await Promise.race([authPromise, timeoutPromise]) as any
+
+    if (user) {
+      try {
+        // Get user profile to determine grade level
+        const userProfile = await getUserProfile(user.id)
+        const gradeLevel = userProfile?.grade_level || 'grade-3'
+
+        // Fetch content filtered by grade level
+        contentItems = await getContentByGradeLevel(gradeLevel, { limit: 10 })
+      } catch (error) {
+        console.error('Error fetching personalized content:', error)
+        // Fallback to general content
+        contentItems = await getContentItems({ limit: 10 })
+      }
+    } else {
+      // Fallback for non-authenticated users
+      contentItems = await getContentItems({ limit: 10 })
+    }
+  } catch (error) {
+    console.error('Database connection error:', error)
+    // If database is not available, show empty state
+    contentItems = []
   }
 
   return (

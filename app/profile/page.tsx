@@ -1,4 +1,4 @@
-'use client'
+'Use client'
 
 import { Navigation } from '@/components/navigation'
 import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2 } from 'lucide-react'
@@ -81,6 +81,49 @@ export default function ProfilePage() {
     password: ''
   })
 
+  // Handle profile save
+  const handleSaveProfile = async () => {
+    if (!userProfile) return
+
+    setSaving(true)
+    try {
+      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
+      const supabase = createBrowserSupabaseClient()
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.fullName,
+          bio: formData.bio,
+          grade_level: formData.gradeLevel,
+          interests: formData.interests ? formData.interests.split(',').map(i => i.trim()) : null,
+          learning_goals: formData.learningGoals,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userProfile.id)
+
+      if (error) throw error
+
+      // Update local state
+      setUserProfile(prev => prev ? {
+        ...prev,
+        fullName: formData.fullName,
+        bio: formData.bio,
+        gradeLevel: formData.gradeLevel,
+        interests: formData.interests ? formData.interests.split(',').map(i => i.trim()) : [],
+        learningGoals: formData.learningGoals
+      } : null)
+
+      setIsEditing(false)
+      // Could add a success toast here
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      // Could add an error toast here
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Check authentication and fetch user profile data
   useEffect(() => {
     checkAuthAndFetchProfile()
@@ -88,10 +131,30 @@ export default function ProfilePage() {
 
   const checkAuthAndFetchProfile = async () => {
     try {
-      // First check if user is authenticated
+      // First check if Supabase is configured
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseKey ||
+          supabaseUrl === 'your_supabase_project_url' ||
+          supabaseKey === 'your_supabase_anon_key') {
+        console.log('Supabase not configured, redirecting to login')
+        router.push('/auth/login')
+        return
+      }
+
+      // Create client and check authentication
       const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
       const supabase = createBrowserSupabaseClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      // Add timeout to prevent hanging (increased to 10 seconds for better reliability)
+      const authPromise = supabase.auth.getUser()
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Auth check timeout')), 10000)
+      )
+
+      const authResult = await Promise.race([authPromise, timeoutPromise])
+      const { data: { user }, error: authError } = authResult
 
       if (authError || !user) {
         // User not authenticated, redirect to login
@@ -103,6 +166,7 @@ export default function ProfilePage() {
       fetchProfile()
     } catch (error) {
       console.error('Error checking authentication:', error)
+      // If there's any error, redirect to login to be safe
       router.push('/auth/login')
     }
   }
@@ -128,33 +192,6 @@ export default function ProfilePage() {
       console.error('Error fetching profile:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSaveProfile = async () => {
-    setSaving(true)
-    try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        alert('Profile updated successfully')
-        setIsEditing(false)
-        fetchProfile() // Refresh data
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to update profile')
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      alert('Failed to update profile')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -458,11 +495,20 @@ export default function ProfilePage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" defaultValue={userProfile.fullName} />
+                        <Input
+                          id="fullName"
+                          value={formData.fullName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue={userProfile.email} />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        />
                       </div>
                     </div>
 
@@ -471,7 +517,8 @@ export default function ProfilePage() {
                       <Textarea
                         id="bio"
                         placeholder="Tell us about yourself..."
-                        defaultValue={userProfile.bio}
+                        value={formData.bio}
+                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                         rows={3}
                       />
                     </div>
@@ -479,11 +526,19 @@ export default function ProfilePage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="gradeLevel">Grade Level</Label>
-                        <Input id="gradeLevel" defaultValue={userProfile.gradeLevel} />
+                        <Input
+                          id="gradeLevel"
+                          value={formData.gradeLevel}
+                          onChange={(e) => setFormData(prev => ({ ...prev, gradeLevel: e.target.value }))}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="interests">Interests</Label>
-                        <Input id="interests" defaultValue={userProfile.interests.join(', ')} />
+                        <Input
+                          id="interests"
+                          value={formData.interests}
+                          onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                        />
                       </div>
                     </div>
 
@@ -492,14 +547,15 @@ export default function ProfilePage() {
                       <Textarea
                         id="learningGoals"
                         placeholder="What do you want to learn?"
-                        defaultValue={userProfile.learningGoals}
+                        value={formData.learningGoals}
+                        onChange={(e) => setFormData(prev => ({ ...prev, learningGoals: e.target.value }))}
                         rows={2}
                       />
                     </div>
 
-                    <Button>
+                    <Button onClick={handleSaveProfile} disabled={saving}>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      {saving ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </CardContent>
                 </Card>

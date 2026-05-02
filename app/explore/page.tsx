@@ -12,12 +12,25 @@ interface ExplorePageProps {
 }
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
-  // Fetch data from database
-  const [categories, featuredContent, allContent] = await Promise.all([
-    getCategories(),
-    getContentItems({ featured: true, limit: 3 }),
-    getContentItems({ limit: 20 })
-  ])
+  let categories: Category[] = []
+  let featuredContent: ContentItem[] = []
+  let allContent: ContentItem[] = []
+
+  try {
+    // Fetch data from database with error handling
+    const results = await Promise.allSettled([
+      getCategories(),
+      getContentItems({ featured: true, limit: 3 }),
+      getContentItems({ limit: 20 })
+    ])
+
+    categories = results[0].status === 'fulfilled' ? results[0].value : []
+    featuredContent = results[1].status === 'fulfilled' ? results[1].value : []
+    allContent = results[2].status === 'fulfilled' ? results[2].value : []
+  } catch (error) {
+    console.error('Database connection error in explore page:', error)
+    // Continue with empty arrays
+  }
 
   // Create category stats (in real app, this would be calculated from database)
   const categoryStats = categories.map(category => ({

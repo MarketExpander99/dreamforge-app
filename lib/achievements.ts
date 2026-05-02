@@ -1,4 +1,5 @@
 // Achievement system utilities
+import { useCallback } from 'react'
 import { createBrowserSupabaseClient } from './supabase-client'
 
 // Client-side helper functions
@@ -184,13 +185,13 @@ export const achievementUtils = {
 
 // Hook for React components to manage achievements
 export function useAchievements() {
-  const checkAchievements = async (userId: string) => {
+  const checkAchievements = useCallback(async (userId: string) => {
     return await achievementUtils.checkAndAwardAchievements(userId)
-  }
+  }, [])
 
-  const getDefinitions = async () => {
+  const getDefinitions = useCallback(async () => {
     return await achievementUtils.getAchievementDefinitions()
-  }
+  }, [])
 
   return {
     checkAchievements,

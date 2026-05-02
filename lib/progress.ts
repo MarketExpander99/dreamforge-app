@@ -1,4 +1,5 @@
 // Progress tracking utilities
+import { useCallback } from 'react'
 import { createBrowserSupabaseClient } from './supabase-client'
 import { useUser } from './user-context'
 
@@ -218,7 +219,7 @@ export const progressUtils = {
 export function useProgress() {
   const { user } = useUser()
 
-  const updateProgress = async (update: ProgressUpdate) => {
+  const updateProgress = useCallback(async (update: ProgressUpdate) => {
     if (!user) {
       return {
         success: false,
@@ -254,42 +255,42 @@ export function useProgress() {
         error: 'An unexpected error occurred'
       }
     }
-  }
+  }, [user])
 
-  const markCompleted = async (contentId: string) => {
+  const markCompleted = useCallback(async (contentId: string) => {
     return await updateProgress({
       contentId,
       status: 'completed',
       progressPercentage: 100
     })
-  }
+  }, [updateProgress])
 
-  const markStarted = async (contentId: string) => {
+  const markStarted = useCallback(async (contentId: string) => {
     return await updateProgress({
       contentId,
       status: 'in_progress',
       progressPercentage: 0
     })
-  }
+  }, [updateProgress])
 
-  const addTime = async (contentId: string, timeSpent: number) => {
+  const addTime = useCallback(async (contentId: string, timeSpent: number) => {
     return await updateProgress({
       contentId,
       timeSpent
     })
-  }
+  }, [updateProgress])
 
-  const getProgress = async (contentId: string) => {
+  const getProgress = useCallback(async (contentId: string) => {
     if (!user) return null
 
     return await getUserProgressForContent(user.id, contentId)
-  }
+  }, [user])
 
-  const getAllProgress = async () => {
+  const getAllProgress = useCallback(async () => {
     if (!user) return []
 
     return await getUserProgress(user.id)
-  }
+  }, [user])
 
   return {
     updateProgress,

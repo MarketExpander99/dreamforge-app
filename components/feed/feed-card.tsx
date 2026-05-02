@@ -10,6 +10,7 @@ import { FeedCard as FeedCardType } from '@/lib/sample-content'
 import { useBookmarks } from '@/lib/bookmarks'
 import { useProgress } from '@/lib/progress'
 import { useAchievements } from '@/lib/achievements'
+import { useLikes } from '@/lib/likes'
 import { clientData } from '@/lib/data'
 import { useUser } from '@/lib/user-context'
 
@@ -19,19 +20,22 @@ interface FeedCardProps {
 
 export function FeedCard({ card }: FeedCardProps) {
   const [isLiked, setIsLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(card.likes || 0)
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
+  const [likeLoading, setLikeLoading] = useState(false)
   const [progressLoading, setProgressLoading] = useState(false)
 
   const { toggleBookmark, checkStatus } = useBookmarks()
   const { markStarted, markCompleted, addTime } = useProgress()
   const { checkAchievements } = useAchievements()
+  const { toggleLike, checkStatus: checkLikeStatus, getLikeCount } = useLikes()
   const { user } = useUser()
 
-  // Check bookmark status on component mount
+  // Check bookmark and like status on component mount
   useEffect(() => {
     const checkBookmarkStatus = async () => {
       const status = await checkStatus(card.id)
@@ -39,6 +43,19 @@ export function FeedCard({ card }: FeedCardProps) {
     }
     checkBookmarkStatus()
   }, [card.id, checkStatus])
+
+  // Check like status and get real like count on component mount
+  useEffect(() => {
+    const checkLikeStatusAndCount = async () => {
+      const [likeStatus, count] = await Promise.all([
+        checkLikeStatus(card.id),
+        getLikeCount(card.id)
+      ])
+      setIsLiked(likeStatus)
+      setLikeCount(count)
+    }
+    checkLikeStatusAndCount()
+  }, [card.id, checkLikeStatus, getLikeCount])
 
   // Track content view progress
   useEffect(() => {
@@ -91,8 +108,21 @@ export function FeedCard({ card }: FeedCardProps) {
     trackQuizCompletion()
   }, [showResult, selectedAnswer, card.id, card.quiz, markCompleted, markStarted, addTime, checkAchievements])
 
-  const handleLike = () => {
-    setIsLiked(!isLiked)
+  const handleLike = async () => {
+    setLikeLoading(true)
+    try {
+      const result = await toggleLike(card.id)
+      if (result.success) {
+        setIsLiked(result.isLiked || false)
+        // Refresh like count after toggle
+        const newCount = await getLikeCount(card.id)
+        setLikeCount(newCount)
+      }
+    } catch (error) {
+      console.error('Like error:', error)
+    } finally {
+      setLikeLoading(false)
+    }
   }
 
   const handleBookmark = async () => {
@@ -251,10 +281,11 @@ export function FeedCard({ card }: FeedCardProps) {
               variant="ghost"
               size="sm"
               onClick={handleLike}
+              disabled={likeLoading}
               className={isLiked ? 'text-red-500' : ''}
             >
               <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-              {card.likes + (isLiked ? 1 : 0)}
+              {likeCount}
             </Button>
             <Button variant="ghost" size="sm">
               <MessageCircle className="h-4 w-4 mr-1" />

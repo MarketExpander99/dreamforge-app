@@ -15,21 +15,47 @@ interface LearningPageProps {
 }
 
 export default async function LearningPage({ searchParams }: LearningPageProps) {
-  // Get current user
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Get current user with timeout
+  let user: any = null
+  try {
+    const supabase = await createClient()
+    const authPromise = supabase.auth.getUser()
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth timeout')), 3000)
+    )
+
+    const { data: { user: authUser } } = await Promise.race([authPromise, timeoutPromise]) as any
+    user = authUser
+  } catch (error) {
+    console.error('Authentication error:', error)
+  }
 
   if (!user) {
     redirect('/auth/login')
   }
 
-  // Fetch user data from database
-  const [userProgress, userBookmarks, userAchievements, userStats] = await Promise.all([
-    getUserProgress(user.id),
-    getUserBookmarks(user.id),
-    getUserAchievements(user.id),
-    getUserStats(user.id)
-  ])
+  // Fetch user data from database with error handling
+  let userProgress: UserProgress[] = []
+  let userBookmarks: UserBookmark[] = []
+  let userAchievements: UserAchievement[] = []
+  let userStats: any = { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 }
+
+  try {
+    const results = await Promise.allSettled([
+      getUserProgress(user.id),
+      getUserBookmarks(user.id),
+      getUserAchievements(user.id),
+      getUserStats(user.id)
+    ])
+
+    userProgress = results[0].status === 'fulfilled' ? results[0].value : []
+    userBookmarks = results[1].status === 'fulfilled' ? results[1].value : []
+    userAchievements = results[2].status === 'fulfilled' ? results[2].value : []
+    userStats = results[3].status === 'fulfilled' ? results[3].value : { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 }
+  } catch (error) {
+    console.error('Error fetching user data:', error)
+    // Continue with empty data
+  }
 
   // Get all content for fallback display
   const allContent = await getContentItems({ limit: 10 })

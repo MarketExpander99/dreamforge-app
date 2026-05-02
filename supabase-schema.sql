@@ -80,6 +80,24 @@ CREATE TABLE IF NOT EXISTS user_achievements (
   UNIQUE(user_id, achievement_type)
 );
 
+-- Create user_likes table
+CREATE TABLE IF NOT EXISTS user_likes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  content_id TEXT REFERENCES content_items(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(user_id, content_id)
+);
+
+-- Create content_comments table
+CREATE TABLE IF NOT EXISTS content_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  content_id TEXT REFERENCES content_items(id) ON DELETE CASCADE,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 -- Temporarily disable RLS for categories and content_items for seeding
@@ -88,6 +106,8 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_bookmarks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE content_comments ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
@@ -161,6 +181,46 @@ DROP POLICY IF EXISTS "Users can view their own achievements" ON user_achievemen
 -- User achievements policies
 CREATE POLICY "Users can view their own achievements" ON user_achievements
   FOR SELECT USING (auth.uid() = user_id);
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own likes" ON user_likes;
+DROP POLICY IF EXISTS "Users can insert their own likes" ON user_likes;
+DROP POLICY IF EXISTS "Users can delete their own likes" ON user_likes;
+
+-- User likes policies
+CREATE POLICY "Users can view their own likes" ON user_likes
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own likes" ON user_likes
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own likes" ON user_likes
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view comments on content they can see" ON content_comments;
+DROP POLICY IF EXISTS "Users can insert their own comments" ON content_comments;
+DROP POLICY IF EXISTS "Users can update their own comments" ON content_comments;
+DROP POLICY IF EXISTS "Users can delete their own comments" ON content_comments;
+
+-- Content comments policies
+CREATE POLICY "Users can view comments on content they can see" ON content_comments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM content_items
+      WHERE content_items.id = content_comments.content_id
+      AND content_items.is_published = true
+    )
+  );
+
+CREATE POLICY "Users can insert their own comments" ON content_comments
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own comments" ON content_comments
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own comments" ON content_comments
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- Drop existing function and trigger if they exist
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

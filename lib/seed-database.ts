@@ -754,16 +754,16 @@ export const seedDatabase = {
 
       const categoryMap = new Map(categories?.map(cat => [cat.name.toLowerCase(), cat.id]) || [])
 
-      // Update content items to use correct category UUIDs
-      const contentWithCorrectIds = sampleSeedData.content.map(content => ({
+      // Update content items to use correct category UUIDs and remove string IDs
+      const contentWithCorrectIds = sampleSeedData.content.map(({ id, ...content }) => ({
         ...content,
         category_id: content.category_id ? categoryMap.get(content.category_id.toLowerCase()) || null : null
       }))
 
-      // Use upsert for content items to handle existing content
+      // Insert content items (without IDs so Supabase generates UUIDs)
       const { error } = await supabase
         .from('content_items')
-        .upsert(contentWithCorrectIds, { onConflict: 'id' })
+        .insert(contentWithCorrectIds)
 
       if (error) throw error
 
