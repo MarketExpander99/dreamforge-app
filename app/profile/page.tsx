@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface UserProfile {
   id: string
@@ -49,6 +50,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const router = useRouter()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -79,10 +81,31 @@ export default function ProfilePage() {
     password: ''
   })
 
-  // Fetch user profile data
+  // Check authentication and fetch user profile data
   useEffect(() => {
-    fetchProfile()
+    checkAuthAndFetchProfile()
   }, [])
+
+  const checkAuthAndFetchProfile = async () => {
+    try {
+      // First check if user is authenticated
+      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
+      const supabase = createBrowserSupabaseClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        // User not authenticated, redirect to login
+        router.push('/auth/login')
+        return
+      }
+
+      // User is authenticated, fetch profile
+      fetchProfile()
+    } catch (error) {
+      console.error('Error checking authentication:', error)
+      router.push('/auth/login')
+    }
+  }
 
   const fetchProfile = async () => {
     try {
@@ -338,7 +361,7 @@ export default function ProfilePage() {
                   <Trophy className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.achievements}</div>
+                  <div className="text-2xl font-bold">{userProfile.achievementsCount}</div>
                   <p className="text-xs text-muted-foreground">unlocked</p>
                 </CardContent>
               </Card>
