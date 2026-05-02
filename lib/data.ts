@@ -254,11 +254,52 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     .single()
 
   if (error) {
-    console.error('Error fetching user profile:', error)
-    return null
+    console.error('Error fetching user profile:', error, 'for userId:', userId)
+    // If no profile exists, try to create one
+    if (error.code === 'PGRST116') {
+      console.log('No profile found for user, attempting to create one')
+      return await createUserProfile(userId)
+    }
+    throw new Error(`Failed to fetch user profile: ${error.message}`)
   }
 
   return data
+}
+
+// Helper function to create a user profile if it doesn't exist
+async function createUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const supabase = await createClient()
+
+    // Get user metadata from auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      console.error('Error getting user for profile creation:', authError)
+      return null
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        role: 'student',
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Student'
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating user profile:', error)
+      return null
+    }
+
+    console.log('Successfully created user profile for:', userId)
+    return data
+  } catch (err) {
+    console.error('Failed to create user profile:', err)
+    return null
+  }
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {

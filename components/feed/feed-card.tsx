@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck } from 'lucide-react'
 import { FeedCard as FeedCardType } from '@/lib/sample-content'
 import { useBookmarks } from '@/lib/bookmarks'
+import { useProgress } from '@/lib/progress'
+import { useAchievements } from '@/lib/achievements'
 import { clientData } from '@/lib/data'
+import { useUser } from '@/lib/user-context'
 
 interface FeedCardProps {
   card: FeedCardType
@@ -21,8 +24,12 @@ export function FeedCard({ card }: FeedCardProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
+  const [progressLoading, setProgressLoading] = useState(false)
 
   const { toggleBookmark, checkStatus } = useBookmarks()
+  const { markStarted, markCompleted, addTime } = useProgress()
+  const { checkAchievements } = useAchievements()
+  const { user } = useUser()
 
   // Check bookmark status on component mount
   useEffect(() => {
@@ -32,6 +39,57 @@ export function FeedCard({ card }: FeedCardProps) {
     }
     checkBookmarkStatus()
   }, [card.id, checkStatus])
+
+  // Track content view progress
+  useEffect(() => {
+    const trackContentView = async () => {
+      setProgressLoading(true)
+      try {
+        await markStarted(card.id)
+        // Add estimated reading time
+        await addTime(card.id, Math.min(card.readTime, 2)) // Cap at 2 minutes for initial view
+      } catch (error) {
+        console.error('Progress tracking error:', error)
+      } finally {
+        setProgressLoading(false)
+      }
+    }
+
+    // Only track if not already loading
+    if (!progressLoading) {
+      trackContentView()
+    }
+  }, [card.id, markStarted, addTime, progressLoading])
+
+  // Track quiz completion
+  useEffect(() => {
+    const trackQuizCompletion = async () => {
+      if (showResult && card.quiz && selectedAnswer !== null) {
+        const isCorrect = selectedAnswer === card.quiz.correctAnswer
+        setProgressLoading(true)
+        try {
+          if (isCorrect) {
+            await markCompleted(card.id)
+            // Check for new achievements after completing content
+            if (user) {
+              await checkAchievements(user.id)
+            }
+          } else {
+            // Mark as in progress if incorrect
+            await markStarted(card.id)
+          }
+          // Add time spent on quiz
+          await addTime(card.id, 3) // Assume 3 minutes for quiz
+        } catch (error) {
+          console.error('Quiz progress tracking error:', error)
+        } finally {
+          setProgressLoading(false)
+        }
+      }
+    }
+
+    trackQuizCompletion()
+  }, [showResult, selectedAnswer, card.id, card.quiz, markCompleted, markStarted, addTime, checkAchievements])
 
   const handleLike = () => {
     setIsLiked(!isLiked)
