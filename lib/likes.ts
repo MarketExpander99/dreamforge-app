@@ -33,7 +33,9 @@ export const likeUtils = {
         .eq('content_id', contentId)
         .single()
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is the expected error when no rows are found with .single()
+      // Only treat as error if there's a real error (not PGRST116 or empty object)
+      if (checkError && checkError.code && checkError.code !== 'PGRST116') {
         console.error('Error checking like status:', checkError)
         return {
           success: false,
@@ -113,8 +115,15 @@ export const likeUtils = {
         .eq('content_id', contentId)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking like status:', error)
+      // PGRST116 is the expected error when no rows are found with .single()
+      // Only treat as error if there's a real error (not PGRST116 or empty object)
+      if (error && error.code && error.code !== 'PGRST116') {
+        console.error('Error checking like status:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
         return false
       }
 
@@ -170,7 +179,9 @@ export function useLikes() {
         .eq('content_id', contentId)
         .single()
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is the expected error when no rows are found with .single()
+      // Only treat as error if there's a real error (not PGRST116 or empty object)
+      if (checkError && checkError.code && checkError.code !== 'PGRST116') {
         console.error('Error checking like status:', checkError)
         return {
           success: false,
@@ -234,7 +245,15 @@ export function useLikes() {
   }, [user])
 
   const checkStatus = useCallback(async (contentId: string) => {
-    if (!user) return false
+    if (!user) {
+      console.warn('Cannot check like status: user not authenticated')
+      return false
+    }
+
+    if (!contentId) {
+      console.warn('Cannot check like status: contentId is required')
+      return false
+    }
 
     try {
       const supabase = createBrowserSupabaseClient()
@@ -246,14 +265,25 @@ export function useLikes() {
         .eq('content_id', contentId)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking like status:', error)
+      // PGRST116 is the expected error when no rows are found with .single()
+      // Only treat as error if there's a real error (not PGRST116 or empty object)
+      if (error && error.code && error.code !== 'PGRST116') {
+        console.error('Error checking like status:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          userId: user.id,
+          contentId: contentId
+        })
         return false
       }
 
       return !!like
     } catch (error) {
-      console.error('Like status check error:', error)
+      console.error('Like status check error:', {
+        error: error instanceof Error ? error.message : error
+      })
       return false
     }
   }, [user])

@@ -1,4 +1,4 @@
-'Use client'
+"use client"
 
 import { Navigation } from '@/components/navigation'
 import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2 } from 'lucide-react'
