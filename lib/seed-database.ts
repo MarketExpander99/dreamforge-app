@@ -705,9 +705,15 @@ export const seedDatabase = {
     try {
       const supabase = await createClient()
 
+      // Use upsert to handle existing categories
+      const categoriesForUpsert = sampleSeedData.categories.map(({ id, ...cat }) => ({
+        ...cat,
+        // Use name as the conflict resolution key since we have UNIQUE constraint on name
+      }))
+
       const { error } = await supabase
         .from('categories')
-        .upsert(sampleSeedData.categories, { onConflict: 'id' })
+        .upsert(categoriesForUpsert, { onConflict: 'name' })
 
       if (error) throw error
 
@@ -725,9 +731,25 @@ export const seedDatabase = {
     try {
       const supabase = await createClient()
 
+      // First, get the category mappings (name -> UUID)
+      const { data: categories, error: catError } = await supabase
+        .from('categories')
+        .select('id, name')
+
+      if (catError) throw catError
+
+      const categoryMap = new Map(categories?.map(cat => [cat.name.toLowerCase(), cat.id]) || [])
+
+      // Update content items to use correct category UUIDs
+      const contentWithCorrectIds = sampleSeedData.content.map(content => ({
+        ...content,
+        category_id: content.category_id ? categoryMap.get(content.category_id.toLowerCase()) || null : null
+      }))
+
+      // Use upsert for content items to handle existing content
       const { error } = await supabase
         .from('content_items')
-        .upsert(sampleSeedData.content, { onConflict: 'id' })
+        .upsert(contentWithCorrectIds, { onConflict: 'id' })
 
       if (error) throw error
 

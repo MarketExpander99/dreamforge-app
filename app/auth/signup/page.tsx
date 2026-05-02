@@ -50,14 +50,33 @@ export default function SignupPage() {
 
       if (error) throw error
 
-      // Redirect to onboarding
-      router.push('/auth/onboarding')
-    } catch (error) {
+      // Show success message for email confirmation
+      alert('Account created successfully! Please check your email and click the confirmation link to activate your account.')
+
+      // Reset form
+      setFormData({
+        email: '',
+        password: '',
+        fullName: '',
+        childName: '',
+        childAge: ''
+      })
+      setStep('role')
+    } catch (error: any) {
       console.error('Signup error:', error)
-      if (error instanceof Error && error.message.includes('Supabase environment variables not configured')) {
+
+      if (error.message?.includes('Supabase environment variables not configured')) {
         alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
+      } else if (error.message?.includes('User already registered')) {
+        alert('An account with this email already exists. Please try logging in instead.')
+      } else if (error.message?.includes('Password should be at least')) {
+        alert('Password must be at least 6 characters long.')
+      } else if (error.message?.includes('Unable to validate email address')) {
+        alert('Please enter a valid email address.')
+      } else if (error.message?.includes('signup is disabled')) {
+        alert('New user registration is currently disabled. Please contact support.')
       } else {
-        alert('Signup failed. Please try again.')
+        alert('Signup failed. Please try again later.')
       }
     } finally {
       setLoading(false)

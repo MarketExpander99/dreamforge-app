@@ -5,21 +5,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🌱 Starting database seeding via API...')
 
-    // First create test user
-    console.log('👤 Creating test user...')
-    const userResult = await seedDatabase.createTestUser()
-    if (userResult.success) {
-      console.log('✅ Test user created successfully!')
-      console.log('📧 Email: test.student@knowfeed.com')
-      console.log('🔑 Password: TestPassword123!')
-      if (userResult.userId) {
-        console.log('🆔 User ID:', userResult.userId)
-      }
-    } else {
-      console.warn('⚠️  Test user creation failed (may already exist):', userResult.error)
-    }
+    // Skip test user creation for now due to rate limits
+    console.log('⏭️  Skipping test user creation (rate limited)...')
 
-    // Then seed database content
+    // Seed database content
     console.log('📚 Seeding database content...')
     const result = await seedDatabase.seedAll()
 
@@ -27,11 +16,8 @@ export async function POST(request: NextRequest) {
       console.log('✅ Database seeded successfully!')
       return NextResponse.json({
         success: true,
-        message: 'Database seeded successfully!',
-        testUser: {
-          email: 'test.student@knowfeed.com',
-          password: 'TestPassword123!'
-        }
+        message: 'Database seeded successfully! Categories and content added.',
+        note: 'Test user creation skipped due to email rate limits. Create test user manually if needed.'
       })
     } else {
       console.error('❌ Database seeding failed:', result.error)

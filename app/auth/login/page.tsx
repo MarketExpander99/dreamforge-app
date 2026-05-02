@@ -31,12 +31,38 @@ export default function LoginPage() {
       if (error) throw error
 
       router.push('/')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error)
-      if (error instanceof Error && error.message.includes('Supabase environment variables not configured')) {
+
+      if (error.message?.includes('Email not confirmed')) {
+        const resendConfirmation = confirm(
+          'Your email address has not been confirmed yet. Would you like us to resend the confirmation email?'
+        )
+
+        if (resendConfirmation) {
+          try {
+            const supabase = createBrowserSupabaseClient()
+            const { error: resendError } = await supabase.auth.resend({
+              type: 'signup',
+              email: formData.email
+            })
+
+            if (resendError) throw resendError
+
+            alert('Confirmation email has been resent. Please check your inbox and spam folder.')
+          } catch (resendError: any) {
+            console.error('Resend error:', resendError)
+            alert('Failed to resend confirmation email. Please try again later.')
+          }
+        }
+      } else if (error.message?.includes('Supabase environment variables not configured')) {
         alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
+      } else if (error.message?.includes('Invalid login credentials')) {
+        alert('Invalid email or password. Please check your credentials and try again.')
+      } else if (error.message?.includes('Too many requests')) {
+        alert('Too many login attempts. Please wait a few minutes before trying again.')
       } else {
-        alert('Login failed. Please check your credentials.')
+        alert('Login failed. Please try again later.')
       }
     } finally {
       setLoading(false)

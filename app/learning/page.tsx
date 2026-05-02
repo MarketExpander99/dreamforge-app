@@ -1,27 +1,34 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, getContentItems, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
+import { createClient } from '@/lib/supabase-server'
 import { BookOpen, Bookmark, Trophy, TrendingUp, Clock, Target, Calendar, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { redirect } from 'next/navigation'
 
 interface LearningPageProps {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export default async function LearningPage({ searchParams }: LearningPageProps) {
-  // For now, using a mock user ID - in real app this would come from authentication
-  const mockUserId = '00000000-0000-0000-0000-000000000000'
+  // Get current user
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/auth/login')
+  }
 
   // Fetch user data from database
   const [userProgress, userBookmarks, userAchievements, userStats] = await Promise.all([
-    getUserProgress(mockUserId),
-    getUserBookmarks(mockUserId),
-    getUserAchievements(mockUserId),
-    getUserStats(mockUserId)
+    getUserProgress(user.id),
+    getUserBookmarks(user.id),
+    getUserAchievements(user.id),
+    getUserStats(user.id)
   ])
 
   // Get all content for fallback display

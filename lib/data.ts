@@ -86,43 +86,19 @@ export interface UserProfile {
 
 // Categories
 export async function getCategories(): Promise<Category[]> {
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name')
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name')
 
-    if (error) {
-      console.warn('Database not available, using fallback categories:', error.message)
-      // Return fallback categories
-      return [
-        { id: '1', name: 'Science', description: 'Explore the wonders of science', icon: '🔬', color: 'blue', created_at: new Date().toISOString() },
-        { id: '2', name: 'History', description: 'Learn about historical events', icon: '🏛️', color: 'green', created_at: new Date().toISOString() },
-        { id: '3', name: 'Geography', description: 'Discover the world around us', icon: '🌍', color: 'orange', created_at: new Date().toISOString() },
-        { id: '4', name: 'Mathematics', description: 'Master mathematical concepts', icon: '🔢', color: 'purple', created_at: new Date().toISOString() },
-        { id: '5', name: 'Language Arts', description: 'Develop reading and writing skills', icon: '📚', color: 'red', created_at: new Date().toISOString() },
-        { id: '6', name: 'Arts & Culture', description: 'Explore creativity and culture', icon: '🎨', color: 'pink', created_at: new Date().toISOString() },
-        { id: '7', name: 'Health & Wellness', description: 'Learn about health and well-being', icon: '❤️', color: 'green', created_at: new Date().toISOString() },
-        { id: '8', name: 'Daily Life', description: 'Practical life skills', icon: '🏠', color: 'gray', created_at: new Date().toISOString() }
-      ]
-    }
-
-    return data || []
-  } catch (err) {
-    console.warn('Database connection failed, using fallback categories')
-    return [
-      { id: '1', name: 'Science', description: 'Explore the wonders of science', icon: '🔬', color: 'blue', created_at: new Date().toISOString() },
-      { id: '2', name: 'History', description: 'Learn about historical events', icon: '🏛️', color: 'green', created_at: new Date().toISOString() },
-      { id: '3', name: 'Geography', description: 'Discover the world around us', icon: '🌍', color: 'orange', created_at: new Date().toISOString() },
-      { id: '4', name: 'Mathematics', description: 'Master mathematical concepts', icon: '🔢', color: 'purple', created_at: new Date().toISOString() },
-      { id: '5', name: 'Language Arts', description: 'Develop reading and writing skills', icon: '📚', color: 'red', created_at: new Date().toISOString() },
-      { id: '6', name: 'Arts & Culture', description: 'Explore creativity and culture', icon: '🎨', color: 'pink', created_at: new Date().toISOString() },
-      { id: '7', name: 'Health & Wellness', description: 'Learn about health and well-being', icon: '❤️', color: 'green', created_at: new Date().toISOString() },
-      { id: '8', name: 'Daily Life', description: 'Practical life skills', icon: '🏠', color: 'gray', created_at: new Date().toISOString() }
-    ]
+  if (error) {
+    console.error('Error fetching categories:', error)
+    throw new Error(`Failed to fetch categories: ${error.message}`)
   }
+
+  return data || []
 }
 
 // Content Items
@@ -134,198 +110,42 @@ export async function getContentItems(options?: {
   offset?: number
   gradeLevel?: string
 }): Promise<ContentItem[]> {
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    let query = supabase
-      .from('content_items')
-      .select(`
-        *,
-        category:categories(*)
-      `)
-      .eq('is_published', true)
+  let query = supabase
+    .from('content_items')
+    .select(`
+      *,
+      category:categories(*)
+    `)
+    .eq('is_published', true)
 
-    if (options?.category) {
-      query = query.eq('category_id', options.category)
-    }
-
-    if (options?.difficulty) {
-      query = query.eq('difficulty', options.difficulty)
-    }
-
-    if (options?.featured) {
-      query = query.eq('is_featured', true)
-    }
-
-    if (options?.limit) {
-      query = query.limit(options.limit)
-    }
-
-    query = query.order('created_at', { ascending: false })
-
-    const { data, error } = await query
-
-    if (error) {
-      console.warn('Database not available, using fallback content:', error.message)
-      // Return fallback content items
-      const fallbackContent: ContentItem[] = [
-        {
-          id: '1',
-          title: 'How Photosynthesis Works',
-          content: 'Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to create oxygen and energy in the form of glucose.',
-          type: 'text',
-          category_id: '1',
-          difficulty: 'beginner',
-          tags: ['science', 'biology', 'plants'],
-          image_url: null,
-          video_url: null,
-          audio_url: null,
-          quiz: null,
-          read_time: 5,
-          likes: 24,
-          views: 156,
-          is_featured: true,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          category: { id: '1', name: 'Science', description: 'Explore the wonders of science', icon: '🔬', color: 'blue', created_at: new Date().toISOString() }
-        },
-        {
-          id: '2',
-          title: 'Ancient Rome: The Rise and Fall',
-          content: 'Ancient Rome was a powerful civilization that began as a small city-state and grew to encompass much of Europe, North Africa, and the Middle East.',
-          type: 'text-image',
-          category_id: '2',
-          difficulty: 'intermediate',
-          tags: ['history', 'rome', 'civilization'],
-          image_url: 'https://images.unsplash.com/photo-1555992336-fb0d29498b13?w=400',
-          video_url: null,
-          audio_url: null,
-          quiz: null,
-          read_time: 8,
-          likes: 18,
-          views: 89,
-          is_featured: false,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          category: { id: '2', name: 'History', description: 'Learn about historical events', icon: '🏛️', color: 'green', created_at: new Date().toISOString() }
-        },
-        {
-          id: '3',
-          title: 'Understanding Maps and Coordinates',
-          content: 'Maps are representations of the Earth\'s surface. Learn about latitude, longitude, and how to read different types of maps.',
-          type: 'text',
-          category_id: '3',
-          difficulty: 'beginner',
-          tags: ['geography', 'maps', 'coordinates'],
-          image_url: null,
-          video_url: null,
-          audio_url: null,
-          quiz: null,
-          read_time: 6,
-          likes: 15,
-          views: 67,
-          is_featured: false,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          category: { id: '3', name: 'Geography', description: 'Discover the world around us', icon: '🌍', color: 'orange', created_at: new Date().toISOString() }
-        },
-        {
-          id: '4',
-          title: 'Introduction to Algebra',
-          content: 'Algebra is a branch of mathematics that uses letters and symbols to represent numbers and quantities in formulas and equations.',
-          type: 'text',
-          category_id: '4',
-          difficulty: 'intermediate',
-          tags: ['mathematics', 'algebra', 'equations'],
-          image_url: null,
-          video_url: null,
-          audio_url: null,
-          quiz: null,
-          read_time: 10,
-          likes: 22,
-          views: 134,
-          is_featured: true,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          category: { id: '4', name: 'Mathematics', description: 'Master mathematical concepts', icon: '🔢', color: 'purple', created_at: new Date().toISOString() }
-        },
-        {
-          id: '5',
-          title: 'The Water Cycle Explained',
-          content: 'The water cycle is the continuous movement of water on, above, and below the surface of the Earth. It involves evaporation, condensation, and precipitation.',
-          type: 'text-image',
-          category_id: '1',
-          difficulty: 'beginner',
-          tags: ['science', 'water', 'environment'],
-          image_url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400',
-          video_url: null,
-          audio_url: null,
-          quiz: null,
-          read_time: 4,
-          likes: 31,
-          views: 203,
-          is_featured: false,
-          is_published: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          category: { id: '1', name: 'Science', description: 'Explore the wonders of science', icon: '🔬', color: 'blue', created_at: new Date().toISOString() }
-        }
-      ]
-
-      // Apply filters to fallback data
-      let filteredContent = fallbackContent
-
-      if (options?.category) {
-        filteredContent = filteredContent.filter(item => item.category_id === options.category)
-      }
-
-      if (options?.difficulty) {
-        filteredContent = filteredContent.filter(item => item.difficulty === options.difficulty)
-      }
-
-      if (options?.featured) {
-        filteredContent = filteredContent.filter(item => item.is_featured)
-      }
-
-      if (options?.limit) {
-        filteredContent = filteredContent.slice(0, options.limit)
-      }
-
-      return filteredContent
-    }
-
-    return data || []
-  } catch (err) {
-    console.warn('Database connection failed, using fallback content')
-    // Return basic fallback content
-    return [
-      {
-        id: '1',
-        title: 'Welcome to KnowFeed',
-        content: 'This is sample content. Connect to a database to see real learning materials.',
-        type: 'text',
-        category_id: '1',
-        difficulty: 'beginner',
-        tags: ['welcome'],
-        image_url: null,
-        video_url: null,
-        audio_url: null,
-        quiz: null,
-        read_time: 2,
-        likes: 0,
-        views: 0,
-        is_featured: false,
-        is_published: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        category: { id: '1', name: 'General', description: 'General content', icon: '📚', color: 'gray', created_at: new Date().toISOString() }
-      }
-    ]
+  if (options?.category) {
+    query = query.eq('category_id', options.category)
   }
+
+  if (options?.difficulty) {
+    query = query.eq('difficulty', options.difficulty)
+  }
+
+  if (options?.featured) {
+    query = query.eq('is_featured', true)
+  }
+
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  query = query.order('created_at', { ascending: false })
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching content items:', error)
+    throw new Error(`Failed to fetch content items: ${error.message}`)
+  }
+
+  return data || []
 }
 
 export async function getContentItem(id: string): Promise<ContentItem | null> {

@@ -1,5 +1,7 @@
+'use client'
+
 import { Navigation } from '@/components/navigation'
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,36 +11,239 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import { useState, useEffect, useRef } from 'react'
+
+interface UserProfile {
+  id: string
+  fullName: string
+  email: string
+  avatar: string
+  bio: string
+  gradeLevel: string
+  interests: string[]
+  learningGoals: string
+  joinDate: string
+  totalLearningTime: number
+  completedModules: number
+  currentStreak: number
+  achievementsCount: number
+  recentActivity: Array<{
+    id: string
+    action: string
+    title: string
+    timestamp: string
+  }>
+  achievements: Array<{
+    id: string
+    title: string
+    description: string
+    icon: string
+    earnedAt: string
+  }>
+  categoryProgress: Array<{
+    category: string
+    progress: number
+    completed: number
+    total: number
+  }>
+}
 
 export default function ProfilePage() {
-  // Mock user data - in real app this would come from database
-  const userProfile = {
-    id: '1',
-    fullName: 'Alex Johnson',
-    email: 'alex.johnson@example.com',
-    avatar: '',
-    bio: 'Passionate learner exploring the wonders of science and history. Always curious about how things work!',
-    gradeLevel: '8th Grade',
-    interests: ['Science', 'History', 'Technology'],
-    learningGoals: 'To master advanced mathematics and explore computer programming',
-    joinDate: 'January 2024',
-    totalLearningTime: 240,
-    completedModules: 12,
-    currentStreak: 5,
-    achievements: 3
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [changingEmail, setChangingEmail] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Form states
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    bio: '',
+    gradeLevel: '',
+    interests: '',
+    learningGoals: ''
+  })
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
+  const [emailData, setEmailData] = useState({
+    newEmail: '',
+    password: ''
+  })
+
+  // Fetch user profile data
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setUserProfile(data)
+        setFormData({
+          fullName: data.fullName,
+          email: data.email,
+          bio: data.bio || '',
+          gradeLevel: data.gradeLevel,
+          interests: data.interests.join(', '),
+          learningGoals: data.learningGoals || ''
+        })
+      } else {
+        console.error('Failed to load profile')
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const recentActivity = [
-    { id: '1', action: 'Completed', title: 'How Photosynthesis Works', timestamp: '2 hours ago' },
-    { id: '2', action: 'Started', title: 'Ancient Rome Quiz', timestamp: '1 day ago' },
-    { id: '3', action: 'Bookmarked', title: 'Geography: Understanding Maps', timestamp: '3 days ago' },
-  ]
+  const handleSaveProfile = async () => {
+    setSaving(true)
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-  const achievements = [
-    { id: '1', title: 'First Steps', description: 'Completed your first learning module', icon: '🎯', earnedAt: '2 weeks ago' },
-    { id: '2', title: 'Knowledge Seeker', description: 'Read 10 different topics', icon: '📚', earnedAt: '1 week ago' },
-    { id: '3', title: 'Quiz Master', description: 'Scored 100% on 5 quizzes', icon: '🏆', earnedAt: '3 days ago' },
-  ]
+      if (response.ok) {
+        alert('Profile updated successfully')
+        setIsEditing(false)
+        fetchProfile() // Refresh data
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to update profile')
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      alert('Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadingAvatar(true)
+    try {
+      const formDataUpload = new FormData()
+      formDataUpload.append('avatar', file)
+
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formDataUpload,
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert('Avatar updated successfully')
+        fetchProfile() // Refresh data
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to upload avatar')
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      alert('Failed to upload avatar')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      alert('New passwords do not match')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const response = await fetch('/api/profile/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      })
+
+      if (response.ok) {
+        alert('Password changed successfully')
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to change password')
+      }
+    } catch (error) {
+      console.error('Error changing password:', error)
+      alert('Failed to change password')
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
+  const handleChangeEmail = async () => {
+    setChangingEmail(true)
+    try {
+      const response = await fetch('/api/profile/change-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert(data.message)
+        setEmailData({ newEmail: '', password: '' })
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to change email')
+      }
+    } catch (error) {
+      console.error('Error changing email:', error)
+      alert('Failed to change email')
+    } finally {
+      setChangingEmail(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Profile not found</h2>
+          <p className="text-muted-foreground">Please try logging in again.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -174,7 +379,7 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {recentActivity.map((activity) => (
+                        {userProfile.recentActivity.map((activity) => (
                           <div key={activity.id} className="flex items-center gap-3">
                             <div className="h-2 w-2 bg-primary rounded-full"></div>
                             <div className="flex-1">
@@ -318,7 +523,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {achievements.map((achievement) => (
+                    {userProfile.achievements.map((achievement) => (
                       <Card key={achievement.id} className="relative">
                         <CardHeader>
                           <div className="flex items-center gap-3">
