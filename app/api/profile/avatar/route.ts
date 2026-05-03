@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient, createServiceClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,16 +27,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File size must be less than 5MB' }, { status: 400 })
     }
 
-    // Generate unique filename
+    // Generate unique filename (flatter structure for RLS compatibility)
     const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`
+    const fileName = `avatar-${user.id}-${Date.now()}.${fileExt}`
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Upload to Supabase Storage using service role (bypasses RLS)
+    const serviceClient = createServiceClient()
+    const { data: uploadData, error: uploadError } = await serviceClient.storage
       .from('avatars')
       .upload(fileName, buffer, {
         contentType: file.type,
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = serviceClient.storage
       .from('avatars')
       .getPublicUrl(fileName)
 
