@@ -68,7 +68,7 @@ export default function ContentCreatorHub() {
                     Analytics
                   </Button>
                   <Button asChild>
-                    <Link href="/content/new">
+                    <Link href="/admin/content/new">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Content
                     </Link>
@@ -232,7 +232,7 @@ export default function ContentCreatorHub() {
                                   {item.status}
                                 </Badge>
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/content/${item.id}/edit`}>
+                                  <Link href={`/admin/content/${item.id}/edit`}>
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
@@ -284,35 +284,35 @@ export default function ContentCreatorHub() {
                           title: 'Article',
                           description: 'Rich text content with formatting',
                           icon: FileText,
-                          href: '/content/new?type=text'
+                          href: '/admin/content/new?type=text'
                         },
                         {
                           type: 'text-image',
                           title: 'Text with Images',
                           description: 'Articles with accompanying visuals',
                           icon: Image,
-                          href: '/content/new?type=text-image'
+                          href: '/admin/content/new?type=text-image'
                         },
                         {
                           type: 'video',
                           title: 'Video Content',
                           description: 'Video-based learning materials',
                           icon: Video,
-                          href: '/content/new?type=video'
+                          href: '/admin/content/new?type=video'
                         },
                         {
                           type: 'audio',
                           title: 'Audio Content',
                           description: 'Podcasts and audio lessons',
                           icon: Headphones,
-                          href: '/content/new?type=audio'
+                          href: '/admin/content/new?type=audio'
                         },
                         {
                           type: 'quiz',
                           title: 'Interactive Quiz',
                           description: 'Multiple choice questions with explanations',
                           icon: HelpCircle,
-                          href: '/content/new?type=quiz'
+                          href: '/admin/content/new?type=quiz'
                         }
                       ].map((contentType) => {
                         const IconComponent = contentType.icon

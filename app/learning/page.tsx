@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
 interface LearningPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -222,8 +223,10 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
                         <p className="text-muted-foreground text-sm">
                           Track your daily learning activity and maintain your streak
                         </p>
-                        <Button className="mt-4" variant="outline">
-                          View Full Calendar
+                        <Button className="mt-4" variant="outline" asChild>
+                          <Link href="/learning/calendar">
+                            View Full Calendar
+                          </Link>
                         </Button>
                       </div>
                     </CardContent>
