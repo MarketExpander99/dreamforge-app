@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
@@ -19,11 +19,44 @@ const navigation = [
 export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const supabase = createBrowserSupabaseClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (user) {
+          setUser(user)
+
+          // Get user profile to check role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+          setUserRole(profile?.role || null)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getUser()
+  }, [])
 
   const handleLogout = async () => {
     try {
       const supabase = createBrowserSupabaseClient()
       await supabase.auth.signOut()
+      setUser(null)
+      setUserRole(null)
       router.push('/auth/login')
     } catch (error) {
       console.error('Logout error:', error)
@@ -31,6 +64,13 @@ export function Navigation() {
       router.push('/auth/login')
     }
   }
+
+  // Check if user has admin access
+  const hasAdminAccess = userRole === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
+
+  const adminNavigation = [
+    { name: 'Content Management', href: '/admin', icon: Settings },
+  ]
 
   return (
     <>
@@ -55,6 +95,33 @@ export function Navigation() {
                 </Link>
               )
             })}
+
+            {/* Admin Navigation */}
+            {hasAdminAccess && (
+              <>
+                <div className="pt-4">
+                  <div className="px-3 py-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Administration
+                    </h3>
+                  </div>
+                  {adminNavigation.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    return (
+                      <Link key={item.name} href={item.href}>
+                        <Button
+                          variant={isActive ? "secondary" : "ghost"}
+                          className="w-full justify-start"
+                        >
+                          <item.icon className="mr-3 h-5 w-5" />
+                          {item.name}
+                        </Button>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </nav>
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full">

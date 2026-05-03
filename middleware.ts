@@ -45,6 +45,36 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Check if accessing admin routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!user) {
+      // Redirect to login if not authenticated
+      const redirectUrl = new URL('/auth/login', request.url)
+      redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    // Check user role from database
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const userRole = profile?.role
+    const userEmail = user.email
+
+    // Allow access if:
+    // 1. User has 'content-creator' role, OR
+    // 2. User's email is the special test email (for development)
+    const hasAccess = userRole === 'content-creator' || userEmail === 'eben.combrinck@proton.me'
+
+    if (!hasAccess) {
+      // Redirect to home page if not authorized
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Users } from 'lucide-react'
+import { User, Users, PenTool } from 'lucide-react'
 
 export default function SignupPage() {
   const [step, setStep] = useState<'role' | 'details'>('role')
-  const [role, setRole] = useState<'parent' | 'student' | null>(null)
+  const [role, setRole] = useState<'parent' | 'student' | 'content-creator' | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,7 +22,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleRoleSelect = (selectedRole: 'parent' | 'student') => {
+  const handleRoleSelect = (selectedRole: 'parent' | 'student' | 'content-creator') => {
     setRole(selectedRole)
     setStep('details')
   }
@@ -38,7 +38,7 @@ export default function SignupPage() {
         password: formData.password,
         options: {
           data: {
-            full_name: role === 'student' ? formData.fullName : formData.childName,
+            full_name: role === 'parent' ? formData.childName : formData.fullName,
             role: role,
             ...(role === 'parent' && {
               child_name: formData.childName,
@@ -90,7 +90,7 @@ export default function SignupPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">Join KnowFeed</CardTitle>
             <CardDescription>
-              Are you registering as a parent or a student?
+              Choose your role to get started
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -110,6 +110,14 @@ export default function SignupPage() {
               <User className="h-8 w-8" />
               <span>Student (13+ years old)</span>
             </Button>
+            <Button
+              onClick={() => handleRoleSelect('content-creator')}
+              className="w-full h-20 flex flex-col items-center gap-2"
+              variant="outline"
+            >
+              <PenTool className="h-8 w-8" />
+              <span>Content Creator</span>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -121,11 +129,15 @@ export default function SignupPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            {role === 'parent' ? 'Parent Registration' : 'Student Registration'}
+            {role === 'parent' ? 'Parent Registration' :
+             role === 'content-creator' ? 'Content Creator Registration' :
+             'Student Registration'}
           </CardTitle>
           <CardDescription>
             {role === 'parent'
               ? 'Create an account for your child'
+              : role === 'content-creator'
+              ? 'Create your content creator account'
               : 'Create your student account'
             }
           </CardDescription>
