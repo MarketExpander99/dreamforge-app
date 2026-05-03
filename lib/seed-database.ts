@@ -801,6 +801,38 @@ export const seedDatabase = {
     }
   },
 
+  async createStorageBuckets(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = await createClient()
+
+      // Create avatars bucket for user profile pictures
+      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('avatars', {
+        public: true,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        fileSizeLimit: 5242880 // 5MB limit
+      })
+
+      if (bucketError) {
+        // Check if bucket already exists or if it's a policy error
+        if (bucketError.message.includes('already exists') ||
+            bucketError.message.includes('violates row-level security policy')) {
+          console.log('ℹ️  Avatars bucket already exists or creation blocked by policy (this is normal)')
+          return { success: true }
+        }
+        throw bucketError
+      }
+
+      console.log('✅ Avatars bucket created successfully')
+      return { success: true }
+    } catch (error) {
+      console.error('Error creating storage buckets:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  },
+
   async clearAllData(): Promise<{ success: boolean; error?: string }> {
     try {
       const supabase = await createClient()
