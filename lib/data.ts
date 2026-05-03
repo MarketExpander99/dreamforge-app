@@ -109,6 +109,7 @@ export async function getContentItems(options?: {
   limit?: number
   offset?: number
   gradeLevel?: string
+  search?: string
 }): Promise<ContentItem[]> {
   const supabase = await createClient()
 
@@ -130,6 +131,10 @@ export async function getContentItems(options?: {
 
   if (options?.featured) {
     query = query.eq('is_featured', true)
+  }
+
+  if (options?.search) {
+    query = query.or(`title.ilike.%${options.search}%,content.ilike.%${options.search}%`)
   }
 
   if (options?.limit) {

@@ -5,12 +5,15 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck } from 'lucide-react'
 import { FeedCard as FeedCardType } from '@/lib/sample-content'
 import { useBookmarks } from '@/lib/bookmarks'
 import { useProgress } from '@/lib/progress'
 import { useAchievements } from '@/lib/achievements'
 import { useLikes } from '@/lib/likes'
+import { useComments, Comment } from '@/lib/comments'
 import { clientData } from '@/lib/data'
 import { useUser } from '@/lib/user-context'
 
@@ -28,11 +31,17 @@ export function FeedCard({ card }: FeedCardProps) {
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
   const [progressLoading, setProgressLoading] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentCount, setCommentCount] = useState(card.comments || 0)
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [newComment, setNewComment] = useState('')
 
   const { toggleBookmark, checkStatus } = useBookmarks()
   const { markStarted, markCompleted, addTime } = useProgress()
   const { checkAchievements } = useAchievements()
   const { toggleLike, checkStatus: checkLikeStatus, getLikeCount } = useLikes()
+  const { addComment, getComments, getCommentCount } = useComments()
   const { user } = useUser()
 
   // Check bookmark and like status on component mount
@@ -56,6 +65,15 @@ export function FeedCard({ card }: FeedCardProps) {
     }
     checkLikeStatusAndCount()
   }, [card.id, checkLikeStatus, getLikeCount])
+
+  // Check comment count on component mount
+  useEffect(() => {
+    const checkCommentCount = async () => {
+      const count = await getCommentCount(card.id)
+      setCommentCount(count)
+    }
+    checkCommentCount()
+  }, [card.id, getCommentCount])
 
   // Track content view progress
   useEffect(() => {
@@ -144,6 +162,40 @@ export function FeedCard({ card }: FeedCardProps) {
     setShowResult(true)
   }
 
+  const handleCommentToggle = async () => {
+    if (!showComments) {
+      // Load comments when opening
+      setCommentLoading(true)
+      try {
+        const fetchedComments = await getComments(card.id)
+        setComments(fetchedComments)
+      } catch (error) {
+        console.error('Error loading comments:', error)
+      } finally {
+        setCommentLoading(false)
+      }
+    }
+    setShowComments(!showComments)
+  }
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return
+
+    setCommentLoading(true)
+    try {
+      const result = await addComment(card.id, newComment)
+      if (result.success && result.comment) {
+        setComments(prev => [...prev, result.comment!])
+        setCommentCount(prev => prev + 1)
+        setNewComment('')
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error)
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
   const renderCardContent = () => {
     switch (card.type) {
       case 'text-image':
@@ -169,10 +221,21 @@ export function FeedCard({ card }: FeedCardProps) {
           <div className="space-y-4">
             <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-              <Button variant="secondary" size="lg">
-                <Play className="h-6 w-6 mr-2" />
-                Watch Video
-              </Button>
+              {card.videoUrl ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => window.open(card.videoUrl, '_blank')}
+                >
+                  <Play className="h-6 w-6 mr-2" />
+                  Watch Video
+                </Button>
+              ) : (
+                <Button variant="secondary" size="lg" disabled>
+                  <Play className="h-6 w-6 mr-2" />
+                  Video Not Available
+                </Button>
+              )}
             </div>
           </div>
         )
@@ -182,10 +245,21 @@ export function FeedCard({ card }: FeedCardProps) {
           <div className="space-y-4">
             <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
-              <Button variant="secondary" size="lg">
-                <Volume2 className="h-6 w-6 mr-2" />
-                Play Audio
-              </Button>
+              {card.audioUrl ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => window.open(card.audioUrl, '_blank')}
+                >
+                  <Volume2 className="h-6 w-6 mr-2" />
+                  Play Audio
+                </Button>
+              ) : (
+                <Button variant="secondary" size="lg" disabled>
+                  <Volume2 className="h-6 w-6 mr-2" />
+                  Audio Not Available
+                </Button>
+              )}
             </div>
           </div>
         )
@@ -287,9 +361,14 @@ export function FeedCard({ card }: FeedCardProps) {
               <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
               {likeCount}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCommentToggle}
+              disabled={commentLoading}
+            >
               <MessageCircle className="h-4 w-4 mr-1" />
-              {card.comments}
+              {commentCount}
             </Button>
             <Button
               variant="ghost"
@@ -307,6 +386,69 @@ export function FeedCard({ card }: FeedCardProps) {
             </Button>
           </div>
         </div>
+
+        {showComments && (
+          <div className="mt-4 pt-4 border-t space-y-4">
+            {user && (
+              <div className="flex gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.user_metadata?.avatar_url} />
+                  <AvatarFallback>
+                    {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 flex gap-2">
+                  <Input
+                    placeholder="Write a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
+                    disabled={commentLoading}
+                  />
+                  <Button
+                    onClick={handleAddComment}
+                    disabled={commentLoading || !newComment.trim()}
+                    size="sm"
+                  >
+                    {commentLoading ? 'Posting...' : 'Post'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {commentLoading && comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Loading comments...</p>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={comment.profiles?.avatar_url} />
+                      <AvatarFallback>
+                        {comment.profiles?.full_name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="bg-muted rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">
+                            {comment.profiles?.full_name || 'Anonymous'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(comment.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm">{comment.comment}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

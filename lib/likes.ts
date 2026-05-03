@@ -33,13 +33,26 @@ export const likeUtils = {
         .eq('content_id', contentId)
         .single()
 
-      // PGRST116 is the expected error when no rows are found with .single()
-      // Only treat as error if there's a real error (not PGRST116 or empty object)
-      if (checkError && checkError.code && checkError.code !== 'PGRST116') {
-        console.error('Error checking like status:', checkError)
-        return {
-          success: false,
-          error: 'Failed to check like status'
+      // Handle different error codes:
+      // PGRST116: No rows found (expected when user hasn't liked the content)
+      // PGRST205: Table not found (database schema not applied)
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          // No like found - this is expected behavior, continue to add like
+        } else if (checkError.code === 'PGRST205') {
+          // Table doesn't exist - log warning and return error
+          console.warn('Database table "user_likes" not found. Please apply the database schema.')
+          return {
+            success: false,
+            error: 'Database table not found. Please contact support.'
+          }
+        } else {
+          // Other errors
+          console.error('Error checking like status:', checkError)
+          return {
+            success: false,
+            error: 'Failed to check like status'
+          }
         }
       }
 
@@ -115,16 +128,22 @@ export const likeUtils = {
         .eq('content_id', contentId)
         .single()
 
-      // PGRST116 is the expected error when no rows are found with .single()
-      // Only treat as error if there's a real error (not PGRST116 or empty object)
-      if (error && error.code && error.code !== 'PGRST116') {
-        console.error('Error checking like status:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        })
-        return false
+      // Handle different error codes:
+      // PGRST116: No rows found (expected when user hasn't liked the content)
+      // PGRST205: Table not found (database schema not applied)
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No like found - this is expected behavior
+          return false
+        } else if (error.code === 'PGRST205') {
+          // Table doesn't exist - log warning but don't crash
+          console.warn('Database table "user_likes" not found. Please apply the database schema.')
+          return false
+        } else {
+          // Other errors
+          console.error('Error checking like status:', error)
+          return false
+        }
       }
 
       return !!like
@@ -179,13 +198,26 @@ export function useLikes() {
         .eq('content_id', contentId)
         .single()
 
-      // PGRST116 is the expected error when no rows are found with .single()
-      // Only treat as error if there's a real error (not PGRST116 or empty object)
-      if (checkError && checkError.code && checkError.code !== 'PGRST116') {
-        console.error('Error checking like status:', checkError)
-        return {
-          success: false,
-          error: 'Failed to check like status'
+      // Handle different error codes:
+      // PGRST116: No rows found (expected when user hasn't liked the content)
+      // PGRST205: Table not found (database schema not applied)
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          // No like found - this is expected behavior, continue to add like
+        } else if (checkError.code === 'PGRST205') {
+          // Table doesn't exist - log warning and return error
+          console.warn('Database table "user_likes" not found. Please apply the database schema.')
+          return {
+            success: false,
+            error: 'Database table not found. Please contact support.'
+          }
+        } else {
+          // Other errors
+          console.error('Error checking like status:', checkError)
+          return {
+            success: false,
+            error: 'Failed to check like status'
+          }
         }
       }
 
@@ -265,18 +297,22 @@ export function useLikes() {
         .eq('content_id', contentId)
         .single()
 
-      // PGRST116 is the expected error when no rows are found with .single()
-      // Only treat as error if there's a real error (not PGRST116 or empty object)
-      if (error && error.code && error.code !== 'PGRST116') {
-        console.error('Error checking like status:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          userId: user.id,
-          contentId: contentId
-        })
-        return false
+      // Handle different error codes:
+      // PGRST116: No rows found (expected when user hasn't liked the content)
+      // PGRST205: Table not found (database schema not applied)
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No like found - this is expected behavior
+          return false
+        } else if (error.code === 'PGRST205') {
+          // Table doesn't exist - log warning but don't crash
+          console.warn('Database table "user_likes" not found. Please apply the database schema.')
+          return false
+        } else {
+          // Other errors
+          console.error('Error checking like status:', error)
+          return false
+        }
       }
 
       return !!like

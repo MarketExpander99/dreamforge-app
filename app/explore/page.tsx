@@ -6,12 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 interface ExplorePageProps {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  const categoryParam = searchParams.category as string | undefined
+  const searchQuery = searchParams.q as string | undefined
+
   let categories: Category[] = []
   let featuredContent: ContentItem[] = []
   let allContent: ContentItem[] = []
@@ -21,7 +25,11 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
     const results = await Promise.allSettled([
       getCategories(),
       getContentItems({ featured: true, limit: 3 }),
-      getContentItems({ limit: 20 })
+      getContentItems({
+        limit: 20,
+        category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined,
+        search: searchQuery
+      })
     ])
 
     categories = results[0].status === 'fulfilled' ? results[0].value : []
@@ -68,35 +76,42 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
 
             {/* Search and Filters */}
             <div className="mb-8 space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <form className="flex flex-col sm:flex-row gap-4" action="/explore" method="GET">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
+                    name="q"
                     placeholder="Search for topics, subjects, or keywords..."
                     className="pl-10"
+                    defaultValue={searchQuery || ''}
                   />
                 </div>
+                <Button type="submit" variant="outline" className="sm:w-auto">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
                 <Button variant="outline" className="sm:w-auto">
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
                 </Button>
-              </div>
+              </form>
 
               {/* Category Pills */}
               <div className="flex flex-wrap gap-2">
                 {displayCategories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={category.id === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-auto py-2 px-3"
-                  >
-                    <span className="mr-2">{category.icon}</span>
-                    {category.name}
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {category.count}
-                    </Badge>
-                  </Button>
+                  <Link key={category.id} href={`/explore${category.id === 'all' ? '' : `?category=${category.id}`}`}>
+                    <Button
+                      variant={category.id === (categoryParam || 'all') ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-auto py-2 px-3"
+                    >
+                      <span className="mr-2">{category.icon}</span>
+                      {category.name}
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {category.count}
+                      </Badge>
+                    </Button>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -129,9 +144,11 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
                       <CardContent>
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <span>{item.read_time} min read</span>
-                          <Button size="sm" variant="outline">
-                            View Details
-                          </Button>
+                          <Link href={`/explore/${item.id}`}>
+                            <Button size="sm" variant="outline">
+                              View Details
+                            </Button>
+                          </Link>
                         </div>
                       </CardContent>
                     </Card>

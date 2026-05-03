@@ -242,7 +242,7 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Drop existing function if it exists
-DROP FUNCTION IF EXISTS public.update_updated_at_column();
+DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
