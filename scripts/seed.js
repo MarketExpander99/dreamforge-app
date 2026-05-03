@@ -12,7 +12,7 @@ async function main() {
     const userResult = await seedDatabase.createTestUser()
     if (userResult.success) {
       console.log('✅ Test user created successfully!')
-      console.log('📧 Email: test.student@knowfeed.com')
+      console.log('📧 Email: test.student@skillgain.com')
       console.log('🔑 Password: TestPassword123!')
       if (userResult.userId) {
         console.log('🆔 User ID:', userResult.userId)
@@ -32,7 +32,7 @@ async function main() {
       console.log('🚀 To test the application:')
       console.log('1. Start the dev server: npm run dev')
       console.log('2. Visit http://localhost:3001')
-      console.log('3. Sign in with: test.student@knowfeed.com / TestPassword123!')
+      console.log('3. Sign in with: test.student@skillgain.com / TestPassword123!')
       console.log('4. Explore the personalized Grade 3 learning content!')
     } else {
       console.error('❌ Database seeding failed:', result.error)

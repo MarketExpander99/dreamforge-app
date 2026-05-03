@@ -68,7 +68,7 @@ export default function OnboardingPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
-          <CardTitle className="text-3xl font-bold">Welcome to KnowFeed!</CardTitle>
+          <CardTitle className="text-3xl font-bold">Welcome to Skill Gain!</CardTitle>
           <CardDescription className="text-lg">
             Your account has been created successfully. Let's get you started on your learning journey.
           </CardDescription>

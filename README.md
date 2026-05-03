@@ -1,4 +1,4 @@
-# KnowFeed - Learning Platform
+# Skill Gain - Learning Platform
 
 A comprehensive learning platform designed for students and parents, built with modern web technologies. Features gamified learning, progress tracking, content discovery, and achievement systems.
 
@@ -108,7 +108,7 @@ npm run lint     # Run ESLint
 
 ## 🎯 Project Goals
 
-KnowFeed aims to provide an engaging, personalized learning experience that:
+Skill Gain aims to provide an engaging, personalized learning experience that:
 - Makes learning fun through gamification
 - Tracks progress and provides meaningful feedback
 - Offers diverse content types and subjects

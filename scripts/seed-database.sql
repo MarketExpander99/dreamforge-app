@@ -1,4 +1,4 @@
--- KnowFeed Database Seeding Script
+-- Skill Gain Database Seeding Script
 -- Run this in your Supabase SQL Editor to populate the database with sample data
 
 -- ===========================================

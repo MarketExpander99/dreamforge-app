@@ -605,7 +605,7 @@ export const seedDatabase = {
 
       // Create test user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: 'test.student@knowfeed.com',
+        email: 'test.student@skillgain.com',
         password: 'TestPassword123!',
         options: {
           data: {

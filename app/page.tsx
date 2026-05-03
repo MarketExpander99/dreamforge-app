@@ -78,7 +78,7 @@ export default async function Home() {
               <Card>
                 <CardContent className="p-8 text-center">
                   <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">Welcome to KnowFeed!</h3>
+                  <h3 className="font-semibold mb-2">Welcome to Skill Gain!</h3>
                   <p className="text-muted-foreground mb-4">
                     Your personalized learning journey starts here. Content will appear in your feed once it's added to the platform.
                   </p>

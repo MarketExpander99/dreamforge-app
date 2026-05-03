@@ -1,6 +1,6 @@
 # Database Setup Guide
 
-This guide will help you set up the Supabase database for the KnowFeed learning platform.
+This guide will help you set up the Supabase database for the Skill Gain learning platform.
 
 ## Prerequisites
 

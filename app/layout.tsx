@@ -3,7 +3,7 @@ import "./globals.css";
 import { UserProvider } from "@/lib/user-context";
 
 export const metadata: Metadata = {
-  title: "KnowFeed - Learn Through Discovery",
+  title: "Skill Gain - Learn Through Discovery",
   description: "An educational social platform where learning feels like scrolling through TikTok",
 };
 

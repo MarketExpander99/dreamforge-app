@@ -1,4 +1,4 @@
-// Data access layer for KnowFeed
+// Data access layer for Skill Gain
 import { createClient } from './supabase-server'
 import { createBrowserSupabaseClient } from './supabase'
 

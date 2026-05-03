@@ -53,18 +53,24 @@ export function FeedCard({ card }: FeedCardProps) {
     checkBookmarkStatus()
   }, [card.id, checkStatus])
 
-  // Check like status and get real like count on component mount
+  // Check like status and get real like count on component mount (only for authenticated users)
   useEffect(() => {
-    const checkLikeStatusAndCount = async () => {
-      const [likeStatus, count] = await Promise.all([
-        checkLikeStatus(card.id),
-        getLikeCount(card.id)
-      ])
-      setIsLiked(likeStatus)
-      setLikeCount(count)
+    if (user) {
+      const checkLikeStatusAndCount = async () => {
+        const [likeStatus, count] = await Promise.all([
+          checkLikeStatus(card.id),
+          getLikeCount(card.id)
+        ])
+        setIsLiked(likeStatus)
+        setLikeCount(count)
+      }
+      checkLikeStatusAndCount()
+    } else {
+      // For unauthenticated users, use default values
+      setIsLiked(false)
+      setLikeCount(card.likes || 0)
     }
-    checkLikeStatusAndCount()
-  }, [card.id, checkLikeStatus, getLikeCount])
+  }, [card.id, checkLikeStatus, getLikeCount, user])
 
   // Check comment count on component mount
   useEffect(() => {
@@ -75,26 +81,28 @@ export function FeedCard({ card }: FeedCardProps) {
     checkCommentCount()
   }, [card.id, getCommentCount])
 
-  // Track content view progress
+  // Track content view progress (only for authenticated users)
   useEffect(() => {
-    const trackContentView = async () => {
-      setProgressLoading(true)
-      try {
-        await markStarted(card.id)
-        // Add estimated reading time
-        await addTime(card.id, Math.min(card.readTime, 2)) // Cap at 2 minutes for initial view
-      } catch (error) {
-        console.error('Progress tracking error:', error)
-      } finally {
-        setProgressLoading(false)
+    if (user) {
+      const trackContentView = async () => {
+        setProgressLoading(true)
+        try {
+          await markStarted(card.id)
+          // Add estimated reading time
+          await addTime(card.id, Math.min(card.readTime, 2)) // Cap at 2 minutes for initial view
+        } catch (error) {
+          console.error('Progress tracking error:', error)
+        } finally {
+          setProgressLoading(false)
+        }
+      }
+
+      // Only track if not already loading
+      if (!progressLoading) {
+        trackContentView()
       }
     }
-
-    // Only track if not already loading
-    if (!progressLoading) {
-      trackContentView()
-    }
-  }, [card.id, markStarted, addTime, progressLoading])
+  }, [card.id, markStarted, addTime, progressLoading, user])
 
   // Track quiz completion
   useEffect(() => {
