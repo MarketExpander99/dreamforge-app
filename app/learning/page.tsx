@@ -192,9 +192,9 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
                               </div>
                             </div>
                             <Progress value={item.progress} className="mb-4" />
-                            <Button size="sm">
-                              {item.progress === 100 ? 'Review' : 'Continue'}
-                            </Button>
+                             <Button size="sm">
+                               {item.progress === 0 ? 'Start' : item.progress === 100 ? 'Review' : 'Continue'}
+                             </Button>
                           </CardContent>
                         </Card>
                       ))}

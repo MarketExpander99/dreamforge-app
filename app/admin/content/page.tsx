@@ -275,7 +275,7 @@ export default function ContentManagementPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/admin/content/${item.id}`}>
+                                  <Link href={`/content/${item.id}`}>
                                     <Eye className="h-4 w-4 mr-2" />
                                     View
                                   </Link>

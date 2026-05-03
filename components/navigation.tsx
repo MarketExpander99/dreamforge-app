@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
@@ -21,6 +21,7 @@ export function Navigation() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,14 +33,15 @@ export function Navigation() {
         if (user) {
           setUser(user)
 
-          // Get user profile to check role
+          // Get user profile to check role and get profile info
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, full_name, avatar_url')
             .eq('id', user.id)
             .single()
 
           setUserRole(profile?.role || null)
+          setUserProfile(profile)
         }
       } catch (error) {
         console.error('Error fetching user:', error)
@@ -68,8 +70,11 @@ export function Navigation() {
   // Check if user has admin access
   const hasAdminAccess = userRole === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
 
+  // Check if user is a content creator
+  const isContentCreator = userRole === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
+
   const adminNavigation = [
-    { name: 'Content Management', href: '/admin', icon: Settings },
+    { name: 'System Admin', href: '/admin', icon: Settings },
   ]
 
   return (
@@ -95,6 +100,28 @@ export function Navigation() {
                 </Link>
               )
             })}
+
+            {/* Content Creator Navigation */}
+            {isContentCreator && (
+              <>
+                <div className="pt-4">
+                  <div className="px-3 py-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Content Creation
+                    </h3>
+                  </div>
+                  <Link href="/content">
+                    <Button
+                      variant={pathname === '/content' || pathname.startsWith('/content/') ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                    >
+                      <PenTool className="mr-3 h-5 w-5" />
+                      Creator Hub
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
 
             {/* Admin Navigation */}
             {hasAdminAccess && (
@@ -126,11 +153,15 @@ export function Navigation() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={userProfile?.avatar_url || ""} />
+                <AvatarFallback>
+                  {userProfile?.full_name ? userProfile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
               </Avatar>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium">User</p>
+                <p className="text-sm font-medium">
+                  {userProfile?.full_name || user?.email?.split('@')[0] || 'User'}
+                </p>
                 <Button
                   variant="ghost"
                   size="sm"

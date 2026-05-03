@@ -28,7 +28,8 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 
 interface QuizQuestion {
   id: string
@@ -38,7 +39,12 @@ interface QuizQuestion {
   explanation: string
 }
 
-export default function NewContentPage() {
+export default function EditContentPage() {
+  const params = useParams()
+  const contentId = params.id as string
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [contentType, setContentType] = useState<string>('text')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -57,20 +63,11 @@ export default function NewContentPage() {
 
   // File upload states
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
 
   // Quiz data
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([
     { id: '1', question: '', options: ['', '', '', ''], correctAnswer: 0, explanation: '' }
   ])
-
-  const contentTypes = [
-    { value: 'text', label: 'Text Article', icon: FileText, description: 'Rich text content with formatting' },
-    { value: 'text-image', label: 'Text with Image', icon: Image, description: 'Text content with accompanying images' },
-    { value: 'video', label: 'Video Content', icon: Video, description: 'Video-based learning content' },
-    { value: 'audio', label: 'Audio Content', icon: Headphones, description: 'Audio-based learning content' },
-    { value: 'quiz', label: 'Interactive Quiz', icon: HelpCircle, description: 'Multiple choice questions with explanations' }
-  ]
 
   const categories = [
     'Science', 'History', 'Geography', 'Mathematics', 'Language Arts',
@@ -82,6 +79,46 @@ export default function NewContentPage() {
     { value: 'intermediate', label: 'Intermediate' },
     { value: 'advanced', label: 'Advanced' }
   ]
+
+  // Load content data
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const response = await fetch(`/api/admin/content/${contentId}`)
+        if (!response.ok) {
+          throw new Error('Failed to load content')
+        }
+        const data = await response.json()
+
+        // Populate form with existing data
+        setTitle(data.title || '')
+        setContent(data.content || '')
+        setContentType(data.type || 'text')
+        setCategory(data.categories?.name || '')
+        setDifficulty(data.difficulty || '')
+        setTags(data.tags || [])
+        setReadTime(data.read_time?.toString() || '')
+        setIsFeatured(data.is_featured || false)
+        setIsPublished(data.is_published || false)
+        setImageUrl(data.image_url || '')
+        setVideoUrl(data.video_url || '')
+        setAudioUrl(data.audio_url || '')
+
+        if (data.quiz && Array.isArray(data.quiz)) {
+          setQuizQuestions(data.quiz)
+        }
+      } catch (error) {
+        console.error('Error loading content:', error)
+        alert('Failed to load content for editing')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (contentId) {
+      loadContent()
+    }
+  }, [contentId])
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -121,8 +158,9 @@ export default function NewContentPage() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('/api/admin/content', {
-        method: 'POST',
+      setSaving(true)
+      const response = await fetch(`/api/admin/content/${contentId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -149,12 +187,12 @@ export default function NewContentPage() {
       }
 
       const result = await response.json()
-      alert('Content saved successfully!')
-      // Reset form or redirect
-      window.location.href = '/admin/content'
+      alert('Content updated successfully!')
     } catch (error: any) {
       console.error('Error saving content:', error)
       alert(`Error saving content: ${error.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -163,8 +201,6 @@ export default function NewContentPage() {
 
     try {
       setUploading(true)
-      setUploadProgress(0)
-
       const formData = new FormData()
       formData.append('file', file)
       formData.append('type', type)
@@ -196,7 +232,6 @@ export default function NewContentPage() {
       alert(`Upload failed: ${error.message}`)
     } finally {
       setUploading(false)
-      setUploadProgress(0)
     }
   }
 
@@ -208,8 +243,23 @@ export default function NewContentPage() {
   }
 
   const handlePreview = () => {
-    // In a real app, this would open a preview modal or page
     alert('Preview functionality would open here')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900">
+        <Navigation />
+        <div className="md:pl-64">
+          <main className="py-6 px-4 md:px-8">
+            <div className="flex items-center justify-center min-h-[400px]">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading content...</span>
+            </div>
+          </main>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -224,15 +274,15 @@ export default function NewContentPage() {
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
+                  <Link href="/admin/content">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
+                    Back to Content
                   </Link>
                 </Button>
               </div>
-              <h1 className="text-3xl font-bold mb-2">Create New Content</h1>
+              <h1 className="text-3xl font-bold mb-2">Edit Content</h1>
               <p className="text-muted-foreground">
-                Add new learning content to the platform
+                Update your learning content
               </p>
             </div>
 
@@ -334,45 +384,11 @@ export default function NewContentPage() {
                   </CardContent>
                 </Card>
 
-                {/* Content Type Selection */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Content Type</CardTitle>
-                    <CardDescription>Choose the type of content you want to create</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {contentTypes.map((type) => {
-                        const IconComponent = type.icon
-                        return (
-                          <div
-                            key={type.value}
-                            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                              contentType === type.value
-                                ? 'border-primary bg-primary/5'
-                                : 'border-muted hover:border-muted-foreground/50'
-                            }`}
-                            onClick={() => setContentType(type.value)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <IconComponent className="h-6 w-6" />
-                              <div>
-                                <h3 className="font-medium">{type.label}</h3>
-                                <p className="text-sm text-muted-foreground">{type.description}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Content Editor */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Content</CardTitle>
-                    <CardDescription>Create your learning content</CardDescription>
+                    <CardDescription>Edit your learning content</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Tabs value={contentType} className="w-full">
@@ -390,18 +406,16 @@ export default function NewContentPage() {
                       </TabsContent>
 
                       <TabsContent value="text-image" className="space-y-4">
-                        {/* File Upload Section */}
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg">Image Upload</CardTitle>
-                            <CardDescription>Upload an image or provide a URL</CardDescription>
+                            <CardTitle className="text-lg">Image</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                               <div className="space-y-2">
                                 <Label htmlFor="imageFile" className="text-sm font-medium">
-                                  Upload Image File
+                                  Upload New Image
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
                                   PNG, JPG, GIF, WebP up to 10MB
@@ -424,7 +438,7 @@ export default function NewContentPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="imageUrl">Or Image URL</Label>
+                              <Label htmlFor="imageUrl">Image URL</Label>
                               <Input
                                 id="imageUrl"
                                 placeholder="https://example.com/image.jpg"
@@ -448,18 +462,16 @@ export default function NewContentPage() {
                       </TabsContent>
 
                       <TabsContent value="video" className="space-y-4">
-                        {/* File Upload Section */}
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg">Video Upload</CardTitle>
-                            <CardDescription>Upload a video file or provide a URL</CardDescription>
+                            <CardTitle className="text-lg">Video</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                               <div className="space-y-2">
                                 <Label htmlFor="videoFile" className="text-sm font-medium">
-                                  Upload Video File
+                                  Upload New Video
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
                                   MP4, WebM, OGG up to 10MB
@@ -482,7 +494,7 @@ export default function NewContentPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="videoUrl">Or Video URL</Label>
+                              <Label htmlFor="videoUrl">Video URL</Label>
                               <Input
                                 id="videoUrl"
                                 placeholder="https://example.com/video.mp4"
@@ -506,18 +518,16 @@ export default function NewContentPage() {
                       </TabsContent>
 
                       <TabsContent value="audio" className="space-y-4">
-                        {/* File Upload Section */}
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg">Audio Upload</CardTitle>
-                            <CardDescription>Upload an audio file or provide a URL</CardDescription>
+                            <CardTitle className="text-lg">Audio</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                               <div className="space-y-2">
                                 <Label htmlFor="audioFile" className="text-sm font-medium">
-                                  Upload Audio File
+                                  Upload New Audio
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
                                   MP3, WAV, OGG, M4A up to 10MB
@@ -540,7 +550,7 @@ export default function NewContentPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="audioUrl">Or Audio URL</Label>
+                              <Label htmlFor="audioUrl">Audio URL</Label>
                               <Input
                                 id="audioUrl"
                                 placeholder="https://example.com/audio.mp3"
@@ -677,9 +687,18 @@ export default function NewContentPage() {
                       <Eye className="h-4 w-4 mr-2" />
                       Preview
                     </Button>
-                    <Button onClick={handleSave} className="w-full">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Content
+                    <Button onClick={handleSave} className="w-full" disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Update Content
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

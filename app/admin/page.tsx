@@ -22,18 +22,21 @@ import Link from 'next/link'
 export default function AdminDashboard() {
   // Mock data - in real app, this would come from database
   const stats = {
+    totalUsers: 156,
+    activeUsers: 89,
     totalContent: 24,
     publishedContent: 18,
     draftContent: 6,
-    totalUsers: 156,
-    activeUsers: 89,
-    categories: 8
+    categories: 8,
+    systemHealth: 'Healthy',
+    serverLoad: 34
   }
 
-  const recentContent = [
-    { id: 1, title: 'Photosynthesis Explained', type: 'text', status: 'published', author: 'Admin', updated: '2 hours ago' },
-    { id: 2, title: 'Ancient Rome Quiz', type: 'quiz', status: 'draft', author: 'Admin', updated: '1 day ago' },
-    { id: 3, title: 'Water Cycle Video', type: 'video', status: 'published', author: 'Admin', updated: '3 days ago' },
+  const recentActivity = [
+    { id: 1, type: 'user', message: 'New user registered: john.doe@example.com', time: '2 hours ago' },
+    { id: 2, type: 'content', message: 'Content published: "Photosynthesis Explained"', time: '4 hours ago' },
+    { id: 3, type: 'system', message: 'Database backup completed successfully', time: '1 day ago' },
+    { id: 4, type: 'user', message: 'User role updated: mary.smith@example.com → Content Creator', time: '2 days ago' },
   ]
 
   const contentTypeIcons = {
@@ -56,21 +59,19 @@ export default function AdminDashboard() {
             <div className="mb-8">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Content Management</h1>
+                  <h1 className="text-3xl font-bold mb-2">System Administration</h1>
                   <p className="text-muted-foreground">
-                    Manage learning content, categories, and platform settings
+                    Monitor platform health, manage users, and oversee system operations
                   </p>
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline">
                     <Settings className="h-4 w-4 mr-2" />
-                    Settings
+                    System Settings
                   </Button>
-                  <Button asChild>
-                    <Link href="/admin/content/new">
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Content
-                    </Link>
+                  <Button variant="outline">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Security
                   </Button>
                 </div>
               </div>
@@ -206,32 +207,24 @@ export default function AdminDashboard() {
                   {/* Recent Activity */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Recent Content</CardTitle>
-                      <CardDescription>Latest content updates</CardDescription>
+                      <CardTitle>Recent Activity</CardTitle>
+                      <CardDescription>Latest platform activity</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {recentContent.map((item) => {
-                          const IconComponent = contentTypeIcons[item.type as keyof typeof contentTypeIcons] || FileText
-                          return (
-                            <div key={item.id} className="flex items-center gap-3">
-                              <div className="p-2 bg-muted rounded-md">
-                                <IconComponent className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{item.title}</p>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span>{item.author}</span>
-                                  <span>•</span>
-                                  <span>{item.updated}</span>
-                                </div>
-                              </div>
-                              <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
-                                {item.status}
-                              </Badge>
+                        {recentActivity.map((item) => (
+                          <div key={item.id} className="flex items-start gap-3">
+                            <div className="p-2 bg-muted rounded-md">
+                              {item.type === 'user' && <Users className="h-4 w-4" />}
+                              {item.type === 'content' && <BookOpen className="h-4 w-4" />}
+                              {item.type === 'system' && <Shield className="h-4 w-4" />}
                             </div>
-                          )
-                        })}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm">{item.message}</p>
+                              <p className="text-xs text-muted-foreground">{item.time}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>

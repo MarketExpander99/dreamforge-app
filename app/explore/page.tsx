@@ -20,6 +20,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   let categories: Category[] = []
   let featuredContent: ContentItem[] = []
   let allContent: ContentItem[] = []
+  let allContentForCounts: ContentItem[] = []
 
   try {
     // Fetch data from database with error handling
@@ -30,21 +31,23 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
         limit: 20,
         category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined,
         search: searchQuery
-      })
+      }),
+      getContentItems({ limit: 1000 }) // Get all content for accurate category counts
     ])
 
     categories = results[0].status === 'fulfilled' ? results[0].value : []
     featuredContent = results[1].status === 'fulfilled' ? results[1].value : []
     allContent = results[2].status === 'fulfilled' ? results[2].value : []
+    allContentForCounts = results[3].status === 'fulfilled' ? results[3].value : []
   } catch (error) {
     console.error('Database connection error in explore page:', error)
     // Continue with empty arrays
   }
 
-  // Create category stats (in real app, this would be calculated from database)
+  // Create category stats using all content (not filtered)
   const categoryStats = categories.map(category => ({
     ...category,
-    count: allContent.filter(content => content.category_id === category.id).length
+    count: allContentForCounts.filter(content => content.category_id === category.id).length
   }))
 
   const allCategory = {

@@ -329,9 +329,22 @@ export default function ProfilePage() {
                         size="sm"
                         variant="outline"
                         className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingAvatar}
                       >
-                        <Camera className="h-4 w-4" />
+                        {uploadingAvatar ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
                       </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
                     </div>
 
                     <div className="flex-1">
