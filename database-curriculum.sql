@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS lesson_plans (
   unit_title TEXT, -- e.g., "Addition and Subtraction"
   term TEXT, -- e.g., "Term 1", "Term 2"
   week INTEGER, -- Week within the term
-  learning_objectives UUID[] REFERENCES learning_objectives(id), -- Array of objective IDs
-  prerequisites UUID[], -- Array of prerequisite lesson IDs
+  learning_objectives UUID[], -- Array of objective IDs (no FK constraint due to array type)
+  prerequisites UUID[], -- Array of prerequisite lesson IDs (no FK constraint due to array type)
   difficulty TEXT DEFAULT 'intermediate' CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
   tags TEXT[],
   is_active BOOLEAN DEFAULT true,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS learning_paths (
   current_grade TEXT NOT NULL,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
   progress_percentage INTEGER DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100),
-  completed_lessons UUID[], -- Array of completed lesson IDs
+  completed_lessons UUID[], -- Array of completed lesson IDs (no FK constraint due to array type)
   current_lesson UUID REFERENCES lesson_plans(id),
   started_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   last_accessed_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,

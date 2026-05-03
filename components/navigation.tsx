@@ -42,15 +42,55 @@ export function Navigation() {
 
           setUserRole(profile?.role || null)
           setUserProfile(profile)
+        } else {
+          // Clear state when user is not authenticated
+          setUser(null)
+          setUserRole(null)
+          setUserProfile(null)
         }
       } catch (error) {
         console.error('Error fetching user:', error)
+        // Clear state on error
+        setUser(null)
+        setUserRole(null)
+        setUserProfile(null)
       } finally {
         setLoading(false)
       }
     }
 
     getUser()
+
+    // Listen for auth state changes
+    const supabase = createBrowserSupabaseClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user)
+        try {
+          // Refetch profile data
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, full_name, avatar_url')
+            .eq('id', session.user.id)
+            .single()
+
+          setUserRole(profile?.role || null)
+          setUserProfile(profile)
+        } catch (error) {
+          console.error('Error fetching profile on auth change:', error)
+          setUserRole(null)
+          setUserProfile(null)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setUserRole(null)
+        setUserProfile(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleLogout = async () => {

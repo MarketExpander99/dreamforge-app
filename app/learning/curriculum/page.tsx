@@ -36,6 +36,7 @@ interface LessonPlan {
   term: string
   week: number
   difficulty: string
+  subject_id: string
   subjects: {
     name: string
     icon: string
@@ -144,7 +145,7 @@ export default function CurriculumPage() {
         .upsert({
           user_id: user.id,
           curriculum_id: curriculums.find(c => c.name === selectedCurriculum)?.id,
-          subject_id: lessonPlans.find(lp => lp.id === lessonPlanId)?.subjects?.id,
+          subject_id: lessonPlans.find(lp => lp.id === lessonPlanId)?.subject_id,
           current_grade: selectedGrade,
           current_lesson: lessonPlanId,
           last_accessed_at: new Date().toISOString()

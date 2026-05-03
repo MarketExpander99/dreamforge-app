@@ -20,7 +20,7 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
   // Get current user with timeout
   let user: any = null
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
     const authPromise = supabase.auth.getUser()
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Auth timeout')), 3000)
@@ -163,10 +163,11 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
 
             {/* Main Content Tabs */}
             <Tabs defaultValue="progress" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="progress">My Progress</TabsTrigger>
-                <TabsTrigger value="bookmarks">Bookmarks</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 h-12">
+                <TabsTrigger value="progress" className="text-sm font-medium">My Progress</TabsTrigger>
+                <TabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</TabsTrigger>
+                <TabsTrigger value="bookmarks" className="text-sm font-medium">Bookmarks</TabsTrigger>
+                <TabsTrigger value="achievements" className="text-sm font-medium">Achievements</TabsTrigger>
               </TabsList>
 
               {/* Progress Tab */}
@@ -231,6 +232,107 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              </TabsContent>
+
+              {/* Curriculum Tab */}
+              <TabsContent value="curriculum" className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <GraduationCap className="h-5 w-5 text-green-500" />
+                    <h2 className="text-xl font-semibold">Curriculum & Lesson Planning</h2>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl mb-2">📝</div>
+                        <h3 className="font-semibold mb-1">Grade Assessment</h3>
+                        <p className="text-sm text-muted-foreground mb-3">Determine your child's grade level</p>
+                        <Button size="sm" asChild>
+                          <Link href="/assessment">Take Assessment</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl mb-2">📚</div>
+                        <h3 className="font-semibold mb-1">Browse Curriculum</h3>
+                        <p className="text-sm text-muted-foreground mb-3">Explore CAPS curriculum</p>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/learning/curriculum">View Curriculum</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl mb-2">🎯</div>
+                        <h3 className="font-semibold mb-1">Lesson Plans</h3>
+                        <p className="text-sm text-muted-foreground mb-3">Structured learning sequences</p>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/learning/curriculum?tab=lessons">View Plans</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Current Learning Path */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5" />
+                        Current Learning Path
+                      </CardTitle>
+                      <CardDescription>
+                        Your personalized curriculum progress
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold">Mathematics - Grade 3</h3>
+                            <p className="text-sm text-muted-foreground">CAPS Curriculum</p>
+                          </div>
+                          <Badge variant="secondary">Active</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Overall Progress</span>
+                            <span>0%</span>
+                          </div>
+                          <Progress value={0} className="w-full" />
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Complete assessment to unlock personalized curriculum
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Available Subjects */}
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-4">Available Subjects</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {[
+                        { name: 'Mathematics', icon: '🔢', color: 'red' },
+                        { name: 'English', icon: '📚', color: 'blue' },
+                        { name: 'Science', icon: '🔬', color: 'green' },
+                        { name: 'Social Sciences', icon: '🌍', color: 'orange' },
+                        { name: 'Life Skills', icon: '🎨', color: 'purple' }
+                      ].map((subject) => (
+                        <Card key={subject.name} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl mb-2">{subject.icon}</div>
+                            <h4 className="font-medium text-sm">{subject.name}</h4>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
 
