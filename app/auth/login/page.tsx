@@ -31,10 +31,11 @@ export default function LoginPage() {
       if (error) throw error
 
       router.push('/')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
 
-      if (error.message?.includes('Email not confirmed')) {
+      if (errorMessage.includes('Email not confirmed')) {
         const resendConfirmation = confirm(
           'Your email address has not been confirmed yet. Would you like us to resend the confirmation email?'
         )
@@ -50,16 +51,16 @@ export default function LoginPage() {
             if (resendError) throw resendError
 
             alert('Confirmation email has been resent. Please check your inbox and spam folder.')
-          } catch (resendError: any) {
+          } catch (resendError: unknown) {
             console.error('Resend error:', resendError)
             alert('Failed to resend confirmation email. Please try again later.')
           }
         }
-      } else if (error.message?.includes('Supabase environment variables not configured')) {
+      } else if (errorMessage.includes('Supabase environment variables not configured')) {
         alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
-      } else if (error.message?.includes('Invalid login credentials')) {
+      } else if (errorMessage.includes('Invalid login credentials')) {
         alert('Invalid email or password. Please check your credentials and try again.')
-      } else if (error.message?.includes('Too many requests')) {
+      } else if (errorMessage.includes('Too many requests')) {
         alert('Too many login attempts. Please wait a few minutes before trying again.')
       } else {
         alert('Login failed. Please try again later.')

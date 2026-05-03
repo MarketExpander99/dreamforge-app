@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 
 interface ExplorePageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
-  const categoryParam = searchParams.category as string | undefined
-  const searchQuery = searchParams.q as string | undefined
+  const resolvedSearchParams = await searchParams
+  const categoryParam = resolvedSearchParams.category as string | undefined
+  const searchQuery = resolvedSearchParams.q as string | undefined
 
   let categories: Category[] = []
   let featuredContent: ContentItem[] = []

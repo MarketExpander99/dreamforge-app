@@ -124,10 +124,29 @@ export default function ProfilePage() {
     }
   }
 
-  // Check authentication and fetch user profile data
-  useEffect(() => {
-    checkAuthAndFetchProfile()
-  }, [])
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setUserProfile(data)
+        setFormData({
+          fullName: data.fullName,
+          email: data.email,
+          bio: data.bio || '',
+          gradeLevel: data.gradeLevel,
+          interests: data.interests.join(', '),
+          learningGoals: data.learningGoals || ''
+        })
+      } else {
+        console.error('Failed to load profile')
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const checkAuthAndFetchProfile = async () => {
     try {
@@ -171,29 +190,10 @@ export default function ProfilePage() {
     }
   }
 
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch('/api/profile')
-      if (response.ok) {
-        const data = await response.json()
-        setUserProfile(data)
-        setFormData({
-          fullName: data.fullName,
-          email: data.email,
-          bio: data.bio || '',
-          gradeLevel: data.gradeLevel,
-          interests: data.interests.join(', '),
-          learningGoals: data.learningGoals || ''
-        })
-      } else {
-        console.error('Failed to load profile')
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Check authentication and fetch user profile data
+  useEffect(() => {
+    checkAuthAndFetchProfile()
+  }, [])
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

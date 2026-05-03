@@ -11,10 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { redirect } from 'next/navigation'
 
 interface LearningPageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function LearningPage({ searchParams }: LearningPageProps) {
+  const resolvedSearchParams = await searchParams
   // Get current user with timeout
   let user: any = null
   try {
