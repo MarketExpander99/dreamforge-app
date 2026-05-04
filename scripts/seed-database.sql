@@ -318,6 +318,28 @@ ON CONFLICT (id) DO NOTHING;
 -- ON CONFLICT (user_id, achievement_type) DO NOTHING;
 
 -- ===========================================
+-- 7. INSERT CONTENT RELATIONSHIPS (for fractal graph)
+-- ===========================================
+
+INSERT INTO content_relationships (source_id, target_id, relationship_type, strength) VALUES
+-- Mathematics relationships
+('multiplication-basics', 'addition-subtraction-3-digit', 'prerequisite', 8),
+('addition-subtraction-3-digit', 'fractions-halves-quarters', 'prerequisite', 6),
+('fractions-halves-quarters', 'multiplication-basics', 'extends', 5),
+
+-- Language Arts relationships
+('writing-complete-sentences', 'reading-comprehension-main-idea', 'similar', 7),
+
+-- Science relationships
+('plants-parts-functions', 'animal-habitats-adaptations', 'similar', 4),
+
+-- Cross-subject relationships (gamified links)
+('multiplication-basics', 'plants-parts-functions', 'gamified_link', 3),
+('fractions-halves-quarters', 'color-theory-primary-secondary', 'gamified_link', 3),
+('reading-comprehension-main-idea', 'community-helpers', 'gamified_link', 4)
+ON CONFLICT (source_id, target_id, relationship_type) DO NOTHING;
+
+-- ===========================================
 -- CLEANUP
 -- ===========================================
 DROP TABLE category_ids;

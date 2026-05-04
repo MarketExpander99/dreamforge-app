@@ -1,48 +1,66 @@
+'use client'
+
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { getCategories, getContentItems, Category, ContentItem } from '@/lib/data'
-import { Search, Filter, TrendingUp, Star, BookOpen } from 'lucide-react'
+import { ExploreGraph } from '@/components/explore-graph'
+import { clientData, Category, ContentItem } from '@/lib/data'
+import { Search, Filter, TrendingUp, Star, BookOpen, Network, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 interface ExplorePageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams?: { [key: string]: string | string[] | undefined }
 }
 
-export default async function ExplorePage({ searchParams }: ExplorePageProps) {
-  const resolvedSearchParams = await searchParams
-  const categoryParam = resolvedSearchParams.category as string | undefined
-  const searchQuery = resolvedSearchParams.q as string | undefined
+export default function ExplorePage({ searchParams }: ExplorePageProps) {
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([])
+  const [allContent, setAllContent] = useState<ContentItem[]>([])
+  const [allContentForCounts, setAllContentForCounts] = useState<ContentItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  let categories: Category[] = []
-  let featuredContent: ContentItem[] = []
-  let allContent: ContentItem[] = []
-  let allContentForCounts: ContentItem[] = []
+  const categoryParam = (searchParams?.category as string) || undefined
+  const searchQuery = (searchParams?.q as string) || undefined
 
-  try {
-    // Fetch data from database with error handling
-    const results = await Promise.allSettled([
-      getCategories(),
-      getContentItems({ featured: true, limit: 3 }),
-      getContentItems({
-        limit: 20,
-        category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined,
-        search: searchQuery
-      }),
-      getContentItems({ limit: 1000 }) // Get all content for accurate category counts
-    ])
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        // Fetch data from database with error handling
+        const results = await Promise.allSettled([
+          clientData.getCategories(),
+          clientData.getContentItems({ featured: true, limit: 3 }),
+          clientData.getContentItems({
+            limit: 20,
+            category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined
+          }),
+          clientData.getContentItems({ limit: 1000 }) // Get all content for accurate category counts
+        ])
 
-    categories = results[0].status === 'fulfilled' ? results[0].value : []
-    featuredContent = results[1].status === 'fulfilled' ? results[1].value : []
-    allContent = results[2].status === 'fulfilled' ? results[2].value : []
-    allContentForCounts = results[3].status === 'fulfilled' ? results[3].value : []
-  } catch (error) {
-    console.error('Database connection error in explore page:', error)
-    // Continue with empty arrays
-  }
+        const fetchedCategories = results[0].status === 'fulfilled' ? results[0].value : []
+        const fetchedFeaturedContent = results[1].status === 'fulfilled' ? results[1].value : []
+        const fetchedAllContent = results[2].status === 'fulfilled' ? results[2].value : []
+        const fetchedAllContentForCounts = results[3].status === 'fulfilled' ? results[3].value : []
+
+        setCategories(fetchedCategories)
+        setFeaturedContent(fetchedFeaturedContent)
+        setAllContent(fetchedAllContent)
+        setAllContentForCounts(fetchedAllContentForCounts)
+      } catch (error) {
+        console.error('Database connection error in explore page:', error)
+        // Continue with empty arrays
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [categoryParam, searchQuery])
 
   // Create category stats using all content (not filtered)
   const categoryStats = categories.map(category => ({
@@ -72,10 +90,32 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">Explore Learning Content</h1>
-              <p className="text-muted-foreground">
-                Discover new topics and expand your knowledge across various subjects
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Explore Learning Content</h1>
+                  <p className="text-muted-foreground">
+                    Discover new topics and expand your knowledge across various subjects
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4 mr-2" />
+                    List
+                  </Button>
+                  <Button
+                    variant={viewMode === 'graph' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('graph')}
+                  >
+                    <Network className="h-4 w-4 mr-2" />
+                    Graph
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* Search and Filters */}
@@ -120,97 +160,111 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
               </div>
             </div>
 
-            {/* Featured Content */}
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Star className="h-5 w-5 text-yellow-500" />
-                <h2 className="text-xl font-semibold">Featured Content</h2>
+            {viewMode === 'graph' ? (
+              /* Graph View */
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Network className="h-5 w-5 text-purple-500" />
+                  <h2 className="text-xl font-semibold">Knowledge Graph</h2>
+                </div>
+                <ExploreGraph />
               </div>
-              {featuredContent.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {featuredContent.map((item) => (
-                    <Card key={item.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <Badge variant="secondary" className="text-xs">
-                            {item.category?.name || 'General'}
-                          </Badge>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <TrendingUp className="h-3 w-3" />
-                            {item.likes}
-                          </div>
-                        </div>
-                        <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+            ) : (
+              /* List View */
+              <>
+                {/* Featured Content */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Star className="h-5 w-5 text-yellow-500" />
+                    <h2 className="text-xl font-semibold">Featured Content</h2>
+                  </div>
+                  {featuredContent.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {featuredContent.map((item) => (
+                        <Card key={item.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <Badge variant="secondary" className="text-xs">
+                                {item.category?.name || 'General'}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <TrendingUp className="h-3 w-3" />
+                                {item.likes}
+                              </div>
+                            </div>
+                            <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
                         <CardDescription className="line-clamp-2">
                           {item.content}
                         </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>{item.read_time} min read</span>
-                          <Link href={`/explore/${item.id}`}>
-                            <Button size="sm" variant="outline">
-                              View Details
-                            </Button>
-                          </Link>
-                        </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>{item.read_time} min read</span>
+                              <Link href={`/explore/${item.id}`}>
+                                <Button size="sm" variant="outline">
+                                  View Details
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="font-semibold mb-2">No Featured Content Yet</h3>
+                        <p className="text-muted-foreground">
+                          Featured content will appear here once it's added to the platform.
+                        </p>
                       </CardContent>
                     </Card>
-                  ))}
+                  )}
                 </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">No Featured Content Yet</h3>
-                    <p className="text-muted-foreground">
-                      Featured content will appear here once it's added to the platform.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
 
-            {/* All Content */}
-            <div>
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-                <h2 className="text-xl font-semibold">All Content</h2>
-              </div>
+                {/* All Content */}
+                <div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <h2 className="text-xl font-semibold">All Content</h2>
+                  </div>
 
-              {allContent.length > 0 ? (
-                <div className="space-y-6">
-                  {allContent.map((item) => {
-                    // Convert database item to FeedCard format
-                    const feedCardItem = {
-                      id: item.id,
-                      type: item.type,
-                      title: item.title,
-                      content: item.content,
-                      imageUrl: item.image_url || undefined,
-                      videoUrl: item.video_url || undefined,
-                      audioUrl: item.audio_url || undefined,
-                      quiz: item.quiz || undefined,
-                      category: item.category?.name || 'General',
-                      readTime: item.read_time,
-                      likes: item.likes,
-                      comments: 0 // Not implemented yet
-                    }
-                    return <FeedCard key={item.id} card={feedCardItem} />
-                  })}
+                  {allContent.length > 0 ? (
+                    <div className="space-y-6">
+                      {allContent.map((item) => {
+                        // Convert database item to FeedCard format
+                        const feedCardItem = {
+                          id: item.id,
+                          type: item.type,
+                          title: item.title,
+                          content: item.content,
+                          imageUrl: item.image_url || undefined,
+                          videoUrl: item.video_url || undefined,
+                          audioUrl: item.audio_url || undefined,
+                          quiz: item.quiz || undefined,
+                          category: item.category?.name || 'General',
+                          readTime: item.read_time,
+                          likes: item.likes,
+                          comments: 0 // Not implemented yet
+                        }
+                        return <FeedCard key={item.id} card={feedCardItem} />
+                      })}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="font-semibold mb-2">No Content Available</h3>
+                        <p className="text-muted-foreground">
+                          Learning content will appear here once it's added to the platform.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">No Content Available</h3>
-                    <p className="text-muted-foreground">
-                      Learning content will appear here once it's added to the platform.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </main>
       </div>

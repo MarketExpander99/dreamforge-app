@@ -1,5 +1,4 @@
-// Data access layer for Skill Gain
-import { createClient } from './supabase-server'
+// Data access layer for Skill Gain - Client-side functions
 import { createBrowserSupabaseClient } from './supabase'
 
 // Types
@@ -86,7 +85,7 @@ export interface UserProfile {
 
 // Categories
 export async function getCategories(): Promise<Category[]> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('categories')
@@ -111,7 +110,7 @@ export async function getContentItems(options?: {
   gradeLevel?: string
   search?: string
 }): Promise<ContentItem[]> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   let query = supabase
     .from('content_items')
@@ -154,7 +153,7 @@ export async function getContentItems(options?: {
 }
 
 export async function getContentItem(id: string): Promise<ContentItem | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('content_items')
@@ -175,7 +174,7 @@ export async function getContentItem(id: string): Promise<ContentItem | null> {
 }
 
 export async function searchContent(query: string): Promise<ContentItem[]> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('content_items')
@@ -204,7 +203,7 @@ export async function getContentByGradeLevel(gradeLevel: string, options?: {
   limit?: number
 }): Promise<ContentItem[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
 
     let query = supabase
       .from('content_items')
@@ -250,7 +249,7 @@ export async function getContentByGradeLevel(gradeLevel: string, options?: {
 
 // User Profile
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('profiles')
@@ -274,7 +273,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 // Helper function to create a user profile if it doesn't exist
 async function createUserProfile(userId: string): Promise<UserProfile | null> {
   try {
-    const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
     // Get user metadata from auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -308,7 +307,7 @@ async function createUserProfile(userId: string): Promise<UserProfile | null> {
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('profiles')
@@ -328,7 +327,7 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
 // User Progress
 export async function getUserProgress(userId: string): Promise<UserProgress[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
 
     const { data, error } = await supabase
       .from('user_progress')
@@ -450,7 +449,7 @@ export async function getUserProgress(userId: string): Promise<UserProgress[]> {
 }
 
 export async function getUserProgressForContent(userId: string, contentId: string): Promise<UserProgress | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('user_progress')
@@ -472,7 +471,7 @@ export async function updateUserProgress(
   contentId: string,
   updates: Partial<UserProgress>
 ): Promise<UserProgress | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('user_progress')
@@ -496,7 +495,7 @@ export async function updateUserProgress(
 // User Bookmarks
 export async function getUserBookmarks(userId: string): Promise<UserBookmark[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
 
     const { data, error } = await supabase
       .from('user_bookmarks')
@@ -630,7 +629,7 @@ export async function getUserBookmarks(userId: string): Promise<UserBookmark[]> 
 }
 
 export async function addUserBookmark(userId: string, contentId: string): Promise<UserBookmark | null> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('user_bookmarks')
@@ -650,7 +649,7 @@ export async function addUserBookmark(userId: string, contentId: string): Promis
 }
 
 export async function removeUserBookmark(userId: string, contentId: string): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { error } = await supabase
     .from('user_bookmarks')
@@ -667,7 +666,7 @@ export async function removeUserBookmark(userId: string, contentId: string): Pro
 }
 
 export async function isContentBookmarked(userId: string, contentId: string): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = createBrowserSupabaseClient()
 
   const { data, error } = await supabase
     .from('user_bookmarks')
@@ -687,7 +686,7 @@ export async function isContentBookmarked(userId: string, contentId: string): Pr
 // User Achievements
 export async function getUserAchievements(userId: string): Promise<UserAchievement[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
 
     const { data, error } = await supabase
       .from('user_achievements')
@@ -773,7 +772,7 @@ export async function getUserStats(userId: string): Promise<{
   achievements: number
 }> {
   try {
-    const supabase = await createClient()
+    const supabase = createBrowserSupabaseClient()
 
     // Get progress stats
     const { data: progressData, error: progressError } = await supabase

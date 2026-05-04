@@ -98,6 +98,17 @@ CREATE TABLE IF NOT EXISTS content_comments (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- Create content_relationships table for fractal graph connections
+CREATE TABLE IF NOT EXISTS content_relationships (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  source_id TEXT REFERENCES content_items(id) ON DELETE CASCADE,
+  target_id TEXT REFERENCES content_items(id) ON DELETE CASCADE,
+  relationship_type TEXT NOT NULL CHECK (relationship_type IN ('prerequisite', 'extends', 'gamified_link', 'similar')),
+  strength INTEGER DEFAULT 1 CHECK (strength >= 1 AND strength <= 10),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(source_id, target_id, relationship_type)
+);
+
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 -- Temporarily disable RLS for categories and content_items for seeding
@@ -108,6 +119,7 @@ ALTER TABLE user_bookmarks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE content_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE content_relationships ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
@@ -221,6 +233,28 @@ CREATE POLICY "Users can update their own comments" ON content_comments
 
 CREATE POLICY "Users can delete their own comments" ON content_comments
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view content relationships" ON content_relationships;
+DROP POLICY IF EXISTS "Allow seeding content relationships" ON content_relationships;
+
+-- Content relationships policies (public read for relationships between published content)
+CREATE POLICY "Anyone can view content relationships" ON content_relationships
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM content_items source
+      WHERE source.id = content_relationships.source_id
+      AND source.is_published = true
+    ) AND EXISTS (
+      SELECT 1 FROM content_items target
+      WHERE target.id = content_relationships.target_id
+      AND target.is_published = true
+    )
+  );
+
+-- Allow seeding operations (for API seeding)
+CREATE POLICY "Allow seeding content relationships" ON content_relationships
+  FOR ALL USING (true);
 
 -- Drop existing function and trigger if they exist
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

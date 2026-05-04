@@ -435,6 +435,7 @@ npm run lint     # Code linting
 3. **Navigation Authentication**: Profile page now properly redirects unauthenticated users to login ✅ **FIXED**
 4. **Database Connection Resilience**: Added timeouts and error handling to prevent page hangs ✅ **FIXED**
 5. **Real Database Integration**: All pages now use real database queries with fallback data ✅ **COMPLETED**
+6. **Server/Client Component Usage**: Fixed Next.js App Router compatibility issue where server-only APIs were used in client components ✅ **FIXED**
 
 ### Architecture Considerations
 1. **State Management**: Currently using local component state; may need global state for complex interactions
