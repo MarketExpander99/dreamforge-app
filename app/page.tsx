@@ -1,6 +1,6 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { getContentItems, getContentByGradeLevel, getUserProfile, ContentItem } from '@/lib/data'
+import { getUserProfile, getContentByGradeLevel, getContentItems, ContentItem } from '@/lib/server-data'
 import { createClient } from '@/lib/supabase-server'
 import { BookOpen } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'

@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 
 interface ExplorePageProps {
-  searchParams?: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default function ExplorePage({ searchParams }: ExplorePageProps) {
@@ -24,8 +24,9 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
   const [allContentForCounts, setAllContentForCounts] = useState<ContentItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const categoryParam = (searchParams?.category as string) || undefined
-  const searchQuery = (searchParams?.q as string) || undefined
+  const params = use(searchParams)
+  const categoryParam = (params?.category as string) || undefined
+  const searchQuery = (params?.q as string) || undefined
 
   useEffect(() => {
     const fetchData = async () => {
