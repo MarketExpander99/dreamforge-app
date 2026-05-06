@@ -1,45 +1,88 @@
+'use client'
+
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { getUserProfile, getContentByGradeLevel, getContentItems, ContentItem } from '@/lib/server-data'
-import { createClient } from '@/lib/supabase-server'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/lib/user-context'
+import { useEffect, useState } from 'react'
 
-export default async function Home() {
-  let contentItems: ContentItem[] = []
-
-  try {
-    // Get current user with timeout
-    const supabase = await createClient()
-    const authPromise = supabase.auth.getUser()
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Auth timeout')), 3000)
-    )
-
-    const { data: { user } } = await Promise.race([authPromise, timeoutPromise]) as any
-
-    if (user) {
-      try {
-        // Get user profile to determine grade level
-        const userProfile = await getUserProfile(user.id)
-        const gradeLevel = userProfile?.grade_level || 'grade-3'
-
-        // Fetch content filtered by grade level
-        contentItems = await getContentByGradeLevel(gradeLevel, { limit: 10 })
-      } catch (error) {
-        console.error('Error fetching personalized content:', error)
-        // Fallback to general content
-        contentItems = await getContentItems({ limit: 10 })
-      }
-    } else {
-      // Fallback for non-authenticated users
-      contentItems = await getContentItems({ limit: 10 })
-    }
-  } catch (error) {
-    console.error('Database connection error:', error)
-    // If database is not available, show empty state
-    contentItems = []
+interface ContentItem {
+  id: string
+  title: string
+  content: string
+  type: 'text' | 'text-image' | 'video' | 'quiz' | 'audio'
+  category_id: string | null
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  tags: string[] | null
+  image_url: string | null
+  video_url: string | null
+  audio_url: string | null
+  quiz: {
+    question: string
+    options: string[]
+    correctAnswer: number
+    explanation: string
+  } | null
+  read_time: number
+  likes: number
+  views: number
+  is_featured: boolean
+  is_published: boolean
+  created_at: string
+  updated_at: string
+  category?: {
+    id: string
+    name: string
+    description: string | null
+    icon: string | null
+    color: string | null
+    created_at: string
   }
+}
+
+export default function Home() {
+  const { user, profile, loading: authLoading } = useAuth()
+  const [contentItems, setContentItems] = useState<ContentItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        let url = '/api/content?limit=10'
+
+        if (user && profile) {
+          // Get user profile to determine grade level
+          const gradeLevel = profile.grade_level || 'grade-3'
+          url += `&gradeLevel=${encodeURIComponent(gradeLevel)}`
+        }
+
+        const response = await fetch(url)
+        if (response.ok) {
+          const items = await response.json()
+          setContentItems(items)
+        } else {
+          console.error('Failed to fetch content')
+          setContentItems([])
+        }
+      } catch (error) {
+        console.error('Database connection error:', error)
+        setError('Failed to load content')
+        setContentItems([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Only fetch content after auth is initialized
+    if (!authLoading) {
+      fetchContent()
+    }
+  }, [user, profile, authLoading])
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">

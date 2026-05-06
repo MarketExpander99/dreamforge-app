@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/user-context'
 
 interface UserProfile {
   id: string
@@ -51,6 +52,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { user, authLoading } = useAuth()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -148,52 +150,18 @@ export default function ProfilePage() {
     }
   }
 
-  const checkAuthAndFetchProfile = async () => {
-    try {
-      // First check if Supabase is configured
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseKey ||
-          supabaseUrl === 'your_supabase_project_url' ||
-          supabaseKey === 'your_supabase_anon_key') {
-        console.log('Supabase not configured, redirecting to login')
-        router.push('/auth/login')
-        return
-      }
-
-      // Create client and check authentication
-      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
-      const supabase = createBrowserSupabaseClient()
-
-      // Add timeout to prevent hanging (increased to 10 seconds for better reliability)
-      const authPromise = supabase.auth.getUser()
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Auth check timeout')), 10000)
-      )
-
-      const authResult = await Promise.race([authPromise, timeoutPromise])
-      const { data: { user }, error: authError } = authResult
-
-      if (authError || !user) {
+  // Check authentication and fetch user profile data
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
         // User not authenticated, redirect to login
         router.push('/auth/login')
         return
       }
-
       // User is authenticated, fetch profile
       fetchProfile()
-    } catch (error) {
-      console.error('Error checking authentication:', error)
-      // If there's any error, redirect to login to be safe
-      router.push('/auth/login')
     }
-  }
-
-  // Check authentication and fetch user profile data
-  useEffect(() => {
-    checkAuthAndFetchProfile()
-  }, [])
+  }, [user, authLoading])
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

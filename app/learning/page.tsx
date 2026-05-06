@@ -1,66 +1,71 @@
+'use client'
+
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, getContentItems, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
-import { createBrowserSupabaseClient } from '@/lib/supabase-client'
-import { BookOpen, Bookmark, Trophy, TrendingUp, Clock, Target, Calendar, Star, GraduationCap, Play } from 'lucide-react'
+import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
+import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/user-context'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 
-interface LearningPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+interface UserStats {
+  totalCompleted: number
+  currentStreak: number
+  totalTime: number
+  achievements: number
 }
 
-export default async function LearningPage({ searchParams }: LearningPageProps) {
-  const resolvedSearchParams = await searchParams
-  // Get current user with timeout
-  let user: any = null
-  try {
-    const supabase = createBrowserSupabaseClient()
-    const authPromise = supabase.auth.getUser()
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Auth timeout')), 3000)
-    )
+export default function LearningPage() {
+  const router = useRouter()
+  const { user, authLoading } = useAuth()
+  const [userProgress, setUserProgress] = useState<UserProgress[]>([])
+  const [userBookmarks, setUserBookmarks] = useState<UserBookmark[]>([])
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
+  const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
+  const [loading, setLoading] = useState(true)
 
-    const { data: { user: authUser } } = await Promise.race([authPromise, timeoutPromise]) as any
-    user = authUser
-  } catch (error) {
-    console.error('Authentication error:', error)
-  }
+  const fetchUserData = useCallback(async () => {
+    if (!user) return
 
-  if (!user) {
-    redirect('/auth/login')
-  }
+    try {
+      setLoading(true)
+      const results = await Promise.allSettled([
+        getUserProgress(user.id),
+        getUserBookmarks(user.id),
+        getUserAchievements(user.id),
+        getUserStats(user.id)
+      ])
 
-  // Fetch user data from database with error handling
-  let userProgress: UserProgress[] = []
-  let userBookmarks: UserBookmark[] = []
-  let userAchievements: UserAchievement[] = []
-  let userStats: any = { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 }
+      setUserProgress(results[0].status === 'fulfilled' ? results[0].value : [])
+      setUserBookmarks(results[1].status === 'fulfilled' ? results[1].value : [])
+      setUserAchievements(results[2].status === 'fulfilled' ? results[2].value : [])
+      setUserStats(results[3].status === 'fulfilled' ? results[3].value : { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+      // Continue with empty data
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
 
-  try {
-    const results = await Promise.allSettled([
-      getUserProgress(user.id),
-      getUserBookmarks(user.id),
-      getUserAchievements(user.id),
-      getUserStats(user.id)
-    ])
-
-    userProgress = results[0].status === 'fulfilled' ? results[0].value : []
-    userBookmarks = results[1].status === 'fulfilled' ? results[1].value : []
-    userAchievements = results[2].status === 'fulfilled' ? results[2].value : []
-    userStats = results[3].status === 'fulfilled' ? results[3].value : { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 }
-  } catch (error) {
-    console.error('Error fetching user data:', error)
-    // Continue with empty data
-  }
-
-  // Get all content for fallback display
-  const allContent = await getContentItems({ limit: 10 })
+  // Check authentication and fetch user profile data
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        // User not authenticated, redirect to login
+        router.push('/auth/login')
+        return
+      }
+      // User is authenticated, fetch profile
+      fetchUserData()
+    }
+  }, [user, authLoading, router, fetchUserData])
 
   // Format achievements for display
   const formattedAchievements = userAchievements.map(achievement => ({
@@ -97,6 +102,17 @@ export default async function LearningPage({ searchParams }: LearningPageProps) 
       likes: bookmark.content!.likes,
       comments: 0 // Not implemented yet
     }))
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your learning data...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">

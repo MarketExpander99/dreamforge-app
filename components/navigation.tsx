@@ -5,9 +5,8 @@ import { usePathname } from 'next/navigation'
 import { Home, Search, BookOpen, User, LogOut, Settings, PenTool } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { createBrowserSupabaseClient } from '@/lib/supabase-client'
+import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -19,99 +18,24 @@ const navigation = [
 export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [userProfile, setUserProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const supabase = createBrowserSupabaseClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (user) {
-          setUser(user)
-
-          // Get user profile to check role and get profile info
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role, full_name, avatar_url')
-            .eq('id', user.id)
-            .single()
-
-          setUserRole(profile?.role || null)
-          setUserProfile(profile)
-        } else {
-          // Clear state when user is not authenticated
-          setUser(null)
-          setUserRole(null)
-          setUserProfile(null)
-        }
-      } catch (error) {
-        console.error('Error fetching user:', error)
-        // Clear state on error
-        setUser(null)
-        setUserRole(null)
-        setUserProfile(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    getUser()
-
-    // Listen for auth state changes
-    const supabase = createBrowserSupabaseClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        try {
-          // Refetch profile data
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role, full_name, avatar_url')
-            .eq('id', session.user.id)
-            .single()
-
-          setUserRole(profile?.role || null)
-          setUserProfile(profile)
-        } catch (error) {
-          console.error('Error fetching profile on auth change:', error)
-          setUserRole(null)
-          setUserProfile(null)
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setUserRole(null)
-        setUserProfile(null)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+  const { user, profile, signOut, loading } = useAuth()
 
   const handleLogout = async () => {
     try {
-      const supabase = createBrowserSupabaseClient()
-      await supabase.auth.signOut()
-      setUser(null)
-      setUserRole(null)
+      await signOut()
       router.push('/auth/login')
     } catch (error) {
       console.error('Logout error:', error)
-      // If Supabase is not configured, just redirect to login
+      // If sign out fails, just redirect to login
       router.push('/auth/login')
     }
   }
 
   // Check if user has admin access
-  const hasAdminAccess = userRole === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
+  const hasAdminAccess = profile?.role === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
 
   // Check if user is a content creator
-  const isContentCreator = userRole === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
+  const isContentCreator = profile?.role === 'content-creator' || user?.email === 'eben.combrinck@proton.me'
 
   const adminNavigation = [
     { name: 'System Admin', href: '/admin', icon: Settings },
@@ -193,14 +117,14 @@ export function Navigation() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={userProfile?.avatar_url || ""} />
+                <AvatarImage src={profile?.avatar_url || ""} />
                 <AvatarFallback>
-                  {userProfile?.full_name ? userProfile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3 flex-1">
                 <p className="text-sm font-medium">
-                  {userProfile?.full_name || user?.email?.split('@')[0] || 'User'}
+                  {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <Button
                   variant="ghost"

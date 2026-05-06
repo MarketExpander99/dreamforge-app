@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { UserProvider } from "@/lib/user-context";
+import { AuthProvider } from "@/lib/user-context";
 
 export const metadata: Metadata = {
   title: "Skill Gain - Learn Through Discovery",
@@ -18,9 +18,9 @@ export default function RootLayout({
       className="h-full antialiased dark"
     >
       <body className="min-h-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <UserProvider>
+        <AuthProvider>
           {children}
-        </UserProvider>
+        </AuthProvider>
       </body>
     </html>
   );
