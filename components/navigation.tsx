@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Explore', href: '/explore', icon: Search },
   { name: 'My Learning', href: '/learning', icon: BookOpen },
+  { name: 'Curriculum', href: '/learning/curriculum', icon: Target },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 

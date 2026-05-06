@@ -1620,9 +1620,9 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
     // Analyze completed content to understand preferences
     const completedContent = progressData?.filter(p => p.status === 'completed') || []
-    const completedCategories = completedContent.map(p => p.content?.category_id).filter(Boolean)
-    const completedTags = completedContent.flatMap(p => p.content?.tags || []).filter(Boolean) as string[]
-    const completedDifficulties = completedContent.map(p => p.content?.difficulty).filter(Boolean) as string[]
+    const completedCategories = completedContent.map(p => p.content?.[0]?.category_id).filter(Boolean)
+    const completedTags = completedContent.flatMap(p => p.content?.[0]?.tags || []).filter(Boolean) as string[]
+    const completedDifficulties = completedContent.map(p => p.content?.[0]?.difficulty).filter(Boolean) as string[]
 
     // Get all available content
     const { data: allContent, error: contentError } = await supabase

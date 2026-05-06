@@ -10,6 +10,7 @@
     "seed": "echo 'To seed the database, make a POST request to /api/seed or visit the application and use the seed endpoint'"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",

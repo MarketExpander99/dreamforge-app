@@ -1,12 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
+import { useAuth } from '@/lib/user-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Recommendations } from '@/components/recommendations'
 import { BookOpen, Target, Clock, Star, ChevronRight, Play } from 'lucide-react'
 
 interface Curriculum {
@@ -57,19 +68,46 @@ interface LearningPath {
 }
 
 export default function CurriculumPage() {
+  const router = useRouter()
+  const { user, profile } = useAuth()
   const [curriculums, setCurriculums] = useState<Curriculum[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([])
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([])
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('CAPS')
   const [selectedGrade, setSelectedGrade] = useState<string>('Grade 3')
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [children, setChildren] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isParent, setIsParent] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
 
   useEffect(() => {
+    if (profile?.role === 'parent') {
+      setIsParent(true)
+      loadChildren()
+    } else {
+      setSelectedUserId(user?.id || null)
+    }
+  }, [profile, user])
+
+  useEffect(() => {
     loadCurriculumData()
-  }, [selectedCurriculum])
+  }, [selectedCurriculum, selectedGrade, selectedUserId])
+
+  const loadChildren = async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, grade_level')
+      .eq('parent_id', user.id)
+      .eq('role', 'student')
+    setChildren(data || [])
+    if (data && data.length > 0) {
+      setSelectedUserId(data[0].id)
+    }
+  }
 
   const loadCurriculumData = async () => {
     setLoading(true)
@@ -82,11 +120,14 @@ export default function CurriculumPage() {
 
       setCurriculums(curriculumData || [])
 
-      // Load subjects for selected curriculum
+      const capsCurriculum = curriculumData?.find(c => c.name === 'CAPS')
+      const capsId = capsCurriculum?.id
+
+      // Load subjects for CAPS
       const { data: subjectData } = await supabase
         .from('subjects')
         .select('*')
-        .eq('curriculum_id', curriculumData?.find(c => c.name === selectedCurriculum)?.id)
+        .eq('curriculum_id', capsId)
         .eq('is_active', true)
 
       setSubjects(subjectData || [])
@@ -109,8 +150,7 @@ export default function CurriculumPage() {
       setLessonPlans(lessonData || [])
 
       // Load user's learning paths
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
+      if (selectedUserId) {
         const { data: pathData } = await supabase
           .from('learning_paths')
           .select(`
@@ -121,7 +161,7 @@ export default function CurriculumPage() {
               color
             )
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', selectedUserId)
           .eq('status', 'active')
 
         setLearningPaths(pathData || [])
@@ -161,19 +201,61 @@ export default function CurriculumPage() {
     }
   }
 
-  if (loading) {
+  const grades = Array.from({length: 12}, (_, i) => `Grade ${i + 1}`)
+
+  const CircularProgress = ({ value }: { value: number }) => {
+    const radius = 42
+    const circumference = radius * 2 * Math.PI
+    const strokeDashoffset = circumference - (value / 100) * circumference
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
+      <svg className="w-20 h-20" viewBox="0 0 100 100">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          strokeWidth="8"
+          stroke="hsl(var(--muted))"
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference}
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          strokeWidth="8"
+          stroke="hsl(var(--primary))"
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          transform="rotate(-90 50 50)"
+        />
+      </svg>
     )
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Curriculum & Lesson Planning</h1>
-        <p className="text-gray-600">Explore structured learning paths and create personalized lesson plans</p>
+        <h1 className="text-3xl font-bold mb-2">CAPS Curriculum Browser</h1>
+        <p className="text-gray-600">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
+        {isParent && children.length > 0 && (
+          <div className="mt-4">
+            <Select value={selectedUserId || ''} onValueChange={(value) => setSelectedUserId(value)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select child" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={user?.id || ''}>My Progress</SelectItem>
+                {children.map((child) => (
+                  <SelectItem key={child.id} value={child.id}>
+                    {child.full_name} ({child.grade_level || 'No grade'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="curriculum" className="space-y-6">
