@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/user-context";
+import { NotificationProvider } from "@/lib/notification-context";
+import { NotificationContainer } from "@/components/notification-container";
 
 export const metadata: Metadata = {
   title: "Skill Gain - Learn Through Discovery",
@@ -19,7 +21,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <AuthProvider>
-          {children}
+          <NotificationProvider>
+            {children}
+            <NotificationContainer />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

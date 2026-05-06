@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -339,125 +340,207 @@ export function FeedCard({ card }: FeedCardProps) {
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto mb-6">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h2 className="text-xl font-bold mb-2">{card.title}</h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">{card.category}</Badge>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {card.readTime} min read
-              </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={{ y: -2 }}
+      className="w-full max-w-2xl mx-auto mb-6"
+    >
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 border-2 hover:border-primary/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <motion.h2
+                className="text-xl font-bold mb-2"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                {card.title}
+              </motion.h2>
+              <motion.div
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Badge variant="secondary" className="transition-colors hover:bg-primary hover:text-primary-foreground">
+                  {card.category}
+                </Badge>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {card.readTime} min read
+                </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {renderCardContent()}
+        </CardHeader>
+        <CardContent className="pt-0">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {renderCardContent()}
+          </motion.div>
 
-        <div className="flex items-center justify-between mt-6 pt-4 border-t">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLike}
-              disabled={likeLoading}
-              className={isLiked ? 'text-red-500' : ''}
-            >
-              <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-              {likeCount}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCommentToggle}
-              disabled={commentLoading}
-            >
-              <MessageCircle className="h-4 w-4 mr-1" />
-              {commentCount}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBookmark}
-              disabled={bookmarkLoading}
-              className={isBookmarked ? 'text-blue-500' : ''}
-            >
-              {isBookmarked ? (
-                <BookmarkCheck className="h-4 w-4 mr-1 fill-current" />
-              ) : (
-                <Bookmark className="h-4 w-4 mr-1" />
-              )}
-              {bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}
-            </Button>
-          </div>
-        </div>
-
-        {showComments && (
-          <div className="mt-4 pt-4 border-t space-y-4">
-            {user && (
-              <div className="flex gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.user_metadata?.avatar_url} />
-                  <AvatarFallback>
-                    {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 flex gap-2">
-                  <Input
-                    placeholder="Write a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
-                    disabled={commentLoading}
-                  />
-                  <Button
-                    onClick={handleAddComment}
-                    disabled={commentLoading || !newComment.trim()}
-                    size="sm"
+          <motion.div
+            className="flex items-center justify-between mt-6 pt-4 border-t"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="flex items-center gap-2">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLike}
+                  disabled={likeLoading}
+                  className={`transition-all duration-200 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
+                >
+                  <motion.div
+                    animate={{ scale: isLiked ? [1, 1.2, 1] : 1 }}
+                    transition={{ duration: 0.3 }}
                   >
-                    {commentLoading ? 'Posting...' : 'Post'}
-                  </Button>
-                </div>
-              </div>
-            )}
+                    <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+                  </motion.div>
+                  <motion.span
+                    key={likeCount}
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    className="font-medium"
+                  >
+                    {likeCount}
+                  </motion.span>
+                </Button>
+              </motion.div>
 
-            <div className="space-y-3">
-              {commentLoading && comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Loading comments...</p>
-              ) : comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
-              ) : (
-                comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCommentToggle}
+                  disabled={commentLoading}
+                  className="transition-colors hover:text-blue-500"
+                >
+                  <MessageCircle className="h-4 w-4 mr-1" />
+                  <motion.span
+                    key={commentCount}
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    className="font-medium"
+                  >
+                    {commentCount}
+                  </motion.span>
+                </Button>
+              </motion.div>
+
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBookmark}
+                  disabled={bookmarkLoading}
+                  className={`transition-all duration-200 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
+                >
+                  <motion.div
+                    animate={{ rotate: isBookmarked ? [0, -10, 10, 0] : 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    {isBookmarked ? (
+                      <BookmarkCheck className="h-4 w-4 mr-1 fill-current" />
+                    ) : (
+                      <Bookmark className="h-4 w-4 mr-1" />
+                    )}
+                  </motion.div>
+                  <span className="font-medium">
+                    {bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}
+                  </span>
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          <AnimatePresence>
+            {showComments && (
+              <motion.div
+                className="mt-4 pt-4 border-t space-y-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {user && (
+                  <div className="flex gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.profiles?.avatar_url} />
+                      <AvatarImage src={user.user_metadata?.avatar_url} />
                       <AvatarFallback>
-                        {comment.profiles?.full_name?.charAt(0) || 'U'}
+                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-muted rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">
-                            {comment.profiles?.full_name || 'Anonymous'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(comment.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-sm">{comment.comment}</p>
-                      </div>
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        placeholder="Write a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
+                        disabled={commentLoading}
+                      />
+                      <Button
+                        onClick={handleAddComment}
+                        disabled={commentLoading || !newComment.trim()}
+                        size="sm"
+                      >
+                        {commentLoading ? 'Posting...' : 'Post'}
+                      </Button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                )}
+
+                <div className="space-y-3">
+                  {commentLoading && comments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Loading comments...</p>
+                  ) : comments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
+                  ) : (
+                    comments.map((comment) => (
+                      <motion.div
+                        key={comment.id}
+                        className="flex gap-3"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={comment.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {comment.profiles?.full_name?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="bg-muted rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">
+                                {comment.profiles?.full_name || 'Anonymous'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(comment.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm">{comment.comment}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }

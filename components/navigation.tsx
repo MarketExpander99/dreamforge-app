@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/user-context'
@@ -13,6 +13,11 @@ const navigation = [
   { name: 'Explore', href: '/explore', icon: Search },
   { name: 'My Learning', href: '/learning', icon: BookOpen },
   { name: 'Profile', href: '/profile', icon: User },
+]
+
+// Family navigation for parents
+const familyNavigation = [
+  { name: 'Family', href: '/family', icon: Users },
 ]
 
 export function Navigation() {
@@ -64,6 +69,33 @@ export function Navigation() {
                 </Link>
               )
             })}
+
+            {/* Family Navigation for Parents */}
+            {profile?.role === 'parent' && (
+              <>
+                <div className="pt-4">
+                  <div className="px-3 py-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Family
+                    </h3>
+                  </div>
+                  {familyNavigation.map((item) => {
+                    const isActive = pathname === item.href
+                    return (
+                      <Link key={item.name} href={item.href}>
+                        <Button
+                          variant={isActive ? "secondary" : "ghost"}
+                          className="w-full justify-start"
+                        >
+                          <item.icon className="mr-3 h-5 w-5" />
+                          {item.name}
+                        </Button>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </>
+            )}
 
             {/* Content Creator Navigation */}
             {isContentCreator && (
