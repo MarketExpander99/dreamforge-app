@@ -1588,6 +1588,397 @@ export async function checkAndUnlockAchievements(userId: string): Promise<string
   }
 }
 
+// Check if user has completed grade assessment
+export async function hasCompletedAssessment(userId: string): Promise<boolean> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    const { data, error } = await supabase
+      .from('grade_assessments')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    if (error) {
+      console.error('Error checking assessment status:', error)
+      return false
+    }
+
+    return data && data.length > 0
+  } catch (error) {
+    console.error('Error checking assessment status:', error)
+    return false
+  }
+}
+
+// Types for learning paths
+export interface LearningPath {
+  id: string
+  user_id: string
+  curriculum_id: string
+  subject_id: string
+  current_grade: string
+  status: 'active' | 'completed' | 'paused'
+  progress_percentage: number
+  completed_lessons: string[]
+  current_lesson: string | null
+  started_at: string
+  last_accessed_at: string
+  created_at: string
+  updated_at: string
+  subjects?: {
+    name: string
+    icon: string
+    color: string
+  }
+}
+
+export interface NextBestLesson {
+  lessonId: string
+  title: string
+  subject: string
+  grade: string
+  reason: string
+  priority: number
+  estimatedDifficulty: 'beginner' | 'intermediate' | 'advanced'
+}
+
+// Generate adaptive learning paths based on assessment results
+export async function generateAdaptiveLearningPaths(userId: string): Promise<void> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user's assessment results
+    const { data: assessment, error: assessmentError } = await supabase
+      .from('grade_assessments')
+      .select('*')
+      .eq('user_id', userId)
+      .order('assessed_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (assessmentError || !assessment) {
+      console.log('No assessment found for user, cannot generate adaptive paths')
+      return
+    }
+
+    // Get curriculum and subjects
+    const { data: curriculum, error: curriculumError } = await supabase
+      .from('curriculums')
+      .select('id')
+      .eq('name', 'CAPS')
+      .single()
+
+    if (curriculumError || !curriculum) {
+      console.error('CAPS curriculum not found')
+      return
+    }
+
+    const { data: subjects, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('id, name')
+      .eq('curriculum_id', curriculum.id)
+
+    if (subjectsError || !subjects) {
+      console.error('Error fetching subjects')
+      return
+    }
+
+    // Parse assessment data to understand strengths/weaknesses
+    const assessmentData = assessment.assessment_data || {}
+    const strengths = assessmentData.strengths || []
+    const weaknesses = assessmentData.weaknesses || []
+
+    // Generate learning paths for each subject
+    for (const subject of subjects) {
+      await generateSubjectLearningPath(userId, curriculum.id, subject.id, assessment.assessed_grade, strengths, weaknesses)
+    }
+
+  } catch (error) {
+    console.error('Error generating adaptive learning paths:', error)
+  }
+}
+
+// Generate learning path for a specific subject
+async function generateSubjectLearningPath(
+  userId: string,
+  curriculumId: string,
+  subjectId: string,
+  assessedGrade: string,
+  strengths: string[],
+  weaknesses: string[]
+): Promise<void> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get lesson plans for this subject and grade
+    const { data: lessonPlans, error: lessonsError } = await supabase
+      .from('lesson_plans')
+      .select('id, title, grade_level, difficulty, prerequisites, learning_objectives')
+      .eq('subject_id', subjectId)
+      .eq('is_active', true)
+      .order('sequence_order', { ascending: true })
+
+    if (lessonsError || !lessonPlans) {
+      console.error('Error fetching lesson plans for subject:', subjectId)
+      return
+    }
+
+    // Determine starting grade based on assessment and subject performance
+    let startingGrade = assessedGrade
+
+    // If subject is in weaknesses, start one grade lower
+    const subjectName = await getSubjectName(subjectId)
+    if (weaknesses.some(w => w.toLowerCase().includes(subjectName?.toLowerCase() || ''))) {
+      startingGrade = getLowerGrade(assessedGrade)
+    }
+
+    // Filter lessons for appropriate grade level
+    const relevantLessons = lessonPlans.filter(lesson =>
+      lesson.grade_level === startingGrade ||
+      lesson.grade_level === getLowerGrade(startingGrade) // Include easier grade as backup
+    )
+
+    // Create or update learning path
+    const { error: upsertError } = await supabase
+      .from('learning_paths')
+      .upsert({
+        user_id: userId,
+        curriculum_id: curriculumId,
+        subject_id: subjectId,
+        current_grade: startingGrade,
+        status: 'active',
+        progress_percentage: 0,
+        completed_lessons: [],
+        current_lesson: relevantLessons.length > 0 ? relevantLessons[0].id : null,
+        last_accessed_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,curriculum_id,subject_id'
+      })
+
+    if (upsertError) {
+      console.error('Error upserting learning path:', upsertError)
+    }
+
+  } catch (error) {
+    console.error('Error generating subject learning path:', error)
+  }
+}
+
+// Get next best lesson recommendation
+export async function getNextBestLesson(userId: string): Promise<NextBestLesson | null> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user's learning paths
+    const { data: learningPaths, error: pathsError } = await supabase
+      .from('learning_paths')
+      .select(`
+        *,
+        subjects(name)
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+
+    if (pathsError || !learningPaths || learningPaths.length === 0) {
+      return null
+    }
+
+    // Get user's recent progress and assessment data
+    const { data: progressData } = await supabase
+      .from('user_progress')
+      .select('content_id, status, completed_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(10)
+
+    const { data: assessment } = await supabase
+      .from('grade_assessments')
+      .select('assessment_data')
+      .eq('user_id', userId)
+      .order('assessed_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    // Analyze patterns and recommend next lesson
+    const recommendations: NextBestLesson[] = []
+
+    for (const path of learningPaths) {
+      if (path.current_lesson) {
+        // Get current lesson details
+        const { data: currentLesson } = await supabase
+          .from('lesson_plans')
+          .select('id, title, grade_level, difficulty, prerequisites')
+          .eq('id', path.current_lesson)
+          .single()
+
+        if (currentLesson) {
+          recommendations.push({
+            lessonId: currentLesson.id,
+            title: currentLesson.title,
+            subject: path.subjects?.name || 'Unknown',
+            grade: currentLesson.grade_level,
+            reason: 'Current lesson in your personalized path',
+            priority: 10,
+            estimatedDifficulty: currentLesson.difficulty || 'intermediate'
+          })
+        }
+      }
+
+      // Look for prerequisite lessons if struggling
+      const weaknesses = assessment?.assessment_data?.weaknesses || []
+      if (weaknesses.length > 0) {
+        const subjectName = path.subjects?.name || ''
+        const isWeakSubject = weaknesses.some((w: string) =>
+          w.toLowerCase().includes(subjectName.toLowerCase())
+        )
+
+        if (isWeakSubject) {
+          // Recommend easier prerequisite lessons
+          const { data: easierLessons } = await supabase
+            .from('lesson_plans')
+            .select('id, title, grade_level, difficulty')
+            .eq('subject_id', path.subject_id)
+            .eq('grade_level', getLowerGrade(path.current_grade))
+            .eq('is_active', true)
+            .limit(2)
+
+          easierLessons?.forEach(lesson => {
+            recommendations.push({
+              lessonId: lesson.id,
+              title: lesson.title,
+              subject: subjectName,
+              grade: lesson.grade_level,
+              reason: 'Recommended prerequisite to build foundation',
+              priority: 8,
+              estimatedDifficulty: 'beginner'
+            })
+          })
+        }
+      }
+    }
+
+    // Sort by priority and return top recommendation
+    recommendations.sort((a, b) => b.priority - a.priority)
+    return recommendations[0] || null
+
+  } catch (error) {
+    console.error('Error getting next best lesson:', error)
+    return null
+  }
+}
+
+// Update learning paths based on lesson completion
+export async function updateLearningPathsOnProgress(userId: string, lessonId: string): Promise<void> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Find which learning path this lesson belongs to
+    const { data: lessonPlan } = await supabase
+      .from('lesson_plans')
+      .select('subject_id, grade_level, sequence_order')
+      .eq('id', lessonId)
+      .single()
+
+    if (!lessonPlan) return
+
+    // Update the relevant learning path
+    const { data: learningPath } = await supabase
+      .from('learning_paths')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('subject_id', lessonPlan.subject_id)
+      .single()
+
+    if (!learningPath) return
+
+    // Add lesson to completed lessons
+    const completedLessons = learningPath.completed_lessons || []
+    if (!completedLessons.includes(lessonId)) {
+      completedLessons.push(lessonId)
+    }
+
+    // Find next lesson in sequence
+    const { data: nextLessons } = await supabase
+      .from('lesson_plans')
+      .select('id, title')
+      .eq('subject_id', lessonPlan.subject_id)
+      .eq('grade_level', lessonPlan.grade_level)
+      .gt('sequence_order', lessonPlan.sequence_order)
+      .eq('is_active', true)
+      .order('sequence_order', { ascending: true })
+      .limit(1)
+
+    const nextLesson = nextLessons?.[0]?.id || null
+
+    // Calculate progress percentage
+    const { data: totalLessons } = await supabase
+      .from('lesson_plans')
+      .select('id', { count: 'exact' })
+      .eq('subject_id', lessonPlan.subject_id)
+      .eq('grade_level', lessonPlan.grade_level)
+      .eq('is_active', true)
+
+    const progressPercentage = totalLessons ?
+      Math.round((completedLessons.length / totalLessons.length) * 100) : 0
+
+    // Update learning path
+    const { error: updateError } = await supabase
+      .from('learning_paths')
+      .update({
+        completed_lessons: completedLessons,
+        current_lesson: nextLesson,
+        progress_percentage: Math.min(progressPercentage, 100),
+        last_accessed_at: new Date().toISOString(),
+        status: progressPercentage >= 100 ? 'completed' : 'active'
+      })
+      .eq('id', learningPath.id)
+
+    if (updateError) {
+      console.error('Error updating learning path:', updateError)
+    }
+
+  } catch (error) {
+    console.error('Error updating learning paths on progress:', error)
+  }
+}
+
+// Helper functions
+async function getSubjectName(subjectId: string): Promise<string | null> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+    const { data } = await supabase
+      .from('subjects')
+      .select('name')
+      .eq('id', subjectId)
+      .single()
+
+    return data?.name || null
+  } catch (error) {
+    return null
+  }
+}
+
+function getLowerGrade(grade: string): string {
+  const gradeNumbers: { [key: string]: string } = {
+    'Grade 1': 'Grade R',
+    'Grade 2': 'Grade 1',
+    'Grade 3': 'Grade 2',
+    'Grade 4': 'Grade 3',
+    'Grade 5': 'Grade 4',
+    'Grade 6': 'Grade 5',
+    'Grade 7': 'Grade 6',
+    'Grade 8': 'Grade 7',
+    'Grade 9': 'Grade 8',
+    'Grade 10': 'Grade 9',
+    'Grade 11': 'Grade 10',
+    'Grade 12': 'Grade 11'
+  }
+
+  return gradeNumbers[grade] || grade
+}
+
 // Get personalized recommendations for a user
 export async function getPersonalizedRecommendations(userId: string, limit: number = 6): Promise<ContentItem[]> {
   try {
@@ -1667,13 +2058,14 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
           return sum + (levels[diff as keyof typeof levels] || 1)
         }, 0) / completedDifficulties.length : 1
 
-      const contentLevel = { beginner: 1, intermediate: 2, advanced: 3 }[content.difficulty] || 1
+      const difficultyLevels = { beginner: 1, intermediate: 2, advanced: 3 }
+      const contentLevel = difficultyLevels[content.difficulty as keyof typeof difficultyLevels] || 1
       if (Math.abs(contentLevel - currentAvgDifficulty) <= 1) {
         score += 4
       }
 
       // Tag similarity
-      const tagOverlap = content.tags?.filter(tag => completedTags.includes(tag)).length || 0
+      const tagOverlap = content.tags?.filter((tag: string) => completedTags.includes(tag)).length || 0
       score += tagOverlap * 2
 
       // Recency bonus (newer content slightly preferred)

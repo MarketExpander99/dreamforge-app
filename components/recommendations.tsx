@@ -16,6 +16,7 @@ interface RecommendationsProps {
   subtitle?: string
   limit?: number
   showScrollButtons?: boolean
+  highlightCurriculum?: boolean
 }
 
 export function Recommendations({
@@ -205,10 +206,20 @@ export function Recommendations({
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold text-sm line-clamp-2 leading-tight">
                           {item.title}
+                          {item.tags?.includes('curriculum-next') && (
+                            <span className="ml-1 text-xs text-blue-600 font-bold">★</span>
+                          )}
                         </h3>
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          {item.category?.name || 'General'}
-                        </Badge>
+                        <div className="flex gap-1">
+                          {item.tags?.includes('curriculum-next') && (
+                            <Badge className="text-xs shrink-0 bg-blue-100 text-blue-800">
+                              Next in Path
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            {item.category?.name || 'General'}
+                          </Badge>
+                        </div>
                       </div>
 
                       <p className="text-xs text-muted-foreground line-clamp-2">

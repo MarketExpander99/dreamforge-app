@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { getCurrentStreak } from '@/lib/data'
+import { getCurrentStreak, hasCompletedAssessment } from '@/lib/data'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -18,6 +18,11 @@ const navigation = [
   { name: 'My Learning', href: '/learning', icon: BookOpen },
   { name: 'Curriculum', href: '/learning/curriculum', icon: Target },
   { name: 'Profile', href: '/profile', icon: User },
+]
+
+// Assessment navigation for students who haven't completed assessment
+const assessmentNavigation = [
+  { name: 'Assessment', href: '/assessment', icon: GraduationCap },
 ]
 
 // Family navigation for parents
@@ -30,22 +35,26 @@ export function Navigation() {
   const router = useRouter()
   const { user, profile, signOut, loading } = useAuth()
   const [currentStreak, setCurrentStreak] = useState(0)
+  const [assessmentCompleted, setAssessmentCompleted] = useState(false)
 
-  // Fetch current streak for students
+  // Fetch current streak and assessment status for students
   useEffect(() => {
-    const fetchStreak = async () => {
+    const fetchData = async () => {
       if (user && profile?.role === 'student') {
         try {
           const { currentStreak: streak } = await getCurrentStreak(user.id)
           setCurrentStreak(streak)
+
+          const completed = await hasCompletedAssessment(user.id)
+          setAssessmentCompleted(completed)
         } catch (error) {
-          console.error('Error fetching streak:', error)
+          console.error('Error fetching data:', error)
         }
       }
     }
 
     if (!loading && user) {
-      fetchStreak()
+      fetchData()
     }
   }, [user, profile, loading])
 
@@ -93,6 +102,22 @@ export function Navigation() {
                 </Link>
               )
             })}
+
+            {/* Assessment Navigation for Students */}
+            {profile?.role === 'student' && !assessmentCompleted && (
+              <Link href="/assessment">
+                <Button
+                  variant={pathname === '/assessment' ? "secondary" : "ghost"}
+                  className="w-full justify-start bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200"
+                >
+                  <GraduationCap className="mr-3 h-5 w-5 text-blue-600" />
+                  Take Assessment
+                  <Badge variant="secondary" className="ml-auto text-xs bg-blue-100 text-blue-700">
+                    New
+                  </Badge>
+                </Button>
+              </Link>
+            )}
 
             {/* Family Navigation for Parents */}
             {profile?.role === 'parent' && (

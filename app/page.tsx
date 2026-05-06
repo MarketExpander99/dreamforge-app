@@ -3,10 +3,13 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { Recommendations } from '@/components/recommendations'
-import { BookOpen, Loader2 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { BookOpen, Loader2, GraduationCap, Target } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/user-context'
 import { useEffect, useState } from 'react'
+import { hasCompletedAssessment } from '@/lib/data'
+import { useRouter } from 'next/navigation'
 
 interface ContentItem {
   id: string
@@ -44,9 +47,11 @@ interface ContentItem {
 
 export default function Home() {
   const { user, profile, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [contentItems, setContentItems] = useState<ContentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasCompletedAssessmentState, setHasCompletedAssessmentState] = useState<boolean | null>(null)
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -85,6 +90,25 @@ export default function Home() {
     }
   }, [user, profile, authLoading])
 
+  // Check assessment status for new users
+  useEffect(() => {
+    const checkAssessmentStatus = async () => {
+      if (user && profile?.role === 'student') {
+        try {
+          const completed = await hasCompletedAssessment(user.id)
+          setHasCompletedAssessmentState(completed)
+        } catch (error) {
+          console.error('Error checking assessment status:', error)
+          setHasCompletedAssessmentState(false)
+        }
+      }
+    }
+
+    if (!authLoading && user) {
+      checkAssessmentStatus()
+    }
+  }, [user, profile, authLoading])
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Navigation />
@@ -96,6 +120,40 @@ export default function Home() {
             <h1 className="text-3xl font-bold mb-8 text-center md:text-left">
               Your Learning Feed
             </h1>
+
+            {/* Assessment Prompt for New Users */}
+            {user && profile?.role === 'student' && hasCompletedAssessmentState === false && (
+              <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-blue-900 dark:text-blue-100">
+                    <GraduationCap className="h-6 w-6 mr-2" />
+                    Welcome to Skill Gain! Take Your Grade Assessment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-blue-800 dark:text-blue-200 mb-4">
+                    Get personalized learning recommendations by taking our quick grade assessment.
+                    We'll create a customized learning path just for you!
+                  </p>
+                  <div className="flex items-center space-x-4">
+                    <Button
+                      onClick={() => router.push('/assessment')}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Target className="h-4 w-4 mr-2" />
+                      Start Assessment
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setHasCompletedAssessmentState(null)} // Hide prompt
+                      className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    >
+                      Maybe Later
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Personalized Recommendations */}
             {user && (

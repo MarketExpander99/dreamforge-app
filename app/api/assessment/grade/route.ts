@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { generateAdaptiveLearningPaths } from '@/lib/data'
 
 // GrokAI integration for grade assessment
 async function analyzeWithGrokAI(responses: any[], curriculum: string = 'CAPS') {
@@ -188,6 +189,14 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.warn('Failed to update user profile grade:', profileError)
+    }
+
+    // Generate adaptive learning paths based on assessment results
+    try {
+      await generateAdaptiveLearningPaths(user.id)
+    } catch (pathError) {
+      console.warn('Failed to generate adaptive learning paths:', pathError)
+      // Don't fail the assessment if path generation fails
     }
 
     return NextResponse.json({

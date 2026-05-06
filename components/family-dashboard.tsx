@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { MessageCircle, Flame, TrendingUp, Send, Clock } from 'lucide-react'
+import { MessageCircle, Flame, TrendingUp, Send, Clock, BookOpen, GraduationCap, Route, Target } from 'lucide-react'
 import { useNotifications } from '@/lib/notification-context'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
@@ -31,6 +31,14 @@ interface ActivityItem {
   description: string
   icon: string
   timestamp: string
+}
+
+interface CurriculumProgress {
+  subject: string
+  completed: number
+  total: number
+  percentage: number
+  grade: string
 }
 
 interface FamilyDashboardProps {
@@ -248,6 +256,161 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
               </motion.div>
             )
           })}
+        </motion.div>
+      )}
+
+      {/* Curriculum Progress Section */}
+      {children.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BookOpen className="h-5 w-5 mr-2" />
+                Curriculum Progress
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Track your children's progress through CAPS curriculum subjects
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {children.map((child) => (
+                  <div key={child.id} className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={child.avatar_url || ""} />
+                        <AvatarFallback className="text-xs">
+                          {child.full_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h4 className="font-medium text-sm">{child.full_name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {child.grade_level || 'Grade Unknown'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Curriculum subjects would be loaded from database */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-11">
+                      {/* Placeholder curriculum subjects - in real implementation, load from database */}
+                      {['Mathematics', 'English', 'Natural Sciences', 'Social Sciences'].map((subject) => {
+                        const progress = Math.floor(Math.random() * 100) // Placeholder
+                        return (
+                          <div key={subject} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{subject}</span>
+                              <span className="text-xs text-muted-foreground">{progress}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Assessment & Learning Paths Section */}
+      {children.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <GraduationCap className="h-5 w-5 mr-2" />
+                Assessment Results & Learning Paths
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                View your children's grade assessments and personalized learning journeys
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {children.map((child) => (
+                  <div key={child.id} className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={child.avatar_url || ""} />
+                        <AvatarFallback className="text-xs">
+                          {child.full_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h4 className="font-medium text-sm">{child.full_name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Assessment Status
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Assessment Status */}
+                    <div className="ml-11 space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Target className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium">Grade Assessment</p>
+                            <p className="text-xs text-muted-foreground">
+                              {child.grade_level ? `Completed - Recommended: ${child.grade_level}` : 'Not completed yet'}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={child.grade_level ? "default" : "secondary"}>
+                          {child.grade_level ? 'Completed' : 'Pending'}
+                        </Badge>
+                      </div>
+
+                      {/* Learning Paths */}
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium flex items-center">
+                          <Route className="h-4 w-4 mr-2" />
+                          Active Learning Paths
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Placeholder learning paths - in real implementation, load from database */}
+                          {['Mathematics', 'English', 'Natural Sciences'].map((subject) => {
+                            const progress = Math.floor(Math.random() * 100)
+                            return (
+                              <div key={subject} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">
+                                    {subject === 'Mathematics' ? '🔢' :
+                                     subject === 'English' ? '📚' : '🧬'}
+                                  </span>
+                                  <div>
+                                    <p className="text-sm font-medium">{subject}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {child.grade_level || 'Grade Unknown'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium">{progress}%</p>
+                                  <Progress value={progress} className="w-16 h-1" />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       )}
 
