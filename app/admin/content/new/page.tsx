@@ -263,13 +263,13 @@ export default function NewContentPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((cat) => (
-                              <SelectItem key={cat} value={cat.toLowerCase().replace(' & ', '-').replace(' ', '-')}>
-                                {cat}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                           <SelectContent>
+                             {categories.map((cat) => (
+                               <SelectItem key={cat} value={cat}>
+                                 {cat}
+                               </SelectItem>
+                             ))}
+                           </SelectContent>
                         </Select>
                       </div>
 
