@@ -3,7 +3,7 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
-import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap } from 'lucide-react'
+import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 
 interface UserStats {
   totalCompleted: number
@@ -179,8 +180,9 @@ export default function LearningPage() {
 
             {/* Main Content Tabs */}
             <Tabs defaultValue="progress" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 h-12">
+              <TabsList className="grid w-full grid-cols-5 h-12">
                 <TabsTrigger value="progress" className="text-sm font-medium">My Progress</TabsTrigger>
+                <TabsTrigger value="analytics" className="text-sm font-medium">Analytics</TabsTrigger>
                 <TabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</TabsTrigger>
                 <TabsTrigger value="bookmarks" className="text-sm font-medium">Bookmarks</TabsTrigger>
                 <TabsTrigger value="achievements" className="text-sm font-medium">Achievements</TabsTrigger>
@@ -249,6 +251,11 @@ export default function LearningPage() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-6">
+                <AnalyticsDashboard />
               </TabsContent>
 
               {/* Curriculum Tab */}

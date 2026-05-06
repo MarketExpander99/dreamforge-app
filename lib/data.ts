@@ -908,3 +908,407 @@ export const clientData = {
     return data || []
   }
 }
+
+// Analytics Functions
+export interface WeeklyData {
+  week: string
+  hours: number
+  date: string
+}
+
+export interface SubjectProgress {
+  subject: string
+  completed: number
+  total: number
+  percentage: number
+}
+
+export interface LearningVelocity {
+  thisWeek: number
+  lastWeek: number
+  change: number
+  changePercent: number
+}
+
+export interface PersonalizedInsight {
+  id: string
+  type: 'improvement' | 'achievement' | 'recommendation' | 'streak'
+  title: string
+  description: string
+  icon: string
+  priority: number
+}
+
+export interface UserAnalytics {
+  weeklyHours: WeeklyData[]
+  subjectProgress: SubjectProgress[]
+  currentStreak: number
+  longestStreak: number
+  totalCompleted: number
+  totalTimeSpent: number
+  completionRate: number
+  learningVelocity: LearningVelocity
+  insights: PersonalizedInsight[]
+  activityHeatmap: { date: string; count: number }[]
+}
+
+// Get comprehensive user analytics
+export async function getUserAnalytics(userId: string): Promise<UserAnalytics> {
+  const supabase = createBrowserSupabaseClient()
+
+  try {
+    // Get all user progress data
+    const { data: progressData, error: progressError } = await supabase
+      .from('user_progress')
+      .select(`
+        *,
+        content:content_items(
+          title,
+          type,
+          category:categories(name),
+          read_time
+        )
+      `)
+      .eq('user_id', userId)
+
+    if (progressError) throw progressError
+
+    // Get achievements data
+    const { data: achievementsData, error: achievementsError } = await supabase
+      .from('user_achievements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('earned_at', { ascending: false })
+
+    if (achievementsError) throw achievementsError
+
+    // Calculate weekly learning hours (last 4 weeks)
+    const weeklyHours = calculateWeeklyHours(progressData || [])
+
+    // Calculate subject progress breakdown
+    const subjectProgress = calculateSubjectProgress(progressData || [])
+
+    // Calculate streaks
+    const { currentStreak, longestStreak } = calculateStreaks(progressData || [])
+
+    // Calculate totals
+    const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+    const totalTimeSpent = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+    const totalItems = progressData?.length || 0
+    const completionRate = totalItems > 0 ? (totalCompleted / totalItems) * 100 : 0
+
+    // Calculate learning velocity
+    const learningVelocity = calculateLearningVelocity(progressData || [])
+
+    // Generate personalized insights
+    const insights = generateInsights(progressData || [], achievementsData || [], {
+      currentStreak,
+      totalCompleted,
+      completionRate,
+      learningVelocity
+    })
+
+    // Generate activity heatmap data
+    const activityHeatmap = generateActivityHeatmap(progressData || [])
+
+    return {
+      weeklyHours,
+      subjectProgress,
+      currentStreak,
+      longestStreak,
+      totalCompleted,
+      totalTimeSpent,
+      completionRate,
+      learningVelocity,
+      insights,
+      activityHeatmap
+    }
+  } catch (error) {
+    console.error('Error fetching user analytics:', error)
+    return {
+      weeklyHours: [],
+      subjectProgress: [],
+      currentStreak: 0,
+      longestStreak: 0,
+      totalCompleted: 0,
+      totalTimeSpent: 0,
+      completionRate: 0,
+      learningVelocity: { thisWeek: 0, lastWeek: 0, change: 0, changePercent: 0 },
+      insights: [],
+      activityHeatmap: []
+    }
+  }
+}
+
+// Calculate weekly learning hours for the last 4 weeks
+function calculateWeeklyHours(progressData: any[]): WeeklyData[] {
+  const weeks: { [key: string]: number } = {}
+  const now = new Date()
+
+  // Initialize last 4 weeks
+  for (let i = 0; i < 4; i++) {
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - (i * 7))
+    const weekKey = weekStart.toISOString().split('T')[0].substring(0, 10)
+    weeks[weekKey] = 0
+  }
+
+  // Aggregate time spent by week
+  progressData.forEach(progress => {
+    if (progress.last_accessed_at) {
+      const date = new Date(progress.last_accessed_at)
+      const weekKey = date.toISOString().split('T')[0].substring(0, 10)
+      if (weeks.hasOwnProperty(weekKey)) {
+        weeks[weekKey] += (progress.time_spent || 0) / 60 // Convert to hours
+      }
+    }
+  })
+
+  return Object.entries(weeks)
+    .map(([date, hours]) => ({
+      week: `Week of ${new Date(date).toLocaleDateString()}`,
+      hours: Math.round(hours * 10) / 10,
+      date
+    }))
+    .reverse()
+}
+
+// Calculate subject progress breakdown
+function calculateSubjectProgress(progressData: any[]): SubjectProgress[] {
+  const subjectStats: { [key: string]: { completed: number; total: number } } = {}
+
+  progressData.forEach(progress => {
+    const subject = progress.content?.category?.name || 'Uncategorized'
+    if (!subjectStats[subject]) {
+      subjectStats[subject] = { completed: 0, total: 0 }
+    }
+    subjectStats[subject].total++
+    if (progress.status === 'completed') {
+      subjectStats[subject].completed++
+    }
+  })
+
+  return Object.entries(subjectStats).map(([subject, stats]) => ({
+    subject,
+    completed: stats.completed,
+    total: stats.total,
+    percentage: stats.total > 0 ? (stats.completed / stats.total) * 100 : 0
+  }))
+}
+
+// Calculate current and longest streaks
+function calculateStreaks(progressData: any[]): { currentStreak: number; longestStreak: number } {
+  if (!progressData.length) return { currentStreak: 0, longestStreak: 0 }
+
+  // Sort by completion date
+  const completedItems = progressData
+    .filter(p => p.status === 'completed' && p.completed_at)
+    .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+
+  if (!completedItems.length) return { currentStreak: 0, longestStreak: 0 }
+
+  let currentStreak = 0
+  let longestStreak = 0
+  let tempStreak = 1
+
+  // Calculate current streak (from most recent completion)
+  const mostRecent = new Date(completedItems[0].completed_at)
+  const today = new Date()
+  const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (daysDiff <= 1) { // Completed today or yesterday
+    currentStreak = 1
+    let checkDate = new Date(mostRecent)
+
+    for (let i = 1; i < completedItems.length; i++) {
+      const itemDate = new Date(completedItems[i].completed_at)
+      const dayDiff = Math.floor((checkDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (dayDiff === 1) { // Consecutive day
+        currentStreak++
+        checkDate = itemDate
+      } else {
+        break
+      }
+    }
+  }
+
+  // Calculate longest streak
+  let prevDate: Date | null = null
+  completedItems.forEach(item => {
+    const itemDate = new Date(item.completed_at)
+
+    if (!prevDate) {
+      tempStreak = 1
+    } else {
+      const dayDiff = Math.floor((prevDate.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24))
+      if (dayDiff === 1) {
+        tempStreak++
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak)
+        tempStreak = 1
+      }
+    }
+
+    prevDate = itemDate
+  })
+
+  longestStreak = Math.max(longestStreak, tempStreak, currentStreak)
+
+  return { currentStreak, longestStreak }
+}
+
+// Calculate learning velocity (this week vs last week)
+function calculateLearningVelocity(progressData: any[]): LearningVelocity {
+  const now = new Date()
+  const thisWeekStart = new Date(now.setDate(now.getDate() - now.getDay()))
+  const lastWeekStart = new Date(thisWeekStart)
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7)
+
+  const thisWeek = progressData.filter(p => {
+    if (!p.completed_at) return false
+    const completedDate = new Date(p.completed_at)
+    return completedDate >= thisWeekStart && completedDate < new Date()
+  }).length
+
+  const lastWeek = progressData.filter(p => {
+    if (!p.completed_at) return false
+    const completedDate = new Date(p.completed_at)
+    return completedDate >= lastWeekStart && completedDate < thisWeekStart
+  }).length
+
+  const change = thisWeek - lastWeek
+  const changePercent = lastWeek > 0 ? (change / lastWeek) * 100 : (thisWeek > 0 ? 100 : 0)
+
+  return {
+    thisWeek,
+    lastWeek,
+    change,
+    changePercent: Math.round(changePercent * 10) / 10
+  }
+}
+
+// Generate personalized insights
+function generateInsights(
+  progressData: any[],
+  achievementsData: any[],
+  stats: { currentStreak: number; totalCompleted: number; completionRate: number; learningVelocity: LearningVelocity }
+): PersonalizedInsight[] {
+  const insights: PersonalizedInsight[] = []
+
+  // Streak-based insights
+  if (stats.currentStreak >= 7) {
+    insights.push({
+      id: 'streak-master',
+      type: 'streak',
+      title: 'Streak Master! 🔥',
+      description: `Amazing! You've maintained a ${stats.currentStreak}-day learning streak. Keep it up!`,
+      icon: '🔥',
+      priority: 1
+    })
+  } else if (stats.currentStreak === 0 && progressData.length > 0) {
+    insights.push({
+      id: 'streak-restart',
+      type: 'recommendation',
+      title: 'Restart Your Streak',
+      description: 'Complete a lesson today to start building your learning streak!',
+      icon: '🎯',
+      priority: 2
+    })
+  }
+
+  // Performance insights
+  if (stats.completionRate >= 80) {
+    insights.push({
+      id: 'high-completion',
+      type: 'achievement',
+      title: 'Completion Champion!',
+      description: `You've completed ${Math.round(stats.completionRate)}% of your started content. Excellent work!`,
+      icon: '🏆',
+      priority: 1
+    })
+  }
+
+  // Velocity insights
+  if (stats.learningVelocity.change > 0) {
+    insights.push({
+      id: 'velocity-up',
+      type: 'improvement',
+      title: 'Learning Momentum!',
+      description: `You're completing ${stats.learningVelocity.changePercent}% more content this week. Great progress!`,
+      icon: '📈',
+      priority: 2
+    })
+  } else if (stats.learningVelocity.change < 0 && stats.learningVelocity.lastWeek > 0) {
+    insights.push({
+      id: 'velocity-down',
+      type: 'recommendation',
+      title: 'Keep the Momentum',
+      description: 'Your learning pace slowed this week. Try to complete at least one lesson today!',
+      icon: '📉',
+      priority: 3
+    })
+  }
+
+  // Subject-specific insights
+  const subjectProgress = calculateSubjectProgress(progressData)
+  const bestSubject = subjectProgress.reduce((best, current) =>
+    current.percentage > best.percentage ? current : best,
+    subjectProgress[0]
+  )
+
+  if (bestSubject && bestSubject.percentage >= 50) {
+    insights.push({
+      id: 'subject-expert',
+      type: 'achievement',
+      title: `${bestSubject.subject} Expert!`,
+      description: `You're excelling in ${bestSubject.subject} with ${Math.round(bestSubject.percentage)}% completion.`,
+      icon: '⭐',
+      priority: 2
+    })
+  }
+
+  // Achievement-based insights
+  if (achievementsData.length === 0 && stats.totalCompleted >= 3) {
+    insights.push({
+      id: 'achievement-unlock',
+      type: 'recommendation',
+      title: 'Achievements Await!',
+      description: 'Complete a few more lessons to unlock your first achievement badge!',
+      icon: '🎖️',
+      priority: 3
+    })
+  }
+
+  // Sort by priority and return top insights
+  return insights
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 4)
+}
+
+// Generate activity heatmap data
+function generateActivityHeatmap(progressData: any[]): { date: string; count: number }[] {
+  const activityMap: { [key: string]: number } = {}
+
+  // Initialize last 30 days
+  for (let i = 0; i < 30; i++) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    const dateKey = date.toISOString().split('T')[0]
+    activityMap[dateKey] = 0
+  }
+
+  // Count activities per day
+  progressData.forEach(progress => {
+    if (progress.last_accessed_at) {
+      const date = new Date(progress.last_accessed_at).toISOString().split('T')[0]
+      if (activityMap.hasOwnProperty(date)) {
+        activityMap[date]++
+      }
+    }
+  })
+
+  return Object.entries(activityMap)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
