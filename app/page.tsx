@@ -2,6 +2,7 @@
 
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
+import { Recommendations } from '@/components/recommendations'
 import { BookOpen, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/lib/user-context'
@@ -95,6 +96,13 @@ export default function Home() {
             <h1 className="text-3xl font-bold mb-8 text-center md:text-left">
               Your Learning Feed
             </h1>
+
+            {/* Personalized Recommendations */}
+            {user && (
+              <div className="mb-8">
+                <Recommendations limit={6} />
+              </div>
+            )}
 
             {contentItems.length > 0 ? (
               <div className="space-y-6">

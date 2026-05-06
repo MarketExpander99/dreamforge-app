@@ -2,11 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { getCurrentStreak } from '@/lib/data'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -24,6 +28,25 @@ export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, profile, signOut, loading } = useAuth()
+  const [currentStreak, setCurrentStreak] = useState(0)
+
+  // Fetch current streak for students
+  useEffect(() => {
+    const fetchStreak = async () => {
+      if (user && profile?.role === 'student') {
+        try {
+          const { currentStreak: streak } = await getCurrentStreak(user.id)
+          setCurrentStreak(streak)
+        } catch (error) {
+          console.error('Error fetching streak:', error)
+        }
+      }
+    }
+
+    if (!loading && user) {
+      fetchStreak()
+    }
+  }, [user, profile, loading])
 
   const handleLogout = async () => {
     try {
@@ -155,14 +178,35 @@ export function Navigation() {
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium">
-                  {profile?.full_name || user?.email?.split('@')[0] || 'User'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">
+                    {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                  </p>
+                  {profile?.role === 'student' && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs px-2 py-0.5 transition-all duration-300 ${
+                          currentStreak > 0
+                            ? 'bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 dark:from-orange-900 dark:to-red-900 dark:text-orange-300 shadow-sm'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        }`}
+                      >
+                        <Flame className={`h-3 w-3 mr-1 transition-all duration-300 ${currentStreak > 0 ? 'animate-pulse' : ''}`} />
+                        {currentStreak > 0 ? currentStreak : '0'}
+                      </Badge>
+                    </motion.div>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto"
+                  className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto transition-colors"
                 >
                   <LogOut className="h-3 w-3 mr-1" />
                   Logout

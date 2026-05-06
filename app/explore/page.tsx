@@ -3,6 +3,7 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { ExploreGraph } from '@/components/explore-graph'
+import { Recommendations } from '@/components/recommendations'
 import { clientData, Category, ContentItem } from '@/lib/data'
 import { Search, Filter, TrendingUp, Star, BookOpen, Network, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -222,6 +223,15 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
                       </CardContent>
                     </Card>
                   )}
+                </div>
+
+                {/* Personalized Recommendations */}
+                <div className="mb-8">
+                  <Recommendations
+                    title="Recommended for You"
+                    subtitle="Discover content tailored to your interests and learning progress"
+                    limit={6}
+                  />
                 </div>
 
                 {/* All Content */}

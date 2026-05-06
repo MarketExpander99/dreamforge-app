@@ -218,7 +218,8 @@ export function FeedCard({ card }: FeedCardProps) {
                   alt={card.title}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
               </div>
             )}
@@ -344,10 +345,11 @@ export function FeedCard({ card }: FeedCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       className="w-full max-w-2xl mx-auto mb-6"
     >
-      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 border-2 hover:border-primary/20">
+      <Card className="overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 border-2 hover:border-primary/30 group">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">

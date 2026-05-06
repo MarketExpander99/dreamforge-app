@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/user-context'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
+import { Leaderboard } from '@/components/leaderboard'
 
 interface UserStats {
   totalCompleted: number
@@ -180,9 +181,10 @@ export default function LearningPage() {
 
             {/* Main Content Tabs */}
             <Tabs defaultValue="progress" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5 h-12">
+              <TabsList className="grid w-full grid-cols-6 h-12">
                 <TabsTrigger value="progress" className="text-sm font-medium">My Progress</TabsTrigger>
                 <TabsTrigger value="analytics" className="text-sm font-medium">Analytics</TabsTrigger>
+                <TabsTrigger value="leaderboard" className="text-sm font-medium">Leaderboard</TabsTrigger>
                 <TabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</TabsTrigger>
                 <TabsTrigger value="bookmarks" className="text-sm font-medium">Bookmarks</TabsTrigger>
                 <TabsTrigger value="achievements" className="text-sm font-medium">Achievements</TabsTrigger>
@@ -256,6 +258,11 @@ export default function LearningPage() {
               {/* Analytics Tab */}
               <TabsContent value="analytics" className="space-y-6">
                 <AnalyticsDashboard />
+              </TabsContent>
+
+              {/* Leaderboard Tab */}
+              <TabsContent value="leaderboard" className="space-y-6">
+                <Leaderboard />
               </TabsContent>
 
               {/* Curriculum Tab */}

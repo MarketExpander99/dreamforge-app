@@ -1312,3 +1312,406 @@ function generateActivityHeatmap(progressData: any[]): { date: string; count: nu
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date))
 }
+
+// Calculate current learning streak
+export async function getCurrentStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number }> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    const { data: progressData, error } = await supabase
+      .from('user_progress')
+      .select('last_accessed_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('last_accessed_at', { ascending: false })
+
+    if (error) throw error
+
+    return calculateStreaks(progressData || [])
+  } catch (error) {
+    console.error('Error calculating streak:', error)
+    return { currentStreak: 0, longestStreak: 0 }
+  }
+}
+
+// Get leaderboard data
+export async function getLeaderboard(limit: number = 10): Promise<Array<{
+  user_id: string
+  full_name: string | null
+  avatar_url: string | null
+  total_time: number
+  total_completed: number
+  current_streak: number
+}>> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get all users with their stats
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('role', 'student')
+
+    if (usersError) throw usersError
+
+    // Calculate stats for each user
+    const leaderboardData = await Promise.all(
+      (users || []).map(async (user) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', user.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        const { currentStreak } = await getCurrentStreak(user.id)
+
+        return {
+          user_id: user.id,
+          full_name: user.full_name,
+          avatar_url: user.avatar_url,
+          total_time: totalTime,
+          total_completed: totalCompleted,
+          current_streak: currentStreak
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error)
+    return []
+  }
+}
+
+// Get family leaderboard for parents
+export async function getFamilyLeaderboard(parentId: string, limit: number = 10): Promise<Array<{
+  user_id: string
+  full_name: string | null
+  avatar_url: string | null
+  total_time: number
+  total_completed: number
+  current_streak: number
+  role: string
+}>> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get parent and their children
+    const { data: familyMembers, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role')
+      .or(`id.eq.${parentId},parent_id.eq.${parentId}`)
+
+    if (error) throw error
+
+    // Calculate stats for each family member
+    const leaderboardData = await Promise.all(
+      (familyMembers || []).map(async (member) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', member.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        const { currentStreak } = member.role === 'student' ? await getCurrentStreak(member.id) : { currentStreak: 0 }
+
+        return {
+          user_id: member.id,
+          full_name: member.full_name,
+          avatar_url: member.avatar_url,
+          total_time: totalTime,
+          total_completed: totalCompleted,
+          current_streak: currentStreak,
+          role: member.role
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching family leaderboard:', error)
+    return []
+  }
+}
+
+// Check and unlock achievements for a user
+export async function checkAndUnlockAchievements(userId: string): Promise<string[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user stats
+    const { data: progressData } = await supabase
+      .from('user_progress')
+      .select('status, time_spent, completed_at')
+      .eq('user_id', userId)
+
+    const { data: achievements } = await supabase
+      .from('user_achievements')
+      .select('achievement_type')
+      .eq('user_id', userId)
+
+    const existingAchievements = achievements?.map(a => a.achievement_type) || []
+    const newAchievements: string[] = []
+
+    // Calculate stats
+    const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+    const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+
+    // Calculate current streak
+    const { currentStreak } = await getCurrentStreak(userId)
+
+    // Check for new achievements
+    const achievementChecks = [
+      {
+        type: 'first_steps',
+        condition: totalCompleted >= 1 && !existingAchievements.includes('first_steps'),
+        title: 'First Steps',
+        description: 'Completed your first learning module',
+        icon: '🎯'
+      },
+      {
+        type: 'content_explorer',
+        condition: totalCompleted >= 10 && !existingAchievements.includes('content_explorer'),
+        title: 'Content Explorer',
+        description: 'Completed 10 different learning modules',
+        icon: '🗺️'
+      },
+      {
+        type: 'quiz_master',
+        condition: totalCompleted >= 25 && !existingAchievements.includes('quiz_master'),
+        title: 'Quiz Master',
+        description: 'Completed 25 learning modules',
+        icon: '🏆'
+      },
+      {
+        type: 'weekly_warrior',
+        condition: totalTime >= 420 && !existingAchievements.includes('weekly_warrior'), // 7 hours
+        title: 'Weekly Warrior',
+        description: 'Spent 7+ hours learning this week',
+        icon: '⚔️'
+      },
+      {
+        type: 'learning_velocity',
+        condition: totalCompleted >= 50 && !existingAchievements.includes('learning_velocity'),
+        title: 'Learning Velocity',
+        description: 'Completed 50 learning modules at high speed',
+        icon: '🚀'
+      },
+      {
+        type: 'streak_master',
+        condition: currentStreak >= 7 && !existingAchievements.includes('streak_master'),
+        title: '7-Day Streak',
+        description: 'Maintained a 7-day learning streak',
+        icon: '🔥'
+      }
+    ]
+
+    // Check parent-specific achievements
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+
+    if (profile?.role === 'parent') {
+      // Get children stats
+      const { data: children } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('parent_id', userId)
+        .eq('role', 'student')
+
+      if (children && children.length > 0) {
+        let totalFamilyCompleted = totalCompleted
+        let totalFamilyTime = totalTime
+
+        for (const child of children) {
+          const { data: childProgress } = await supabase
+            .from('user_progress')
+            .select('status, time_spent')
+            .eq('user_id', child.id)
+
+          totalFamilyCompleted += childProgress?.filter(p => p.status === 'completed').length || 0
+          totalFamilyTime += childProgress?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        }
+
+        if (totalFamilyCompleted >= 20 && !existingAchievements.includes('parents_pride')) {
+          achievementChecks.push({
+            type: 'parents_pride',
+            condition: true,
+            title: 'Parent\'s Pride',
+            description: 'Helped family complete 20+ learning modules',
+            icon: '👨‍👩‍👧‍👦'
+          })
+        }
+      }
+    }
+
+    // Unlock new achievements
+    for (const check of achievementChecks) {
+      if (check.condition) {
+        try {
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: userId,
+              achievement_type: check.type,
+              title: check.title,
+              description: check.description,
+              icon: check.icon
+            })
+
+          newAchievements.push(check.title)
+        } catch (error) {
+          // Achievement might already exist, continue
+          console.log(`Achievement ${check.type} may already exist`)
+        }
+      }
+    }
+
+    return newAchievements
+  } catch (error) {
+    console.error('Error checking achievements:', error)
+    return []
+  }
+}
+
+// Get personalized recommendations for a user
+export async function getPersonalizedRecommendations(userId: string, limit: number = 6): Promise<ContentItem[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (profileError) throw profileError
+
+    // Get user's progress to understand what they've completed
+    const { data: progressData, error: progressError } = await supabase
+      .from('user_progress')
+      .select(`
+        content_id,
+        status,
+        content:content_items(
+          category_id,
+          difficulty,
+          tags
+        )
+      `)
+      .eq('user_id', userId)
+
+    if (progressError) throw progressError
+
+    // Analyze completed content to understand preferences
+    const completedContent = progressData?.filter(p => p.status === 'completed') || []
+    const completedCategories = completedContent.map(p => p.content?.category_id).filter(Boolean)
+    const completedTags = completedContent.flatMap(p => p.content?.tags || []).filter(Boolean) as string[]
+    const completedDifficulties = completedContent.map(p => p.content?.difficulty).filter(Boolean) as string[]
+
+    // Get all available content
+    const { data: allContent, error: contentError } = await supabase
+      .from('content_items')
+      .select(`
+        *,
+        category:categories(*)
+      `)
+      .eq('is_published', true)
+
+    if (contentError) throw contentError
+
+    // Filter out already completed content
+    const completedIds = completedContent.map(p => p.content_id)
+    let availableContent = allContent?.filter(item => !completedIds.includes(item.id)) || []
+
+    // Score content based on various factors
+    const scoredContent = availableContent.map(content => {
+      let score = 0
+
+      // Grade level match (high priority)
+      if (profile.grade_level && content.tags?.includes(profile.grade_level)) {
+        score += 10
+      }
+
+      // Interest match (high priority)
+      if (profile.interests && profile.interests.some((interest: string) =>
+        content.tags?.includes(interest) || content.title.toLowerCase().includes(interest.toLowerCase())
+      )) {
+        score += 8
+      }
+
+      // Category preference based on completed content
+      if (completedCategories.includes(content.category_id)) {
+        score += 6
+      }
+
+      // Difficulty progression (prefer slightly harder than current level)
+      const currentAvgDifficulty = completedDifficulties.length > 0 ?
+        completedDifficulties.reduce((sum, diff) => {
+          const levels = { beginner: 1, intermediate: 2, advanced: 3 }
+          return sum + (levels[diff as keyof typeof levels] || 1)
+        }, 0) / completedDifficulties.length : 1
+
+      const contentLevel = { beginner: 1, intermediate: 2, advanced: 3 }[content.difficulty] || 1
+      if (Math.abs(contentLevel - currentAvgDifficulty) <= 1) {
+        score += 4
+      }
+
+      // Tag similarity
+      const tagOverlap = content.tags?.filter(tag => completedTags.includes(tag)).length || 0
+      score += tagOverlap * 2
+
+      // Recency bonus (newer content slightly preferred)
+      const daysSinceCreated = (Date.now() - new Date(content.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      score += Math.max(0, 3 - daysSinceCreated / 30) // Bonus for content less than 30 days old
+
+      // Featured content bonus
+      if (content.is_featured) {
+        score += 2
+      }
+
+      return { ...content, recommendationScore: score }
+    })
+
+    // Sort by score and return top recommendations
+    return scoredContent
+      .sort((a, b) => b.recommendationScore - a.recommendationScore)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error getting personalized recommendations:', error)
+    // Fallback to featured content
+    try {
+      const supabase = createBrowserSupabaseClient()
+      const { data } = await supabase
+        .from('content_items')
+        .select(`
+          *,
+          category:categories(*)
+        `)
+        .eq('is_published', true)
+        .eq('is_featured', true)
+        .limit(limit)
+
+      return data || []
+    } catch (fallbackError) {
+      console.error('Fallback recommendation error:', fallbackError)
+      return []
+    }
+  }
+}
