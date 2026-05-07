@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# MCP configuration files (may contain secrets)
+.mcp.json
+.vscode/mcp.json
