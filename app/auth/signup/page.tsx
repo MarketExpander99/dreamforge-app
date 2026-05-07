@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Users, PenTool } from 'lucide-react'
+import { User, Users, PenTool, GraduationCap } from 'lucide-react'
 
 export default function SignupPage() {
   const [step, setStep] = useState<'role' | 'details'>('role')
-  const [role, setRole] = useState<'parent' | 'student' | 'content-creator' | null>(null)
+  const [role, setRole] = useState<'parent' | 'student' | 'content-creator' | 'teacher' | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,7 +22,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleRoleSelect = (selectedRole: 'parent' | 'student' | 'content-creator') => {
+  const handleRoleSelect = (selectedRole: 'parent' | 'student' | 'content-creator' | 'teacher') => {
     setRole(selectedRole)
     setStep('details')
   }
@@ -109,6 +109,14 @@ export default function SignupPage() {
             >
               <User className="h-8 w-8" />
               <span>Student (13+ years old)</span>
+            </Button>
+            <Button
+              onClick={() => handleRoleSelect('teacher')}
+              className="w-full h-20 flex flex-col items-center gap-2"
+              variant="outline"
+            >
+              <GraduationCap className="h-8 w-8" />
+              <span>Teacher</span>
             </Button>
             <Button
               onClick={() => handleRoleSelect('content-creator')}

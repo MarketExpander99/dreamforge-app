@@ -13,6 +13,7 @@ interface UserProfile {
   bio?: string
   interests?: string[]
   learning_goals?: string
+  teacher_onboarding_completed?: boolean
 }
 
 interface AuthContextType {

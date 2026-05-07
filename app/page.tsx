@@ -109,6 +109,21 @@ export default function Home() {
     }
   }, [user, profile, authLoading])
 
+  // Auto-redirect teachers to onboarding if not completed
+  useEffect(() => {
+    if (!authLoading && user && profile) {
+      const isTeacher = profile.role === 'teacher'
+      const isAdmin = user.email === 'eben.combrinck@proton.me'
+      const needsOnboarding = !profile.teacher_onboarding_completed
+
+      // Redirect teachers who haven't completed onboarding
+      if ((isTeacher || isAdmin) && needsOnboarding && !window.location.pathname.startsWith('/teacher')) {
+        console.log('🎯 Auto-redirecting teacher to onboarding:', user.email)
+        router.push('/teacher')
+      }
+    }
+  }, [user, profile, authLoading, router])
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Navigation />

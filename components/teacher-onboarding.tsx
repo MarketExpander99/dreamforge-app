@@ -138,29 +138,54 @@ export function TeacherOnboarding({ onComplete }: TeacherOnboardingProps) {
   const progress = ((completedSteps.size + (currentStep < steps.length ? 1 : 0)) / steps.length) * 100
 
   const handleNext = () => {
+    console.log(`🎯 handleNext called, currentStep: ${currentStep}, steps.length: ${steps.length}`)
     setCompletedSteps(prev => new Set([...prev, currentStep]))
 
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
+      const nextStep = currentStep + 1
+      console.log(`📍 Advancing to step ${nextStep}`)
+      setCurrentStep(nextStep)
     } else {
+      console.log('🎯 Reached final step, calling handleComplete')
       handleComplete()
     }
   }
 
   const handleComplete = async () => {
+    console.log('🎯 handleComplete function called!')
+
     try {
-      // Mark onboarding as complete in user profile
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({ teacher_onboarding_completed: true })
-          .eq('id', user.id)
+      console.log('🎯 Starting onboarding completion via API...')
+
+      // Call the API route to complete onboarding (bypasses RLS)
+      console.log('📡 Making fetch request to /api/onboarding/complete...')
+      const response = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      console.log('📡 Fetch response received, status:', response.status)
+
+      const result = await response.json()
+      console.log('📡 Response body:', result)
+
+      if (!response.ok) {
+        console.error('❌ API error:', result)
+        alert(`Failed to complete onboarding: ${result.error}`)
+        return
       }
+
+      console.log('✅ Onboarding completed successfully via API:', result)
+
     } catch (error) {
-      console.error('Error updating onboarding status:', error)
+      console.error('❌ Unexpected error in handleComplete:', error)
+      alert('An unexpected error occurred. Please try again.')
+      return
     }
 
+    console.log('🎉 Onboarding completion successful, calling onComplete callback')
     onComplete()
   }
 
