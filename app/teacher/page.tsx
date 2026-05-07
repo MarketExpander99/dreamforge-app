@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TeacherOnboarding } from '@/components/teacher-onboarding'
 import {
   Users,
   BookOpen,
@@ -15,11 +17,39 @@ import {
   Target,
   Award,
   Clock,
-  CheckCircle
+  CheckCircle,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
+import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 
 export default function TeacherDashboard() {
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const supabase = createBrowserSupabaseClient()
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('teacher_onboarding_completed')
+            .eq('id', user.id)
+            .single()
+
+          if (!profile?.teacher_onboarding_completed) {
+            setShowOnboarding(true)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error)
+      }
+    }
+
+    checkOnboardingStatus()
+  }, [supabase])
+
   // Mock data - in real app, this would come from database
   const stats = {
     totalStudents: 24,
@@ -177,11 +207,12 @@ export default function TeacherDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="classes">My Classes</TabsTrigger>
                 <TabsTrigger value="students">Students</TabsTrigger>
                 <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="moderation">Moderation</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -355,10 +386,126 @@ export default function TeacherDashboard() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Moderation Tab */}
+              <TabsContent value="moderation" className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-3 mb-6">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                      <BookOpen className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-orange-600">3</div>
+                      <p className="text-xs text-muted-foreground">
+                        content items awaiting approval
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Approved Today</CardTitle>
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">12</div>
+                      <p className="text-xs text-muted-foreground">
+                        content items approved
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+                      <X className="h-4 w-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-600">2</div>
+                      <p className="text-xs text-muted-foreground">
+                        content items this week
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Content Moderation Queue</CardTitle>
+                    <CardDescription>Review and approve teacher-created content</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Mock pending content items */}
+                      {[
+                        {
+                          id: 1,
+                          title: "Introduction to Photosynthesis",
+                          author: "Ms. Johnson",
+                          subject: "Natural Sciences",
+                          grade: "Grade 5",
+                          submitted: "2 hours ago",
+                          type: "lesson"
+                        },
+                        {
+                          id: 2,
+                          title: "Multiplication Quiz - Grade 4",
+                          author: "Mr. Smith",
+                          subject: "Mathematics",
+                          grade: "Grade 4",
+                          submitted: "4 hours ago",
+                          type: "quiz"
+                        },
+                        {
+                          id: 3,
+                          title: "English Literature Analysis",
+                          author: "Mrs. Davis",
+                          subject: "English Home Language",
+                          grade: "Grade 8",
+                          submitted: "1 day ago",
+                          type: "lesson"
+                        }
+                      ].map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold">{item.title}</h3>
+                              <Badge variant="outline" className="capitalize">{item.type}</Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>by {item.author}</span>
+                              <span>{item.subject}</span>
+                              <span>{item.grade}</span>
+                              <span>Submitted {item.submitted}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              Preview
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                              Reject
+                            </Button>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                              Approve
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </main>
       </div>
+
+      {/* Teacher Onboarding */}
+      {showOnboarding && (
+        <TeacherOnboarding onComplete={() => setShowOnboarding(false)} />
+      )}
     </div>
   )
 }
