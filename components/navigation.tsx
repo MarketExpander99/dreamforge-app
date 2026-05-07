@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target, GraduationCap } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target, GraduationCap, Download, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -195,6 +195,27 @@ export function Navigation() {
               </>
             )}
           </nav>
+
+          {/* Install App Button */}
+          <div className="px-2 pb-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 text-blue-700 hover:text-blue-800"
+              onClick={() => {
+                // Trigger install prompt or redirect to install instructions
+                if ('beforeinstallprompt' in window) {
+                  window.dispatchEvent(new Event('beforeinstallprompt'))
+                } else {
+                  // Fallback for browsers that don't support install prompt
+                  alert('To install Skill Gain, tap the share button in your browser and select "Add to Home Screen"')
+                }
+              }}
+            >
+              <Smartphone className="mr-3 h-5 w-5" />
+              Install App
+            </Button>
+          </div>
+
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full">
               <Avatar className="h-8 w-8">

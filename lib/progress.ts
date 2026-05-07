@@ -2,6 +2,7 @@
 import { useCallback } from 'react'
 import { createBrowserSupabaseClient } from './supabase-client'
 import { useUser } from './user-context'
+import { useOfflineQueue } from './offline-queue'
 
 // Client-side helper functions
 async function getUserProgressForContent(userId: string, contentId: string) {
@@ -127,6 +128,30 @@ export const progressUtils = {
         return {
           success: false,
           error: 'User not authenticated'
+        }
+      }
+
+      // Check if we're offline
+      const isOnline = navigator.onLine
+
+      if (!isOnline) {
+        // Queue for offline sync
+        try {
+          const { getOfflineQueue } = await import('./offline-queue')
+          const queue = getOfflineQueue()
+          await queue.addToQueue(update, user.id)
+
+          return {
+            success: true,
+            progress: null, // Will be synced when back online
+            error: undefined
+          }
+        } catch (queueError) {
+          console.error('Failed to queue offline progress:', queueError)
+          return {
+            success: false,
+            error: 'Failed to queue progress for offline sync'
+          }
         }
       }
 

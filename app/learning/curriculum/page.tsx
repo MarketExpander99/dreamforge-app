@@ -20,6 +20,7 @@ import {
 import { Recommendations } from '@/components/recommendations'
 import { BookOpen, Target, Clock, Star, ChevronRight, Play, ChevronDown, CheckCircle, Lock, MapPin, Route } from 'lucide-react'
 import { getNextBestLesson, LearningPath, NextBestLesson } from '@/lib/data'
+import { useCurriculumCache } from '@/lib/curriculum-cache'
 
 interface Curriculum {
   id: string
@@ -61,6 +62,7 @@ interface LessonPlan {
 export default function CurriculumPage() {
   const router = useRouter()
   const { user, profile } = useAuth()
+  const { cacheItem, getItems, preloadPopular } = useCurriculumCache()
   const [curriculums, setCurriculums] = useState<Curriculum[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([])
@@ -74,6 +76,7 @@ export default function CurriculumPage() {
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set())
   const [subjectLessons, setSubjectLessons] = useState<Record<string, LessonPlan[]>>({})
   const [nextBestLesson, setNextBestLesson] = useState<NextBestLesson | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
 
@@ -122,7 +125,42 @@ export default function CurriculumPage() {
 
   const loadCurriculumData = async () => {
     setLoading(true)
+    setIsOffline(!navigator.onLine)
+
     try {
+      // Check if we're offline and try to load from cache first
+      if (!navigator.onLine) {
+        console.log('Offline mode: Loading from cache')
+        try {
+          const cachedLessons = await getItems({ limit: 50 })
+          if (cachedLessons.length > 0) {
+            // Transform cached data to match expected format
+            const lessonPlans = cachedLessons.map(item => ({
+              id: item.id,
+              title: item.title,
+              description: item.content.substring(0, 200) + '...',
+              grade_level: selectedGrade,
+              duration_minutes: 45, // Default duration
+              unit_title: 'Unit',
+              term: 'Term 1',
+              week: 1,
+              difficulty: item.difficulty,
+              subject_id: item.category_id || '',
+              subjects: {
+                name: 'Subject',
+                icon: '📚',
+                color: '#3b82f6'
+              }
+            }))
+            setLessonPlans(lessonPlans)
+            setLoading(false)
+            return
+          }
+        } catch (cacheError) {
+          console.warn('Failed to load from cache:', cacheError)
+        }
+      }
+
       // Load curriculums
       const { data: curriculumData } = await supabase
         .from('curriculums')
@@ -160,6 +198,32 @@ export default function CurriculumPage() {
 
       setLessonPlans(lessonData || [])
 
+      // Cache lesson content for offline access
+      if (navigator.onLine && lessonData) {
+        try {
+          // Get content items for these lessons
+          const lessonIds = lessonData.map(lesson => lesson.id)
+          const { data: contentItems } = await supabase
+            .from('content_items')
+            .select('*')
+            .in('lesson_id', lessonIds)
+            .eq('is_published', true)
+            .limit(20) // Cache first 20 items
+
+          if (contentItems) {
+            for (const item of contentItems) {
+              try {
+                await cacheItem(item)
+              } catch (cacheError) {
+                console.warn(`Failed to cache item ${item.id}:`, cacheError)
+              }
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Failed to cache curriculum content:', cacheError)
+        }
+      }
+
       // Load user's learning paths
       if (selectedUserId) {
         const { data: pathData } = await supabase
@@ -180,6 +244,35 @@ export default function CurriculumPage() {
 
     } catch (error) {
       console.error('Error loading curriculum data:', error)
+
+      // If online request fails, try cache as fallback
+      if (navigator.onLine) {
+        try {
+          const cachedLessons = await getItems({ limit: 20 })
+          if (cachedLessons.length > 0) {
+            const lessonPlans = cachedLessons.map(item => ({
+              id: item.id,
+              title: item.title,
+              description: item.content.substring(0, 200) + '...',
+              grade_level: selectedGrade,
+              duration_minutes: 45,
+              unit_title: 'Unit',
+              term: 'Term 1',
+              week: 1,
+              difficulty: item.difficulty,
+              subject_id: item.category_id || '',
+              subjects: {
+                name: 'Subject',
+                icon: '📚',
+                color: '#3b82f6'
+              }
+            }))
+            setLessonPlans(lessonPlans)
+          }
+        } catch (cacheError) {
+          console.warn('Cache fallback also failed:', cacheError)
+        }
+      }
     } finally {
       setLoading(false)
     }

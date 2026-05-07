@@ -17,6 +17,29 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // PWA Configuration
+  serverExternalPackages: ['workbox-webpack-plugin'],
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
+
+      config.plugins.push(
+        new WorkboxWebpackPlugin.InjectManifest({
+          swSrc: './public/sw.js',
+          swDest: 'sw.js',
+          exclude: [
+            /\.map$/,
+            /^manifest.*\.js$/,
+            /\/_next\/static\/.*\.js$/,
+          ],
+        })
+      );
+    }
+
+    return config;
+  },
+  // Enable Turbopack compatibility
+  turbopack: {},
 };
 
 export default nextConfig;

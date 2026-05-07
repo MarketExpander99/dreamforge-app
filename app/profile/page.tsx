@@ -1,7 +1,7 @@
 "use client"
 
 import { Navigation } from '@/components/navigation'
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2 } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2, Bell, BellOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
+import { usePushNotifications, getNotificationPreferences, updateNotificationPreferences } from '@/lib/push-notifications'
 
 interface UserProfile {
   id: string
@@ -82,6 +83,16 @@ export default function ProfilePage() {
     newEmail: '',
     password: ''
   })
+
+  // Notification preferences state
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    achievements: true,
+    progress: true,
+    streaks: true,
+    nudges: true,
+    familyUpdates: true
+  })
+  const [savingNotifications, setSavingNotifications] = useState(false)
 
   // Handle profile save
   const handleSaveProfile = async () => {
@@ -160,6 +171,13 @@ export default function ProfilePage() {
       }
       // User is authenticated, fetch profile
       fetchProfile()
+
+      // Fetch notification preferences
+      getNotificationPreferences(user.id).then((prefs) => {
+        setNotificationPrefs(prefs)
+      }).catch((error) => {
+        console.error('Failed to load notification preferences:', error)
+      })
     }
   }, [user, authLoading])
 
@@ -546,13 +564,115 @@ export default function ProfilePage() {
                     <CardTitle>Account Settings</CardTitle>
                     <CardDescription>Manage your account preferences</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">Email Notifications</h4>
-                        <p className="text-sm text-muted-foreground">Receive updates about your learning progress</p>
+                  <CardContent className="space-y-6">
+                    {/* Push Notifications */}
+                    <div>
+                      <h4 className="font-medium mb-4 flex items-center gap-2">
+                        <Bell className="h-4 w-4" />
+                        Push Notifications
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Achievement Unlocks</p>
+                            <p className="text-xs text-muted-foreground">Get notified when you earn new achievements</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNotificationPrefs(prev => ({ ...prev, achievements: !prev.achievements }))}
+                          >
+                            {notificationPrefs.achievements ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Progress Milestones</p>
+                            <p className="text-xs text-muted-foreground">Notifications for completed lessons and modules</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNotificationPrefs(prev => ({ ...prev, progress: !prev.progress }))}
+                          >
+                            {notificationPrefs.progress ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Streak Reminders</p>
+                            <p className="text-xs text-muted-foreground">Daily reminders to maintain your learning streak</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNotificationPrefs(prev => ({ ...prev, streaks: !prev.streaks }))}
+                          >
+                            {notificationPrefs.streaks ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Learning Nudges</p>
+                            <p className="text-xs text-muted-foreground">Gentle reminders when you haven't learned for a few days</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNotificationPrefs(prev => ({ ...prev, nudges: !prev.nudges }))}
+                          >
+                            {notificationPrefs.nudges ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Family Updates</p>
+                            <p className="text-xs text-muted-foreground">Notifications about family member progress (for parents)</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNotificationPrefs(prev => ({ ...prev, familyUpdates: !prev.familyUpdates }))}
+                          >
+                            {notificationPrefs.familyUpdates ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="outline" size="sm">Configure</Button>
+
+                      <Button
+                        onClick={async () => {
+                          if (!user?.id) return
+                          setSavingNotifications(true)
+                          try {
+                            await updateNotificationPreferences(user.id, notificationPrefs)
+                            alert('Notification preferences saved!')
+                          } catch (error) {
+                            console.error('Failed to save notification preferences:', error)
+                            alert('Failed to save preferences')
+                          } finally {
+                            setSavingNotifications(false)
+                          }
+                        }}
+                        disabled={savingNotifications}
+                        className="mt-4"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {savingNotifications ? 'Saving...' : 'Save Preferences'}
+                      </Button>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">Email Notifications</h4>
+                          <p className="text-sm text-muted-foreground">Receive updates about your learning progress</p>
+                        </div>
+                        <Button variant="outline" size="sm">Configure</Button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between">
