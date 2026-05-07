@@ -166,6 +166,11 @@ export async function getContentItem(id: string): Promise<ContentItem | null> {
     .single()
 
   if (error) {
+    // Handle "not found" errors gracefully - these are expected 404s, not actual errors
+    if (error.code === 'PGRST116' || error.message?.includes('No rows found')) {
+      return null
+    }
+    // Only log actual errors, not missing content
     console.error('Error fetching content item:', error)
     return null
   }

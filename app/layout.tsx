@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/user-context";
 import { NotificationProvider } from "@/lib/notification-context";
@@ -61,8 +61,6 @@ export const metadata: Metadata = {
     },
   },
   manifest: "/manifest.json",
-  themeColor: "#3b82f6",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -77,6 +75,15 @@ export const metadata: Metadata = {
     "msapplication-config": "/browserconfig.xml",
   },
 };
+
+// Next.js 16+ App Router viewport configuration
+export const generateViewport = (): Viewport => ({
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#3b82f6',
+});
 
 export default function RootLayout({
   children,
