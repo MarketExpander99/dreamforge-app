@@ -202,7 +202,7 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
                           <CardContent>
                             <div className="flex items-center justify-between text-sm text-muted-foreground">
                               <span>{item.read_time} min read</span>
-                              <Link href={`/explore/${item.id}`}>
+                              <Link href={`/content/${item.id}`}>
                                 <Button size="sm" variant="outline">
                                   View Details
                                 </Button>

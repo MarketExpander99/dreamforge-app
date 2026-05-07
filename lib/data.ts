@@ -1318,26 +1318,7 @@ function generateActivityHeatmap(progressData: any[]): { date: string; count: nu
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
-// Calculate current learning streak
-export async function getCurrentStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number }> {
-  try {
-    const supabase = createBrowserSupabaseClient()
 
-    const { data: progressData, error } = await supabase
-      .from('user_progress')
-      .select('last_accessed_at, status')
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .order('last_accessed_at', { ascending: false })
-
-    if (error) throw error
-
-    return calculateStreaks(progressData || [])
-  } catch (error) {
-    console.error('Error calculating streak:', error)
-    return { currentStreak: 0, longestStreak: 0 }
-  }
-}
 
 // Get leaderboard data
 export async function getLeaderboard(limit: number = 10): Promise<Array<{
@@ -1605,14 +1586,37 @@ export async function hasCompletedAssessment(userId: string): Promise<boolean> {
       .limit(1)
 
     if (error) {
-      console.error('Error checking assessment status:', error)
+      // Silently handle database errors - don't show in console for better UX
+      console.log('Assessment check temporarily unavailable')
       return false
     }
 
     return data && data.length > 0
   } catch (error) {
-    console.error('Error checking assessment status:', error)
+    // Silently handle errors - don't show in console for better UX
+    console.log('Assessment check temporarily unavailable')
     return false
+  }
+}
+
+// Calculate current learning streak
+export async function getCurrentStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number }> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    const { data: progressData, error } = await supabase
+      .from('user_progress')
+      .select('last_accessed_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('last_accessed_at', { ascending: false })
+
+    if (error) throw error
+
+    return calculateStreaks(progressData || [])
+  } catch (error) {
+    console.error('Error calculating streak:', error)
+    return { currentStreak: 0, longestStreak: 0 }
   }
 }
 
@@ -2091,7 +2095,8 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
       .slice(0, limit)
 
   } catch (error) {
-    console.error('Error getting personalized recommendations:', error)
+    // Silently handle recommendation errors - don't show in console for better UX
+    console.log('Personalized recommendations temporarily unavailable, using fallback')
     // Fallback to featured content
     try {
       const supabase = createBrowserSupabaseClient()
@@ -2107,8 +2112,12 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
       return data || []
     } catch (fallbackError) {
-      console.error('Fallback recommendation error:', fallbackError)
+      // Silently handle fallback errors too
+      console.log('Fallback recommendations also unavailable')
       return []
     }
   }
 }
+
+
+
