@@ -66,8 +66,9 @@ export async function middleware(request: NextRequest) {
 
     // Allow access if:
     // 1. User has 'content-creator' role, OR
-    // 2. User's email is the special test email (for development)
-    const hasAccess = userRole === 'content-creator' || userEmail === 'eben.combrinck@proton.me'
+    // 2. User has 'teacher' role, OR
+    // 3. User's email is the special test email (for development)
+    const hasAccess = userRole === 'content-creator' || userRole === 'teacher' || userEmail === 'eben.combrinck@proton.me'
 
     if (!hasAccess) {
       // Redirect to home page if not authorized
