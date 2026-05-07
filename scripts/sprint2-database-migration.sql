@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS email_notifications (
 ALTER TABLE email_notifications ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for email notifications
+DROP POLICY IF EXISTS "Users can view their own email notifications" ON email_notifications;
+DROP POLICY IF EXISTS "Service role can insert email notifications" ON email_notifications;
+
 CREATE POLICY "Users can view their own email notifications"
   ON email_notifications FOR SELECT
   USING (auth.uid() = recipient_id);
@@ -82,10 +85,11 @@ CREATE POLICY "Service role can insert email notifications"
 CREATE TABLE IF NOT EXISTS curriculum_subjects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
-  code TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL,
   grade_level TEXT NOT NULL,
   description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(code, grade_level)
 );
 
 CREATE TABLE IF NOT EXISTS curriculum_lessons (
@@ -116,6 +120,23 @@ CREATE TABLE IF NOT EXISTS curriculum_assessments (
   points INTEGER DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add unique constraint for assessment_questions to support ON CONFLICT
+-- First check if it exists and drop if needed
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'assessment_questions_unique_question'
+  ) THEN
+    ALTER TABLE assessment_questions DROP CONSTRAINT assessment_questions_unique_question;
+  END IF;
+END $$;
+
+-- Add unique constraint on curriculum, grade, subject, and question
+ALTER TABLE assessment_questions
+ADD CONSTRAINT assessment_questions_unique_question
+UNIQUE (curriculum_id, grade_level, subject, question);
 
 -- 4. Create teacher-specific tables
 -- ===========================================
@@ -181,6 +202,10 @@ ALTER TABLE teacher_content ENABLE ROW LEVEL SECURITY;
 
 -- 6. RLS Policies for curriculum tables (public read for published content)
 -- ===========================================
+DROP POLICY IF EXISTS "Anyone can view curriculum subjects" ON curriculum_subjects;
+DROP POLICY IF EXISTS "Anyone can view curriculum lessons" ON curriculum_lessons;
+DROP POLICY IF EXISTS "Anyone can view curriculum assessments" ON curriculum_assessments;
+
 CREATE POLICY "Anyone can view curriculum subjects"
   ON curriculum_subjects FOR SELECT USING (true);
 
@@ -199,6 +224,11 @@ CREATE POLICY "Anyone can view curriculum assessments"
 
 -- 7. RLS Policies for teacher tables
 -- ===========================================
+DROP POLICY IF EXISTS "Teachers can view their own classes" ON teacher_classes;
+DROP POLICY IF EXISTS "Teachers can create their own classes" ON teacher_classes;
+DROP POLICY IF EXISTS "Teachers can update their own classes" ON teacher_classes;
+DROP POLICY IF EXISTS "Students can view classes they're enrolled in" ON teacher_classes;
+
 CREATE POLICY "Teachers can view their own classes"
   ON teacher_classes FOR SELECT
   USING (auth.uid() = teacher_id);
@@ -221,6 +251,10 @@ CREATE POLICY "Students can view classes they're enrolled in"
       AND cs.status = 'active'
     )
   );
+
+DROP POLICY IF EXISTS "Students can view their class enrollments" ON class_students;
+DROP POLICY IF EXISTS "Teachers can view students in their classes" ON class_students;
+DROP POLICY IF EXISTS "Teachers can manage class enrollments" ON class_students;
 
 CREATE POLICY "Students can view their class enrollments"
   ON class_students FOR SELECT
@@ -245,6 +279,11 @@ CREATE POLICY "Teachers can manage class enrollments"
       AND tc.teacher_id = auth.uid()
     )
   );
+
+DROP POLICY IF EXISTS "Teachers can view their own content" ON teacher_content;
+DROP POLICY IF EXISTS "Teachers can create content" ON teacher_content;
+DROP POLICY IF EXISTS "Teachers can update their own content" ON teacher_content;
+DROP POLICY IF EXISTS "Students can view published content from their classes" ON teacher_content;
 
 CREATE POLICY "Teachers can view their own content"
   ON teacher_content FOR SELECT
@@ -274,6 +313,10 @@ CREATE POLICY "Students can view published content from their classes"
 
 -- 8. Add updated_at triggers for new tables
 -- ===========================================
+DROP TRIGGER IF EXISTS update_curriculum_lessons_updated_at ON curriculum_lessons;
+DROP TRIGGER IF EXISTS update_teacher_classes_updated_at ON teacher_classes;
+DROP TRIGGER IF EXISTS update_teacher_content_updated_at ON teacher_content;
+
 CREATE TRIGGER update_curriculum_lessons_updated_at
   BEFORE UPDATE ON curriculum_lessons
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

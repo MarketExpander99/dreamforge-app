@@ -11,436 +11,1062 @@
 -- ===========================================
 
 -- Insert assessment questions for Mathematics Grades 4-9
+-- Only insert if the question doesn't already exist
 INSERT INTO assessment_questions (
   curriculum_id,
-  grade_level,
   subject,
+  grade_level,
+  question_type,
   question,
   options,
   correct_answer,
-  explanation,
   difficulty,
   points,
-  tags,
   is_active
-) VALUES
--- Grade 4 Mathematics (20 questions)
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 3 × 4 × 2?',
- '["12", "24", "18", "20"]',
- 1,
- '3 × 4 = 12, then 12 × 2 = 24',
- 'intermediate',
- 2,
- ARRAY['multiplication', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Which fraction represents one quarter?',
- '["1/2", "1/3", "1/4", "2/4"]',
- 2,
- 'One quarter means dividing into 4 equal parts and taking 1 part',
- 'beginner',
- 1,
- ARRAY['fractions', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is the perimeter of a square with side length 5 cm?',
- '["10 cm", "15 cm", "20 cm", "25 cm"]',
- 2,
- 'Perimeter = 4 × side length = 4 × 5 = 20 cm',
- 'intermediate',
- 2,
- ARRAY['perimeter', 'geometry', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'If you have 24 apples and share them equally among 6 friends, how many does each friend get?',
- '["3", "4", "5", "6"]',
- 1,
- '24 ÷ 6 = 4',
- 'intermediate',
- 2,
- ARRAY['division', 'sharing', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 0.5 as a fraction?',
- '["1/2", "1/3", "1/4", "1/5"]',
- 0,
- '0.5 = 5/10 = 1/2 when simplified',
- 'intermediate',
- 2,
- ARRAY['decimals', 'fractions', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'How many faces does a cube have?',
- '["4", "6", "8", "12"]',
- 1,
- 'A cube has 6 faces',
- 'beginner',
- 1,
- ARRAY['geometry', '3d-shapes', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 15 + 27?',
- '["32", "42", "52", "62"]',
- 1,
- '15 + 27 = 42',
- 'beginner',
- 1,
- ARRAY['addition', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Which of these is a prime number?',
- '["4", "6", "7", "9"]',
- 2,
- '7 is a prime number (only divisible by 1 and itself)',
- 'intermediate',
- 2,
- ARRAY['prime-numbers', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is the area of a rectangle with length 8 cm and width 3 cm?',
- '["11 cm²", "24 cm²", "16 cm²", "32 cm²"]',
- 1,
- 'Area = length × width = 8 × 3 = 24 cm²',
- 'intermediate',
- 2,
- ARRAY['area', 'rectangle', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Round 47 to the nearest ten.',
- '["40", "50", "45", "47"]',
- 1,
- '47 is closer to 50 than to 40',
- 'intermediate',
- 2,
- ARRAY['rounding', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 100 - 37?',
- '["63", "73", "53", "83"]',
- 0,
- '100 - 37 = 63',
- 'beginner',
- 1,
- ARRAY['subtraction', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'How many millimeters are in 3 centimeters?',
- '["30", "300", "3", "0.3"]',
- 0,
- '1 cm = 10 mm, so 3 cm = 30 mm',
- 'intermediate',
- 2,
- ARRAY['measurement', 'millimeters', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 2/5 + 1/5?',
- '["3/5", "2/10", "1/5", "3/10"]',
- 0,
- '2/5 + 1/5 = 3/5',
- 'intermediate',
- 2,
- ARRAY['fractions', 'addition', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Which shape has 5 sides?',
- '["Triangle", "Square", "Pentagon", "Hexagon"]',
- 2,
- 'A pentagon has 5 sides',
- 'beginner',
- 1,
- ARRAY['geometry', 'shapes', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 6 × 7?',
- '["42", "36", "48", "54"]',
- 0,
- '6 × 7 = 42',
- 'intermediate',
- 2,
- ARRAY['multiplication', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Convert 3/4 to a decimal.',
- '["0.75", "0.25", "0.5", "0.33"]',
- 0,
- '3 ÷ 4 = 0.75',
- 'intermediate',
- 2,
- ARRAY['fractions', 'decimals', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is the place value of 7 in 473?',
- '["7", "70", "700", "7 tens"]',
- 1,
- 'In 473, 7 is in the tens place, so its value is 70',
- 'intermediate',
- 2,
- ARRAY['place-value', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'How many degrees are in a right angle?',
- '["45°", "90°", "180°", "360°"]',
- 1,
- 'A right angle measures 90 degrees',
- 'beginner',
- 1,
- ARRAY['angles', 'geometry', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'What is 25% as a fraction?',
- '["1/4", "1/2", "3/4", "1/5"]',
- 0,
- '25% = 25/100 = 1/4',
- 'intermediate',
- 2,
- ARRAY['percentages', 'fractions', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Mathematics',
- 'Calculate 12 ÷ 3.',
- '["3", "4", "5", "6"]',
- 1,
- '12 ÷ 3 = 4',
- 'beginner',
- 1,
- ARRAY['division', 'grade-4'],
- true),
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 3 × 4 × 2?',
+  ARRAY['12', '24', '18', '20'],
+  '24',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 3 × 4 × 2?'
+);
 
--- Grade 5 Mathematics (20 questions)
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 0.25 + 0.75?',
- '["1.00", "0.10", "0.50", "1.25"]',
- 0,
- '0.25 + 0.75 = 1.00',
- 'intermediate',
- 2,
- ARRAY['decimals', 'addition', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Calculate the area of a triangle with base 10 cm and height 6 cm.',
- '["30 cm²", "60 cm²", "16 cm²", "80 cm²"]',
- 0,
- 'Area = (base × height) ÷ 2 = (10 × 6) ÷ 2 = 60 ÷ 2 = 30 cm²',
- 'intermediate',
- 2,
- ARRAY['area', 'triangle', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 3/4 × 2/3?',
- '["1/2", "2/3", "1/4", "3/8"]',
- 0,
- '3/4 × 2/3 = (3×2)/(4×3) = 6/12 = 1/2',
- 'advanced',
- 3,
- ARRAY['fractions', 'multiplication', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Round 2.783 to the nearest hundredth.',
- '["2.78", "2.79", "2.80", "2.78"]',
- 0,
- '2.783 to nearest hundredth is 2.78',
- 'intermediate',
- 2,
- ARRAY['decimals', 'rounding', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is the volume of a rectangular prism with length 5 cm, width 3 cm, and height 4 cm?',
- '["60 cm³", "24 cm³", "47 cm³", "12 cm³"]',
- 0,
- 'Volume = length × width × height = 5 × 3 × 4 = 60 cm³',
- 'intermediate',
- 2,
- ARRAY['volume', '3d-shapes', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Simplify 12/18.',
- '["2/3", "1/2", "3/4", "4/6"]',
- 0,
- 'Divide numerator and denominator by 6: 12÷6=2, 18÷6=3, so 2/3',
- 'intermediate',
- 2,
- ARRAY['fractions', 'simplification', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 45% of 200?',
- '["90", "45", "900", "22.5"]',
- 0,
- '45% of 200 = 0.45 × 200 = 90',
- 'intermediate',
- 2,
- ARRAY['percentages', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Solve for x: 2x + 5 = 15',
- '["5", "10", "7.5", "3"]',
- 0,
- '2x + 5 = 15, so 2x = 10, x = 5',
- 'intermediate',
- 2,
- ARRAY['algebra', 'equations', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is the circumference of a circle with radius 7 cm? (Use π ≈ 3.14)',
- '["43.96 cm", "21.98 cm", "153.86 cm", "87.92 cm"]',
- 0,
- 'Circumference = 2 × π × r = 2 × 3.14 × 7 ≈ 43.96 cm',
- 'intermediate',
- 2,
- ARRAY['circumference', 'circles', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Convert 3.5 km to meters.',
- '["3500 m", "350 m", "35 m", "3.5 m"]',
- 0,
- '1 km = 1000 m, so 3.5 km = 3500 m',
- 'beginner',
- 1,
- ARRAY['measurement', 'conversion', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is the median of: 3, 7, 2, 9, 5?',
- '["5", "3", "7", "2"]',
- 0,
- 'Sort: 2, 3, 5, 7, 9. Median is the middle value: 5',
- 'intermediate',
- 2,
- ARRAY['statistics', 'median', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Calculate 1.5 × 4.2',
- '["6.3", "5.7", "7.2", "6.0"]',
- 0,
- '1.5 × 4.2 = 6.3',
- 'intermediate',
- 2,
- ARRAY['decimals', 'multiplication', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 5/6 - 1/3?',
- '["1/2", "1/3", "2/3", "1/6"]',
- 0,
- '5/6 - 1/3 = 5/6 - 2/6 = 3/6 = 1/2',
- 'intermediate',
- 2,
- ARRAY['fractions', 'subtraction', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'How many edges does a rectangular prism have?',
- '["8", "12", "6", "4"]',
- 1,
- 'A rectangular prism has 12 edges',
- 'beginner',
- 1,
- ARRAY['geometry', '3d-shapes', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 2³?',
- '["6", "8", "9", "16"]',
- 1,
- '2³ = 2 × 2 × 2 = 8',
- 'intermediate',
- 2,
- ARRAY['exponents', 'powers', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Find the area of a circle with radius 5 cm. (Use π ≈ 3.14)',
- '["78.5 cm²", "31.4 cm²", "15.7 cm²", "25 cm²"]',
- 0,
- 'Area = π × r² = 3.14 × 25 = 78.5 cm²',
- 'intermediate',
- 2,
- ARRAY['area', 'circles', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is 40% as a decimal?',
- '["0.4", "0.04", "4.0", "0.40"]',
- 0,
- '40% = 0.40',
- 'beginner',
- 1,
- ARRAY['percentages', 'decimals', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'Solve: 3x = 21',
- '["7", "18", "24", "63"]',
- 0,
- 'x = 21 ÷ 3 = 7',
- 'beginner',
- 1,
- ARRAY['algebra', 'equations', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Mathematics',
- 'What is the range of: 12, 8, 15, 6, 10?',
- '["9", "10", "15", "6"]',
- 0,
- 'Range = maximum - minimum = 15 - 6 = 9',
- 'intermediate',
- 2,
- ARRAY['statistics', 'range', 'grade-5'],
- true),
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+   'Which fraction represents one quarter?',
+   ARRAY['1/2', '1/3', '1/4', '2/4'],
+   '1/4',
+   'easy',
+   1,
+   true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Which fraction represents one quarter?'
+);
 
--- Continue with Grades 6-9 Mathematics and other subjects...
--- (Adding abbreviated versions for brevity - in real implementation, would include all 20 questions per grade/subject)
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is the perimeter of a square with side length 5 cm?',
+  ARRAY['10 cm', '15 cm', '20 cm', '25 cm'],
+  '20 cm',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is the perimeter of a square with side length 5 cm?'
+);
 
--- Grade 6 Mathematics (sample of 5 questions)
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 6', 'Mathematics',
- 'Solve: 2(x + 3) = 14',
- '["4", "5", "3.5", "7"]',
- 1,
- '2(x + 3) = 14, so x + 3 = 7, x = 4',
- 'intermediate',
- 2,
- ARRAY['algebra', 'equations', 'grade-6'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 6', 'Mathematics',
- 'What is the probability of rolling a 6 on a fair die?',
- '["1/6", "1/2", "1/3", "1/4"]',
- 0,
- 'A die has 6 faces, so probability = 1/6',
- 'intermediate',
- 2,
- ARRAY['probability', 'grade-6'],
- true),
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'If you have 24 apples and share them equally among 6 friends, how many does each friend get?',
+  ARRAY['3', '4', '5', '6'],
+  '4',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'If you have 24 apples and share them equally among 6 friends, how many does each friend get?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 0.5 as a fraction?',
+  ARRAY['1/2', '1/3', '1/4', '1/5'],
+  '1/2',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 0.5 as a fraction?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'How many faces does a cube have?',
+  ARRAY['4', '6', '8', '12'],
+  '6',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'How many faces does a cube have?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 15 + 27?',
+  ARRAY['32', '42', '52', '62'],
+  '42',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 15 + 27?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'Which of these is a prime number?',
+  ARRAY['4', '6', '7', '9'],
+  '7',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Which of these is a prime number?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is the area of a rectangle with length 8 cm and width 3 cm?',
+  ARRAY['11 cm²', '24 cm²', '16 cm²', '32 cm²'],
+  '24 cm²',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is the area of a rectangle with length 8 cm and width 3 cm?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'Round 47 to the nearest ten.',
+  ARRAY['40', '50', '45', '47'],
+  '50',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Round 47 to the nearest ten.'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 100 - 37?',
+  ARRAY['63', '73', '53', '83'],
+  '63',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 100 - 37?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'How many millimeters are in 3 centimeters?',
+  ARRAY['30', '300', '3', '0.3'],
+  '30',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'How many millimeters are in 3 centimeters?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 2/5 + 1/5?',
+  ARRAY['3/5', '2/10', '1/5', '3/10'],
+  '3/5',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 2/5 + 1/5?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'Which shape has 5 sides?',
+  ARRAY['Triangle', 'Square', 'Pentagon', 'Hexagon'],
+  'Pentagon',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Which shape has 5 sides?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 6 × 7?',
+  ARRAY['42', '36', '48', '54'],
+  '42',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 6 × 7?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'Convert 3/4 to a decimal.',
+  ARRAY['0.75', '0.25', '0.5', '0.33'],
+  '0.75',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Convert 3/4 to a decimal.'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is the place value of 7 in 473?',
+  ARRAY['7', '70', '700', '7 tens'],
+  '70',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is the place value of 7 in 473?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'How many degrees are in a right angle?',
+  ARRAY['45°', '90°', '180°', '360°'],
+  '90°',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'How many degrees are in a right angle?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'What is 25% as a fraction?',
+  ARRAY['1/4', '1/2', '3/4', '1/5'],
+  '1/4',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is 25% as a fraction?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 4',
+  'multiple_choice',
+  'Calculate 12 ÷ 3.',
+  ARRAY['3', '4', '5', '6'],
+  '4',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 4'
+    AND question = 'Calculate 12 ÷ 3.'
+);
+
+-- Sample additional assessment questions (in production, would have 20+ per grade/subject)
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'What is 0.25 + 0.75?',
+  ARRAY['1.00', '0.10', '0.50', '1.25'],
+  '1.00',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'What is 0.25 + 0.75?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'Calculate the area of a triangle with base 10 cm and height 6 cm.',
+  ARRAY['30 cm²', '60 cm²', '16 cm²', '80 cm²'],
+  '30 cm²',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'Calculate the area of a triangle with base 10 cm and height 6 cm.'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'What is 3/4 × 2/3?',
+  ARRAY['1/2', '2/3', '1/4', '3/8'],
+  '1/2',
+  'hard',
+  3,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'What is 3/4 × 2/3?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'Round 2.783 to the nearest hundredth.',
+  ARRAY['2.78', '2.79', '2.80', '2.78'],
+  '2.78',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'Round 2.783 to the nearest hundredth.'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'What is the volume of a rectangular prism with length 5 cm, width 3 cm, and height 4 cm?',
+  ARRAY['60 cm³', '24 cm³', '47 cm³', '12 cm³'],
+  '60 cm³',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'What is the volume of a rectangular prism with length 5 cm, width 3 cm, and height 4 cm?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'Simplify 12/18.',
+  ARRAY['2/3', '1/2', '3/4', '4/6'],
+  '2/3',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'Simplify 12/18.'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'What is 45% of 200?',
+  ARRAY['90', '45', '900', '22.5'],
+  '90',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'What is 45% of 200?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'Solve for x: 2x + 5 = 15',
+  ARRAY['5', '10', '7.5', '3'],
+  '5',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'Solve for x: 2x + 5 = 15'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'What is the circumference of a circle with radius 7 cm? (Use π ≈ 3.14)',
+  ARRAY['43.96 cm', '21.98 cm', '153.86 cm', '87.92 cm'],
+  '43.96 cm',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'What is the circumference of a circle with radius 7 cm? (Use π ≈ 3.14)'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Mathematics',
+  'Grade 5',
+  'multiple_choice',
+  'Convert 3.5 km to meters.',
+  ARRAY['3500 m', '350 m', '35 m', '3.5 m'],
+  '3500 m',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Mathematics'
+    AND grade_level = 'Grade 5'
+    AND question = 'Convert 3.5 km to meters.'
+);
 
 -- Natural Sciences assessment questions for Grades 4-5
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Natural Sciences',
- 'What is the process by which plants make their own food?',
- '["Respiration", "Photosynthesis", "Transpiration", "Germination"]',
- 1,
- 'Plants make food through photosynthesis using sunlight, water, and carbon dioxide',
- 'intermediate',
- 2,
- ARRAY['photosynthesis', 'plants', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 4', 'Natural Sciences',
- 'Which of these is NOT a state of matter?',
- '["Solid", "Liquid", "Gas", "Energy"]',
- 3,
- 'Energy is not a state of matter. The three states of matter are solid, liquid, and gas.',
- 'beginner',
- 1,
- ARRAY['states-of-matter', 'grade-4'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Natural Sciences',
- 'What system in the human body is responsible for pumping blood?',
- '["Digestive", "Respiratory", "Circulatory", "Nervous"]',
- 2,
- 'The circulatory system, with the heart as its pump, circulates blood throughout the body',
- 'intermediate',
- 2,
- ARRAY['circulatory-system', 'heart', 'grade-5'],
- true),
-((SELECT id FROM curriculums WHERE name = 'CAPS'), 'Grade 5', 'Natural Sciences',
- 'What type of energy is stored in a stretched rubber band?',
- '["Kinetic", "Potential", "Heat", "Light"]',
- 1,
- 'A stretched rubber band has potential energy stored in it',
- 'intermediate',
- 2,
- ARRAY['energy', 'potential-energy', 'grade-5'],
- true)
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Natural Sciences',
+  'Grade 4',
+  'multiple_choice',
+  'What is the process by which plants make their own food?',
+  ARRAY['Respiration', 'Photosynthesis', 'Transpiration', 'Germination'],
+  'Photosynthesis',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Natural Sciences'
+    AND grade_level = 'Grade 4'
+    AND question = 'What is the process by which plants make their own food?'
+);
 
-ON CONFLICT (curriculum_id, grade_level, subject, question) DO NOTHING;
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Natural Sciences',
+  'Grade 4',
+  'multiple_choice',
+  'Which of these is NOT a state of matter?',
+  ARRAY['Solid', 'Liquid', 'Gas', 'Energy'],
+  'Energy',
+  'easy',
+  1,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Natural Sciences'
+    AND grade_level = 'Grade 4'
+    AND question = 'Which of these is NOT a state of matter?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Natural Sciences',
+  'Grade 5',
+  'multiple_choice',
+  'What system in the human body is responsible for pumping blood?',
+  ARRAY['Digestive', 'Respiratory', 'Circulatory', 'Nervous'],
+  'Circulatory',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Natural Sciences'
+    AND grade_level = 'Grade 5'
+    AND question = 'What system in the human body is responsible for pumping blood?'
+);
+
+INSERT INTO assessment_questions (
+  curriculum_id,
+  subject,
+  grade_level,
+  question_type,
+  question,
+  options,
+  correct_answer,
+  difficulty,
+  points,
+  is_active
+)
+SELECT
+  (SELECT id FROM curriculums WHERE name = 'CAPS'),
+  'Natural Sciences',
+  'Grade 5',
+  'multiple_choice',
+  'What type of energy is stored in a stretched rubber band?',
+  ARRAY['Kinetic', 'Potential', 'Heat', 'Light'],
+  'Potential',
+  'intermediate',
+  2,
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM assessment_questions
+  WHERE curriculum_id = (SELECT id FROM curriculums WHERE name = 'CAPS')
+    AND subject = 'Natural Sciences'
+    AND grade_level = 'Grade 5'
+    AND question = 'What type of energy is stored in a stretched rubber band?'
+);
 
 -- ===========================================
 -- 2. ADDITIONAL CAPS LESSONS FOR GRADES 1-3 AND 10-12
