@@ -52,49 +52,95 @@ export default function TeacherDashboard() {
     checkOnboardingStatus()
   }, [supabase])
 
-  // Mock data - in real app, this would come from database
-  const stats = {
-    totalStudents: 24,
-    activeStudents: 18,
-    classesCreated: 3,
-    lessonsAssigned: 12,
-    avgCompletion: 78,
-    totalEngagement: 156
-  }
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    activeStudents: 0,
+    classesCreated: 0,
+    lessonsAssigned: 0,
+    avgCompletion: 0,
+    totalEngagement: 0
+  })
 
-  const recentActivity = [
-    { id: 1, type: 'student', message: 'Sarah completed "Multiplication Basics"', time: '2 hours ago' },
-    { id: 2, type: 'class', message: 'New student joined "Grade 4 Math Class"', time: '4 hours ago' },
-    { id: 3, type: 'lesson', message: 'Lesson "Fractions Introduction" assigned to 8 students', time: '1 day ago' },
-    { id: 4, type: 'progress', message: 'Class average improved by 12% this week', time: '2 days ago' },
-  ]
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [classData, setClassData] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const classData = [
-    {
-      id: 'grade4-math',
-      name: 'Grade 4 Mathematics',
-      students: 12,
-      avgProgress: 82,
-      activeThisWeek: 10,
-      code: 'MATH4-2024'
-    },
-    {
-      id: 'grade5-science',
-      name: 'Grade 5 Natural Sciences',
-      students: 8,
-      avgProgress: 75,
-      activeThisWeek: 6,
-      code: 'SCI5-2024'
-    },
-    {
-      id: 'grade3-english',
-      name: 'Grade 3 English',
-      students: 4,
-      avgProgress: 68,
-      activeThisWeek: 3,
-      code: 'ENG3-2024'
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Load teacher's classes
+        const { data: classes, error: classesError } = await supabase
+          .from('teacher_classes')
+          .select(`
+            id,
+            name,
+            subject,
+            grade_level,
+            class_code,
+            created_at,
+            max_students,
+            is_active
+          `)
+          .eq('teacher_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+
+        if (classesError) {
+          console.error('Error loading classes:', classesError)
+          return
+        }
+
+        // Load student counts for each class
+        const classesWithCounts = await Promise.all(
+          (classes || []).map(async (classItem) => {
+            const { count: studentCount } = await supabase
+              .from('class_students')
+              .select('*', { count: 'exact', head: true })
+              .eq('class_id', classItem.id)
+              .eq('status', 'active')
+
+            return {
+              ...classItem,
+              students: studentCount || 0,
+              avgProgress: 0, // TODO: Calculate actual progress
+              activeThisWeek: 0, // TODO: Calculate active students this week
+            }
+          })
+        )
+
+        setClassData(classesWithCounts)
+
+        // Calculate stats
+        const totalStudents = classesWithCounts.reduce((sum, cls) => sum + cls.students, 0)
+        const classesCreated = classesWithCounts.length
+
+        setStats({
+          totalStudents,
+          activeStudents: totalStudents, // For now, assume all are active
+          classesCreated,
+          lessonsAssigned: 0, // TODO: Calculate from assignments
+          avgCompletion: 0, // TODO: Calculate from progress data
+          totalEngagement: totalStudents * 5 // Mock engagement score
+        })
+
+        // Mock recent activity - in real app, this would come from a notifications/activities table
+        setRecentActivity([
+          { id: 1, type: 'class', message: `Created "${classesWithCounts[0]?.name || 'New Class'}"`, time: 'Recently' },
+          { id: 2, type: 'info', message: `${totalStudents} students enrolled across ${classesCreated} classes`, time: 'This week' },
+        ])
+
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ]
+
+    loadDashboardData()
+  }, [supabase])
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -319,26 +365,94 @@ export default function TeacherDashboard() {
 
               {/* Classes Tab */}
               <TabsContent value="classes" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>My Classes</CardTitle>
-                    <CardDescription>Manage your teaching classes</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">My Classes</h2>
+                    <p className="text-muted-foreground">Manage your teaching classes</p>
+                  </div>
+                  <Button asChild>
+                    <Link href="/teacher/classes/new">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Class
+                    </Link>
+                  </Button>
+                </div>
+
+                {isLoading ? (
+                  <Card>
+                    <CardContent className="py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="ml-2">Loading classes...</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : classData.length === 0 ? (
+                  <Card>
+                    <CardContent className="text-center py-8">
                       <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-semibold mb-2">Class Management</h3>
+                      <h3 className="font-semibold mb-2">No Classes Yet</h3>
                       <p className="text-muted-foreground mb-4">
-                        Create and manage classes, assign students, and track progress.
+                        Create your first class to start teaching and managing students.
                       </p>
                       <Button asChild>
                         <Link href="/teacher/classes/new">
                           Create New Class
                         </Link>
                       </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {classData.map((classItem) => (
+                      <Card key={classItem.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg mb-1">{classItem.name}</CardTitle>
+                              <CardDescription>
+                                {classItem.subject.replace('-', ' ')} • {classItem.grade_level.replace('grade-', 'Grade ')}
+                              </CardDescription>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {classItem.class_code}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Students</span>
+                              <span className="font-medium">{classItem.students}/{classItem.max_students}</span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Status</span>
+                              <Badge variant={classItem.is_active ? "default" : "secondary"} className="text-xs">
+                                {classItem.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                              <Button variant="outline" size="sm" className="flex-1" asChild>
+                                <Link href={`/teacher/classes/${classItem.id}`}>
+                                  View Details
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigator.clipboard.writeText(`${window.location.origin}/join/${classItem.class_code}`)}
+                              >
+                                <Share2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               {/* Students Tab */}
