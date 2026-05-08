@@ -201,7 +201,7 @@ export function Navigation() {
           <div className="px-2 pb-4">
             <Button
               variant="outline"
-              className="w-full justify-start bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 text-blue-900 hover:text-blue-900 dark:text-blue-100 dark:hover:text-blue-50"
+              className="w-full justify-start bg-slate-800 hover:bg-slate-900 border-slate-800 text-gray-100 hover:text-white shadow-sm hover:shadow-md dark:bg-slate-700 dark:hover:bg-slate-800 dark:border-slate-700 dark:text-gray-100 dark:hover:text-white"
               onClick={() => {
                 // Trigger install prompt or redirect to install instructions
                 if ('beforeinstallprompt' in window) {
