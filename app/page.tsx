@@ -7,6 +7,7 @@ import { BookOpen, Loader2, GraduationCap, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/user-context'
+import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
 import { useEffect, useState } from 'react'
 import { hasCompletedAssessment } from '@/lib/data'
 import { useRouter } from 'next/navigation'
@@ -123,6 +124,38 @@ export default function Home() {
       }
     }
   }, [user, profile, authLoading, router])
+
+  // Show loading state while fetching content
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900">
+        <Navigation />
+        <div className="md:pl-64">
+          <main className="py-6 px-4 md:px-8 pb-20 md:pb-6">
+            <div className="max-w-2xl mx-auto">
+              <div className="h-8 bg-gray-200 rounded animate-pulse mb-8"></div>
+              <div className="space-y-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">

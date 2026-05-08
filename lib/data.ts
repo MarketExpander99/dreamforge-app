@@ -1,6 +1,43 @@
 // Data access layer for Skill Gain - Client-side functions
 import { createBrowserSupabaseClient } from './supabase'
 
+// Simple in-memory cache with TTL
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+class SimpleCache {
+  private cache = new Map<string, CacheEntry<any>>()
+
+  set<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void { // 5 minutes default
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs
+    })
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key)
+    if (!entry) return null
+
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key)
+      return null
+    }
+
+    return entry.data
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+}
+
+const dataCache = new SimpleCache()
+
 // Types
 export interface Category {
   id: string
@@ -110,6 +147,13 @@ export async function getContentItems(options?: {
   gradeLevel?: string
   search?: string
 }): Promise<ContentItem[]> {
+  // Create cache key based on options
+  const cacheKey = `content_items_${JSON.stringify(options || {})}`
+  const cached = dataCache.get<ContentItem[]>(cacheKey)
+  if (cached) {
+    return cached
+  }
+
   const supabase = createBrowserSupabaseClient()
 
   let query = supabase
@@ -149,7 +193,10 @@ export async function getContentItems(options?: {
     return []
   }
 
-  return data || []
+  const result = data || []
+  // Cache for 2 minutes since content doesn't change frequently
+  dataCache.set(cacheKey, result, 2 * 60 * 1000)
+  return result
 }
 
 export async function getContentItem(id: string): Promise<ContentItem | null> {
