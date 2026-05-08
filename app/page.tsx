@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import LandingPage from './components/LandingPage'
+import HomeDashboard from './components/HomeDashboard'
 
 // Check authentication on server side
 export default async function Home() {
@@ -13,38 +14,23 @@ export default async function Home() {
     return <LandingPage />
   }
 
-  // If user is authenticated, redirect to appropriate dashboard
+  // If user is authenticated, show personalized home dashboard
   try {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, teacher_onboarding_completed')
+      .select('role, teacher_onboarding_completed, full_name, avatar')
       .eq('id', user.id)
       .single()
 
-    // If profile fetch fails, redirect to learning (assume student)
+    // If profile fetch fails, show basic dashboard
     if (profileError) {
-      redirect('/learning')
+      return <HomeDashboard user={user} profile={null} />
     }
 
-    // Check if user is teacher or admin
-    const isTeacher = profile?.role === 'teacher'
-    const isAdmin = user.email === 'eben.combrinck@proton.me'
-    const needsOnboarding = !profile?.teacher_onboarding_completed
-
-    // Redirect teachers who haven't completed onboarding
-    if ((isTeacher || isAdmin) && needsOnboarding) {
-      redirect('/teacher')
-    }
-
-    // Redirect teachers who have completed onboarding to teacher dashboard
-    if (isTeacher || isAdmin) {
-      redirect('/teacher')
-    }
-
-    // Redirect students to learning dashboard
-    redirect('/learning')
+    // Show personalized home dashboard for all authenticated users
+    return <HomeDashboard user={user} profile={profile} />
   } catch (error) {
-    // If any error occurs, redirect to learning as fallback
-    redirect('/learning')
+    // If any error occurs, show basic dashboard as fallback
+    return <HomeDashboard user={user} profile={null} />
   }
 }
