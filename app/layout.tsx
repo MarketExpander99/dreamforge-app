@@ -22,20 +22,20 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  metadataBase: new URL('https://skillgain.app'),
+  metadataBase: new URL('https://skill-gain.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_ZA',
-    url: 'https://skillgain.app',
+    url: 'https://skill-gain.com',
     title: 'Skill Gain - Learn Through Discovery',
     description: 'Transform education with Skill Gain - an interactive learning platform featuring adaptive CAPS curriculum, gamification, and social learning.',
     siteName: 'Skill Gain',
     images: [
       {
-        url: 'https://skillgain.app/og-image.jpg',
+        url: 'https://skill-gain.com/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Skill Gain - Learn Through Discovery',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Skill Gain - Learn Through Discovery',
     description: 'Transform education with Skill Gain - an interactive learning platform featuring adaptive CAPS curriculum, gamification, and social learning.',
-    images: ['https://skillgain.app/og-image.jpg'],
+    images: ['https://skill-gain.com/og-image.jpg'],
     creator: '@skillgainapp',
   },
   robots: {
