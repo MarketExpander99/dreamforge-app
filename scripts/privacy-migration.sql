@@ -4,7 +4,7 @@
 -- Add new columns to profiles table
 ALTER TABLE profiles
 ADD COLUMN IF NOT EXISTS display_name TEXT,
-ADD COLUMN IF NOT EXISTS anonymous_id TEXT UNIQUE NOT NULL DEFAULT '',
+ADD COLUMN IF NOT EXISTS anonymous_id TEXT,
 ADD COLUMN IF NOT EXISTS parent_consent_given BOOLEAN DEFAULT false;
 
 -- Create function to generate anonymous_id
@@ -35,9 +35,13 @@ UPDATE profiles
 SET anonymous_id = generate_anonymous_id()
 WHERE anonymous_id = '';
 
--- Make anonymous_id NOT NULL constraint (after backfilling)
+-- Make anonymous_id NOT NULL and UNIQUE (after backfilling)
 ALTER TABLE profiles
 ALTER COLUMN anonymous_id SET NOT NULL;
+
+-- Add unique constraint on anonymous_id
+ALTER TABLE profiles
+ADD CONSTRAINT profiles_anonymous_id_key UNIQUE (anonymous_id);
 
 -- Update the handle_new_user function to generate anonymous_id on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

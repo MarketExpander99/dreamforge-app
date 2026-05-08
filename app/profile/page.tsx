@@ -631,9 +631,9 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <Button onClick={handleSaveProfile} disabled={saving}>
+                    <Button onClick={handleSaveProfile} loading={saving}>
                       <Save className="h-4 w-4 mr-2" />
-                      {saving ? 'Saving...' : 'Save Changes'}
+                      Save Changes
                     </Button>
                   </CardContent>
                 </Card>
@@ -736,11 +736,11 @@ export default function ProfilePage() {
                             setSavingNotifications(false)
                           }
                         }}
-                        disabled={savingNotifications}
+                        loading={savingNotifications}
                         className="mt-4"
                       >
                         <Save className="h-4 w-4 mr-2" />
-                        {savingNotifications ? 'Saving...' : 'Save Preferences'}
+                        Save Preferences
                       </Button>
                     </div>
 
@@ -871,10 +871,11 @@ export default function ProfilePage() {
                               setSavingDisplayName(false);
                             }
                           }}
-                          disabled={savingDisplayName || (userProfile.role === 'student' && !userProfile.parentConsentGiven)}
+                          loading={savingDisplayName}
+                          disabled={userProfile.role === 'student' && !userProfile.parentConsentGiven}
                         >
                           <Save className="h-4 w-4 mr-2" />
-                          {savingDisplayName ? 'Saving...' : 'Update Display Name'}
+                          Update Display Name
                         </Button>
                       </div>
                     </div>
