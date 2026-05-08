@@ -117,8 +117,8 @@ test.describe('Complete User Journey Test - Skill Gain Application', () => {
       await takeScreenshot(page, 'teacher-login-complete');
 
       // Step 3: Check if onboarding is triggered
-      const currentUrl = page.url();
-      console.log(`📍 Current URL after login: ${currentUrl}`);
+      const loginUrl = page.url();
+      console.log(`📍 Current URL after login: ${loginUrl}`);
 
       const onboardingVisible = await page.locator('[class*="fixed inset-0 z-50"]').isVisible();
       if (onboardingVisible) {
@@ -403,11 +403,123 @@ test.describe('Complete User Journey Test - Skill Gain Application', () => {
 
       // Step 10: Logout
       console.log('🚪 Logging out teacher');
-      const logoutButton = page.locator('button:has-text("Logout"), a:has-text("Logout")').first();
-      if (await logoutButton.isVisible()) {
-        await logoutButton.click();
-        await page.waitForTimeout(2000);
-        await takeScreenshot(page, 'teacher-logout-complete');
+
+      // Aggressive modal dismissal - try multiple strategies
+      console.log('🔍 Checking for blocking modals...');
+
+      // Strategy 1: Look for common modal close buttons
+      const closeSelectors = [
+        'button:has-text("×")',
+        'button:has-text("✕")',
+        'button[aria-label="Close"]',
+        'button[data-testid="close"]',
+        '.modal-close',
+        '.close-button',
+        '[data-state="open"] button:first-child' // First button in open modal
+      ];
+
+      for (const selector of closeSelectors) {
+        try {
+          const closeButton = page.locator(selector).first();
+          if (await closeButton.isVisible({ timeout: 500 }).catch(() => false)) {
+            console.log(`Found close button with selector: ${selector}, clicking...`);
+            await closeButton.click();
+            await page.waitForTimeout(1000);
+            break; // Stop after first successful click
+          }
+        } catch (error) {
+          // Continue to next selector
+        }
+      }
+
+      // Strategy 2: Check for modal overlay and try to dismiss it
+      const modalOverlays = [
+        '[class*="fixed inset-0 z-50"]',
+        '[role="dialog"]',
+        '[data-state="open"]',
+        '.modal-overlay',
+        '.overlay'
+      ];
+
+      for (const overlaySelector of modalOverlays) {
+        try {
+          const overlay = page.locator(overlaySelector).first();
+          if (await overlay.isVisible({ timeout: 500 }).catch(() => false)) {
+            console.log(`Found modal overlay: ${overlaySelector}, attempting to close...`);
+
+            // Try escape key first
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(1000);
+
+            // If still visible, try clicking outside
+            if (await overlay.isVisible({ timeout: 500 }).catch(() => false)) {
+              console.log('Escape key didn\'t work, trying click outside modal...');
+              await page.mouse.click(10, 10); // Click in top-left corner
+              await page.waitForTimeout(1000);
+            }
+
+            // If still visible, try clicking in center of screen
+            if (await overlay.isVisible({ timeout: 500 }).catch(() => false)) {
+              console.log('Click outside didn\'t work, trying center click...');
+              const viewport = page.viewportSize();
+              if (viewport) {
+                await page.mouse.click(viewport.width / 2, viewport.height / 2);
+                await page.waitForTimeout(1000);
+              }
+            }
+
+            break; // Stop after trying to close one overlay
+          }
+        } catch (error) {
+          // Continue to next overlay selector
+        }
+      }
+
+      // Strategy 3: Force refresh the page to clear any stuck modals
+      try {
+        const teacherUrl = page.url();
+        if (teacherUrl.includes('/teacher')) {
+          console.log('🔄 Modal dismissal failed, refreshing page to clear state...');
+          await page.reload();
+          await page.waitForLoadState('networkidle');
+          await page.waitForTimeout(2000);
+        }
+      } catch (error) {
+        console.log('⚠️ Page context closed during modal dismissal, skipping page refresh');
+      }
+
+      // Final attempt to find and click logout
+      console.log('🔍 Looking for logout button...');
+      const logoutSelectors = [
+        'button:has-text("Logout")',
+        'a:has-text("Logout")',
+        'button[aria-label*="logout" i]',
+        'button[title*="logout" i]',
+        '[data-testid="logout"]',
+        '.logout-button'
+      ];
+
+      let logoutClicked = false;
+      for (const selector of logoutSelectors) {
+        try {
+          const logoutButton = page.locator(selector).first();
+          if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+            console.log(`Found logout button with selector: ${selector}, clicking...`);
+            await logoutButton.click();
+            await page.waitForTimeout(2000);
+            await takeScreenshot(page, 'teacher-logout-complete');
+            logoutClicked = true;
+            break;
+          }
+        } catch (error) {
+          console.log(`Logout selector ${selector} failed:`, (error as Error).message);
+        }
+      }
+
+      if (!logoutClicked) {
+        console.log('❌ Could not find or click logout button');
+        await takeScreenshot(page, 'teacher-logout-failed');
+        throw new Error('Logout button not found or clickable');
       }
 
       console.log('✅ Teacher journey completed');
