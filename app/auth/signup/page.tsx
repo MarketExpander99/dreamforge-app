@@ -223,6 +223,31 @@ export default function SignupPage() {
               </div>
             )}
 
+            {/* Privacy Notice */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Privacy & Data Protection</h4>
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                <p>
+                  <strong>Your privacy matters to us.</strong> We comply with POPI Act and GDPR regulations.
+                </p>
+                <p>
+                  • Your real name is never displayed publicly
+                </p>
+                <p>
+                  • You'll be assigned an anonymous ID (like "User_12345") for public display
+                </p>
+                <p>
+                  • You can optionally choose a display name in your profile settings
+                </p>
+                <p>
+                  • Students under 18 require parent/guardian consent for display names
+                </p>
+                <p className="text-xs mt-2">
+                  By creating an account, you agree to our privacy policy and data protection practices.
+                </p>
+              </div>
+            </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>

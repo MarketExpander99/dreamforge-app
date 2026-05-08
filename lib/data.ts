@@ -1365,117 +1365,7 @@ function generateActivityHeatmap(progressData: any[]): { date: string; count: nu
 
 
 
-// Get leaderboard data
-export async function getLeaderboard(limit: number = 10): Promise<Array<{
-  user_id: string
-  full_name: string | null
-  avatar_url: string | null
-  total_time: number
-  total_completed: number
-  current_streak: number
-}>> {
-  try {
-    const supabase = createBrowserSupabaseClient()
 
-    // Get all users with their stats
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .eq('role', 'student')
-
-    if (usersError) throw usersError
-
-    // Calculate stats for each user
-    const leaderboardData = await Promise.all(
-      (users || []).map(async (user) => {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('time_spent, status')
-          .eq('user_id', user.id)
-
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-
-        const { currentStreak } = await getCurrentStreak(user.id)
-
-        return {
-          user_id: user.id,
-          full_name: user.full_name,
-          avatar_url: user.avatar_url,
-          total_time: totalTime,
-          total_completed: totalCompleted,
-          current_streak: currentStreak
-        }
-      })
-    )
-
-    // Sort by total time spent (descending) and return top limit
-    return leaderboardData
-      .sort((a, b) => b.total_time - a.total_time)
-      .slice(0, limit)
-
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error)
-    return []
-  }
-}
-
-// Get family leaderboard for parents
-export async function getFamilyLeaderboard(parentId: string, limit: number = 10): Promise<Array<{
-  user_id: string
-  full_name: string | null
-  avatar_url: string | null
-  total_time: number
-  total_completed: number
-  current_streak: number
-  role: string
-}>> {
-  try {
-    const supabase = createBrowserSupabaseClient()
-
-    // Get parent and their children
-    const { data: familyMembers, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url, role')
-      .or(`id.eq.${parentId},parent_id.eq.${parentId}`)
-
-    if (error) throw error
-
-    // Calculate stats for each family member
-    const leaderboardData = await Promise.all(
-      (familyMembers || []).map(async (member) => {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('time_spent, status')
-          .eq('user_id', member.id)
-
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-
-        const { currentStreak } = member.role === 'student' ? await getCurrentStreak(member.id) : { currentStreak: 0 }
-
-        return {
-          user_id: member.id,
-          full_name: member.full_name,
-          avatar_url: member.avatar_url,
-          total_time: totalTime,
-          total_completed: totalCompleted,
-          current_streak: currentStreak,
-          role: member.role
-        }
-      })
-    )
-
-    // Sort by total time spent (descending) and return top limit
-    return leaderboardData
-      .sort((a, b) => b.total_time - a.total_time)
-      .slice(0, limit)
-
-  } catch (error) {
-    console.error('Error fetching family leaderboard:', error)
-    return []
-  }
-}
 
 // Check and unlock achievements for a user
 export async function checkAndUnlockAchievements(userId: string): Promise<string[]> {
@@ -2031,6 +1921,104 @@ function getLowerGrade(grade: string): string {
   }
 
   return gradeNumbers[grade] || grade
+}
+
+// Get global leaderboard with privacy-first names
+export async function getLeaderboard(limit: number = 10): Promise<any[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get all users with their stats
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, anonymous_id, avatar_url, role')
+      .eq('role', 'student')
+
+    if (usersError) throw usersError
+
+    // Calculate stats for each user
+    const leaderboardData = await Promise.all(
+      (users || []).map(async (user) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', user.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        return {
+          user_id: user.id,
+          full_name: user.full_name,
+          public_name: user.display_name || user.anonymous_id || 'Anonymous User',
+          avatar_url: user.avatar_url,
+          total_time: Math.floor(totalTime / 60), // Convert to minutes
+          total_completed: totalCompleted,
+          current_streak: 0, // TODO: Implement streak calculation
+          role: user.role
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error)
+    return []
+  }
+}
+
+// Get family leaderboard for parents
+export async function getFamilyLeaderboard(parentId: string, limit: number = 10): Promise<any[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // First get family members
+    const { data: familyMembers, error: familyError } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, anonymous_id, avatar_url, role')
+      .eq('parent_id', parentId)
+
+    if (familyError) throw familyError
+
+    if (!familyMembers || familyMembers.length === 0) return []
+
+    // Calculate stats for each family member
+    const leaderboardData = await Promise.all(
+      (familyMembers || []).map(async (member) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', member.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        return {
+          user_id: member.id,
+          full_name: member.full_name,
+          public_name: member.display_name || member.anonymous_id || 'Anonymous User',
+          avatar_url: member.avatar_url,
+          total_time: Math.floor(totalTime / 60), // Convert to minutes
+          total_completed: totalCompleted,
+          current_streak: 0, // TODO: Implement streak calculation
+          role: member.role
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching family leaderboard:', error)
+    return []
+  }
 }
 
 // Get personalized recommendations for a user

@@ -19,12 +19,17 @@ import { usePushNotifications, getNotificationPreferences, updateNotificationPre
 interface UserProfile {
   id: string
   fullName: string
+  publicName: string
+  displayName: string | null
+  anonymousId: string
   email: string
   avatar: string
   bio: string
   gradeLevel: string
   interests: string[]
   learningGoals: string
+  role: string
+  parentConsentGiven: boolean
   joinDate: string
   totalLearningTime: number
   completedModules: number
@@ -94,6 +99,14 @@ export default function ProfilePage() {
   })
   const [savingNotifications, setSavingNotifications] = useState(false)
 
+  // Display name state
+  const [displayNameData, setDisplayNameData] = useState({
+    displayName: '',
+    parentEmail: ''
+  })
+  const [savingDisplayName, setSavingDisplayName] = useState(false)
+  const [parentConsentGiven, setParentConsentGiven] = useState(false)
+
   // Handle profile save
   const handleSaveProfile = async () => {
     if (!userProfile) return
@@ -157,12 +170,17 @@ export default function ProfilePage() {
         const fallbackProfile: UserProfile = {
           id: user?.id || '',
           fullName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+          publicName: 'Anonymous User',
+          displayName: null,
+          anonymousId: 'User_00000',
           email: user?.email || '',
           avatar: user?.user_metadata?.avatar_url || '',
           bio: 'Welcome to Skill Gain! Start your learning journey today.',
           gradeLevel: 'Not specified',
           interests: [],
           learningGoals: 'Explore and learn new skills',
+          role: 'student',
+          parentConsentGiven: false,
           joinDate: new Date().toLocaleDateString(),
           totalLearningTime: 0,
           completedModules: 0,
@@ -188,12 +206,17 @@ export default function ProfilePage() {
       const fallbackProfile: UserProfile = {
         id: user?.id || '',
         fullName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+        publicName: 'Anonymous User',
+        displayName: null,
+        anonymousId: 'User_00000',
         email: user?.email || '',
         avatar: user?.user_metadata?.avatar_url || '',
         bio: 'Welcome to Skill Gain! Start your learning journey today.',
         gradeLevel: 'Not specified',
         interests: [],
         learningGoals: 'Explore and learn new skills',
+        role: 'student',
+        parentConsentGiven: false,
         joinDate: new Date().toLocaleDateString(),
         totalLearningTime: 0,
         completedModules: 0,
@@ -731,12 +754,129 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">Privacy Settings</h4>
-                        <p className="text-sm text-muted-foreground">Control who can see your profile and activity</p>
+                    {/* Privacy Settings */}
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium mb-4 flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Privacy & Display Name
+                      </h4>
+
+                      {/* Current Public Name Display */}
+                      <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Public Name</p>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{userProfile.publicName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          This is how you appear to other users in comments, leaderboards, and activity feeds.
+                        </p>
                       </div>
-                      <Button variant="outline" size="sm">Manage</Button>
+
+                      {/* Display Name Input */}
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="displayName">Display Name (Optional)</Label>
+                          <Input
+                            id="displayName"
+                            placeholder="Choose how you want to be known publicly"
+                            value={displayNameData.displayName}
+                            onChange={(e) => setDisplayNameData(prev => ({ ...prev, displayName: e.target.value }))}
+                            maxLength={50}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Choose a display name or leave blank to use your anonymous ID. Display names are public.
+                          </p>
+                        </div>
+
+                        {/* Parent Consent for Students */}
+                        {userProfile.role === 'student' && !userProfile.parentConsentGiven && (
+                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                            <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                              Parent/Guardian Consent Required
+                            </p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+                              As a student, you need parent or guardian consent to set a display name.
+                            </p>
+                            <div className="space-y-2">
+                              <Label htmlFor="parentEmail">Parent/Guardian Email</Label>
+                              <Input
+                                id="parentEmail"
+                                type="email"
+                                placeholder="parent@example.com"
+                                value={displayNameData.parentEmail}
+                                onChange={(e) => setDisplayNameData(prev => ({ ...prev, parentEmail: e.target.value }))}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  if (!displayNameData.parentEmail) {
+                                    alert('Please enter a parent email address');
+                                    return;
+                                  }
+                                  try {
+                                    const response = await fetch('/api/profile/display-name', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        consentGiven: true,
+                                        parentEmail: displayNameData.parentEmail
+                                      })
+                                    });
+                                    if (response.ok) {
+                                      setParentConsentGiven(true);
+                                      setUserProfile(prev => prev ? { ...prev, parentConsentGiven: true } : null);
+                                      alert('Consent request sent! Please ask your parent to approve.');
+                                    } else {
+                                      const error = await response.json();
+                                      alert(error.error || 'Failed to send consent request');
+                                    }
+                                  } catch (error) {
+                                    console.error('Error sending consent:', error);
+                                    alert('Failed to send consent request');
+                                  }
+                                }}
+                              >
+                                Request Parent Consent
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Save Display Name Button */}
+                        <Button
+                          onClick={async () => {
+                            setSavingDisplayName(true);
+                            try {
+                              const response = await fetch('/api/profile/display-name', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ displayName: displayNameData.displayName || null })
+                              });
+
+                              if (response.ok) {
+                                const data = await response.json();
+                                setUserProfile(prev => prev ? {
+                                  ...prev,
+                                  displayName: data.displayName,
+                                  publicName: data.publicName
+                                } : null);
+                                alert('Display name updated successfully!');
+                              } else {
+                                const error = await response.json();
+                                alert(error.error || 'Failed to update display name');
+                              }
+                            } catch (error) {
+                              console.error('Error updating display name:', error);
+                              alert('Failed to update display name');
+                            } finally {
+                              setSavingDisplayName(false);
+                            }
+                          }}
+                          disabled={savingDisplayName || (userProfile.role === 'student' && !userProfile.parentConsentGiven)}
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {savingDisplayName ? 'Saving...' : 'Update Display Name'}
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between">
