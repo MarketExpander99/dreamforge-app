@@ -6,15 +6,25 @@ import LandingPage from './components/LandingPage'
 // Check authentication on server side
 export default async function Home() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  // If there's an auth error or no user, show landing page
+  if (error || !user) {
+    return <LandingPage />
+  }
 
   // If user is authenticated, redirect to appropriate dashboard
-  if (user) {
-    const { data: profile } = await supabase
+  try {
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, teacher_onboarding_completed')
       .eq('id', user.id)
       .single()
+
+    // If profile fetch fails, redirect to learning (assume student)
+    if (profileError) {
+      redirect('/learning')
+    }
 
     // Check if user is teacher or admin
     const isTeacher = profile?.role === 'teacher'
@@ -33,8 +43,8 @@ export default async function Home() {
 
     // Redirect students to learning dashboard
     redirect('/learning')
+  } catch (error) {
+    // If any error occurs, redirect to learning as fallback
+    redirect('/learning')
   }
-
-  // Show landing page for unauthenticated users
-  return <LandingPage />
 }

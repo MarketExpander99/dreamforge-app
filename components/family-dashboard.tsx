@@ -153,9 +153,21 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             No Children Linked Yet
           </h3>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
             Link student accounts to start tracking their progress and achievements.
           </p>
+          <Button
+            onClick={() => {
+              // For now, show an alert with instructions
+              // In a real implementation, this would open a dialog or navigate to a child linking flow
+              alert('To add a child account:\n\n1. Have your child create a student account\n2. Ask them to share their account details with you\n3. Contact support to link the accounts\n\nThis feature will be available in the next update.')
+            }}
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
+          >
+            <GraduationCap className="h-5 w-5 mr-2" />
+            Add Child Account
+          </Button>
         </motion.div>
       ) : (
         <motion.div

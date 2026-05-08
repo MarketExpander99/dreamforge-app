@@ -8,6 +8,21 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.skill-gain.com',
+          },
+        ],
+        destination: 'https://skill-gain.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

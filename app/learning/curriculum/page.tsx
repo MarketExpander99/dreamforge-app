@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
+import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -389,7 +390,9 @@ export default function CurriculumPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <Navigation />
+      <div className="md:ml-64 container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">CAPS Curriculum Browser</h1>
         <p className="text-gray-600">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
@@ -849,5 +852,6 @@ export default function CurriculumPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  </>
+)
 }
