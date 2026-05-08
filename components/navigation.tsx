@@ -92,7 +92,7 @@ export function Navigation() {
             {navigation.map((item) => {
               const isActive = pathname === item.href
               return (
-                <Link key={item.name} href={item.href}>
+                <Link key={item.name} href={item.href} className="block">
                   <Button
                     variant={isActive ? "secondary" : "ghost"}
                     className="w-full justify-start"
