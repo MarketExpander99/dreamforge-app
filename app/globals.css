@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* High contrast light theme - WCAG AA compliant */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -24,9 +25,21 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Educational color palette - optimized for readability */
+    --educational-blue: 221.2 83.2% 53.3%;
+    --educational-green: 142.1 76.2% 36.3%;
+    --educational-purple: 262.1 83.3% 57.8%;
+    --educational-orange: 25.7 95% 53.1%;
+
+    /* High contrast text colors */
+    --text-primary: 222.2 84% 4.9%;
+    --text-secondary: 215.4 16.3% 46.9%;
+    --text-muted: 215 13.8% 34.1%;
   }
 
   .dark {
+    /* High contrast dark theme - WCAG AA compliant */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
@@ -46,6 +59,17 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
+
+    /* Educational color palette for dark mode */
+    --educational-blue: 217.2 91.2% 59.8%;
+    --educational-green: 142.1 70.6% 45.3%;
+    --educational-purple: 262.1 83.3% 67.8%;
+    --educational-orange: 25.7 95% 63.1%;
+
+    /* High contrast text colors for dark mode */
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20.2% 65.1%;
+    --text-muted: 217.2 10.6% 64.9%;
   }
 }
 
@@ -55,5 +79,140 @@
   }
   body {
     @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+  }
+}
+
+/* Typography Scale - Consistent heading and text sizing */
+@layer utilities {
+  /* Display headings - for major sections */
+  .text-display-2xl {
+    @apply text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight;
+  }
+  .text-display-xl {
+    @apply text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight;
+  }
+  .text-display-lg {
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight;
+  }
+
+  /* Section headings */
+  .text-heading-2xl {
+    @apply text-3xl sm:text-4xl font-bold leading-tight tracking-tight;
+  }
+  .text-heading-xl {
+    @apply text-2xl sm:text-3xl font-bold leading-snug tracking-tight;
+  }
+  .text-heading-lg {
+    @apply text-xl sm:text-2xl font-bold leading-snug tracking-tight;
+  }
+  .text-heading-base {
+    @apply text-lg sm:text-xl font-bold leading-snug tracking-tight;
+  }
+
+  /* Body text */
+  .text-body-lg {
+    @apply text-lg leading-relaxed font-medium;
+  }
+  .text-body-base {
+    @apply text-base leading-relaxed font-normal;
+  }
+  .text-body-sm {
+    @apply text-sm leading-relaxed font-normal;
+  }
+
+  /* UI text */
+  .text-ui-lg {
+    @apply text-lg font-semibold leading-normal;
+  }
+  .text-ui-base {
+    @apply text-base font-medium leading-normal;
+  }
+  .text-ui-sm {
+    @apply text-sm font-medium leading-normal;
+  }
+  .text-ui-xs {
+    @apply text-xs font-medium leading-normal uppercase tracking-wide;
+  }
+
+  /* Muted text */
+  .text-muted-primary {
+    @apply text-gray-600 dark:text-gray-300;
+  }
+  .text-muted-secondary {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+  .text-muted-tertiary {
+    @apply text-gray-400 dark:text-gray-500;
+  }
+
+  /* Spacing System - Consistent margins and padding */
+  .space-section {
+    @apply py-16 lg:py-20;
+  }
+  .space-section-compact {
+    @apply py-12 lg:py-16;
+  }
+  .space-section-large {
+    @apply py-20 lg:py-24;
+  }
+
+  .space-container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  .space-container-wide {
+    @apply max-w-7xl mx-auto;
+  }
+  .space-container-narrow {
+    @apply max-w-4xl mx-auto;
+  }
+
+  .space-stack-lg {
+    @apply space-y-8;
+  }
+  .space-stack-md {
+    @apply space-y-6;
+  }
+  .space-stack-sm {
+    @apply space-y-4;
+  }
+  .space-stack-xs {
+    @apply space-y-2;
+  }
+
+  .space-inline-lg {
+    @apply space-x-8;
+  }
+  .space-inline-md {
+    @apply space-x-6;
+  }
+  .space-inline-sm {
+    @apply space-x-4;
+  }
+  .space-inline-xs {
+    @apply space-x-2;
+  }
+
+  /* Form spacing */
+  .form-group {
+    @apply space-y-2;
+  }
+  .form-section {
+    @apply space-y-6;
+  }
+
+  /* Card spacing */
+  .card-padding {
+    @apply p-6;
+  }
+  .card-padding-lg {
+    @apply p-8;
+  }
+
+  /* Button groups */
+  .button-group {
+    @apply flex gap-3;
+  }
+  .button-group-vertical {
+    @apply flex flex-col gap-3;
   }
 }

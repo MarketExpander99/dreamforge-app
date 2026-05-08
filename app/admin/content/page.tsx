@@ -128,7 +128,7 @@ export default function ContentManagementPage() {
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
+                  <Link href="/admin" className="flex items-center">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Dashboard
                   </Link>
@@ -142,7 +142,7 @@ export default function ContentManagementPage() {
                   </p>
                 </div>
                 <Button asChild>
-                  <Link href="/admin/content/new">
+                  <Link href="/admin/content/new" className="flex items-center">
                     <Plus className="h-4 w-4 mr-2" />
                     New Content
                   </Link>
@@ -275,13 +275,13 @@ export default function ContentManagementPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/content/${item.id}`}>
+                                  <Link href={`/content/${item.id}`} className="flex items-center">
                                     <Eye className="h-4 w-4 mr-2" />
                                     View
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/admin/content/${item.id}/edit`}>
+                                  <Link href={`/admin/content/${item.id}/edit`} className="flex items-center">
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit
                                   </Link>
