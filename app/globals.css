@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@reference "tailwindcss/theme";
-
 @layer base {
   :root {
     /* High contrast light theme - WCAG AA compliant */

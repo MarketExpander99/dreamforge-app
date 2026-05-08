@@ -163,11 +163,9 @@ export default function TeacherClassCreation() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/teacher">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/teacher'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
                 </Button>
               </div>
               <div>
@@ -460,10 +458,8 @@ export default function TeacherClassCreation() {
                     </>
                   )}
                 </Button>
-                <Button type="button" variant="outline" asChild disabled={isLoading}>
-                  <Link href="/teacher">
-                    Cancel
-                  </Link>
+                <Button type="button" variant="outline" onClick={() => window.location.href = '/teacher'} disabled={isLoading}>
+                  Cancel
                 </Button>
               </div>
             </form>

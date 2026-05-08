@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -39,11 +41,9 @@ export default function CreateContentPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/teacher/content">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Content
-                  </Link>
+                <Button variant="ghost" size="sm" onClick={() => window.location.href = '/teacher/content'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Content
                 </Button>
               </div>
               <div className="flex items-center justify-between">

@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -254,10 +256,8 @@ export default function StudentsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/teacher/students/${student.id}`}>
-                            View Profile
-                          </Link>
+                        <Button variant="ghost" size="sm" onClick={() => window.location.href = `/teacher/students/${student.id}`}>
+                          View Details
                         </Button>
                         <Button variant="ghost" size="sm">
                           <Mail className="h-4 w-4" />
@@ -281,10 +281,8 @@ export default function StudentsPage() {
                   <p className="text-muted-foreground mb-4">
                     Students will appear here once they enroll in your classes.
                   </p>
-                  <Button asChild>
-                    <Link href="/teacher/classes">
-                      View My Classes
-                    </Link>
+                  <Button onClick={() => window.location.href = '/teacher/classes'}>
+                    View My Classes
                   </Button>
                 </CardContent>
               </Card>

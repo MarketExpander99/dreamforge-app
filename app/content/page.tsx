@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -67,11 +69,9 @@ export default function ContentCreatorHub() {
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Analytics
                   </Button>
-                  <Button asChild>
-                    <Link href="/admin/content/new">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Content
-                    </Link>
+                  <Button onClick={() => window.location.href = '/admin/content/new'}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Content
                   </Button>
                 </div>
               </div>
@@ -177,29 +177,21 @@ export default function ContentCreatorHub() {
                       <CardDescription>Start creating new learning content</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                       <Button className="w-full justify-start" variant="outline" asChild>
-                         <Link href="/admin/content/new?type=text">
-                           <FileText className="h-4 w-4 mr-2" />
-                           New Article
-                         </Link>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new?type=text'}>
+                         <FileText className="h-4 w-4 mr-2" />
+                         New Article
                        </Button>
-                       <Button className="w-full justify-start" variant="outline" asChild>
-                         <Link href="/admin/content/new?type=quiz">
-                           <HelpCircle className="h-4 w-4 mr-2" />
-                           Create Quiz
-                         </Link>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new?type=quiz'}>
+                         <HelpCircle className="h-4 w-4 mr-2" />
+                         Create Quiz
                        </Button>
-                       <Button className="w-full justify-start" variant="outline" asChild>
-                         <Link href="/admin/content/new?type=video">
-                           <Video className="h-4 w-4 mr-2" />
-                           Video Content
-                         </Link>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new?type=video'}>
+                         <Video className="h-4 w-4 mr-2" />
+                         Video Content
                        </Button>
-                       <Button className="w-full justify-start" variant="outline" asChild>
-                         <Link href="/admin/content/new?type=audio">
-                           <Headphones className="h-4 w-4 mr-2" />
-                           Audio Lesson
-                         </Link>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new?type=audio'}>
+                         <Headphones className="h-4 w-4 mr-2" />
+                         Audio Lesson
                        </Button>
                     </CardContent>
                   </Card>
@@ -231,10 +223,8 @@ export default function ContentCreatorHub() {
                                 <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
                                   {item.status}
                                 </Badge>
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/admin/content/${item.id}/edit`}>
-                                    <Edit className="h-4 w-4" />
-                                  </Link>
+                                <Button variant="ghost" size="sm" onClick={() => window.location.href = `/admin/content/${item.id}/edit`}>
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
@@ -352,10 +342,8 @@ export default function ContentCreatorHub() {
                       <p className="text-muted-foreground mb-4">
                         Access your complete content library with advanced filtering and management tools.
                       </p>
-                      <Button asChild>
-                        <Link href="/content/manage">
-                          Open Content Library
-                        </Link>
+                      <Button onClick={() => window.location.href = '/content/manage'}>
+                        Open Content Library
                       </Button>
                     </div>
                   </CardContent>
@@ -376,10 +364,8 @@ export default function ContentCreatorHub() {
                       <p className="text-muted-foreground mb-4">
                         View detailed analytics about your content engagement, reach, and impact.
                       </p>
-                      <Button asChild>
-                        <Link href="/content/analytics">
-                          View Analytics
-                        </Link>
+                      <Button onClick={() => window.location.href = '/content/analytics'}>
+                        View Analytics
                       </Button>
                     </div>
                   </CardContent>

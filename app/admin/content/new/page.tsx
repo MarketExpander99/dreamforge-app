@@ -222,14 +222,12 @@ export default function NewContentPage() {
           <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Link>
-                </Button>
-              </div>
+               <div className="flex items-center gap-4 mb-4">
+                 <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin'}>
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Dashboard
+                 </Button>
+               </div>
               <h1 className="text-3xl font-bold mb-2">Create New Content</h1>
               <p className="text-muted-foreground">
                 Add new learning content to the platform

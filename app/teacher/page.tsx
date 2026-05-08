@@ -274,29 +274,21 @@ export default function TeacherDashboard() {
                       <CardDescription>Common teaching tasks</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/teacher/classes/new">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create New Class
-                        </Link>
+                      <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/teacher/classes/new'}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create New Class
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/teacher/content/new">
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          Create Content
-                        </Link>
+                      <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/teacher/content/new'}>
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Create Content
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/teacher/assignments/new">
-                          <Target className="h-4 w-4 mr-2" />
-                          Assign Lesson
-                        </Link>
+                      <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/teacher/assignments/new'}>
+                        <Target className="h-4 w-4 mr-2" />
+                        Assign Lesson
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/teacher/analytics">
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          View Analytics
-                        </Link>
+                      <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/teacher/analytics'}>
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Analytics
                       </Button>
                     </CardContent>
                   </Card>
@@ -352,10 +344,8 @@ export default function TeacherDashboard() {
                               </span>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/teacher/classes/${classItem.id}`}>
-                              View Details
-                            </Link>
+                          <Button variant="outline" size="sm" onClick={() => window.location.href = `/teacher/classes/${classItem.id}`}>
+                            View Details
                           </Button>
                         </div>
                       ))}
@@ -371,11 +361,9 @@ export default function TeacherDashboard() {
                     <h2 className="text-2xl font-bold">My Classes</h2>
                     <p className="text-muted-foreground">Manage your teaching classes</p>
                   </div>
-                  <Button asChild>
-                    <Link href="/teacher/classes/new">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create New Class
-                    </Link>
+                  <Button onClick={() => window.location.href = '/teacher/classes/new'}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create New Class
                   </Button>
                 </div>
 
@@ -396,10 +384,8 @@ export default function TeacherDashboard() {
                       <p className="text-muted-foreground mb-4">
                         Create your first class to start teaching and managing students.
                       </p>
-                      <Button asChild>
-                        <Link href="/teacher/classes/new">
-                          Create New Class
-                        </Link>
+                      <Button onClick={() => window.location.href = '/teacher/classes/new'}>
+                        Create New Class
                       </Button>
                     </CardContent>
                   </Card>
@@ -435,10 +421,8 @@ export default function TeacherDashboard() {
                             </div>
 
                             <div className="flex gap-2 pt-2">
-                              <Button variant="outline" size="sm" className="flex-1" asChild>
-                                <Link href={`/teacher/classes/${classItem.id}`}>
-                                  View Details
-                                </Link>
+                              <Button variant="outline" size="sm" className="flex-1" onClick={() => window.location.href = `/teacher/classes/${classItem.id}`}>
+                                View Details
                               </Button>
                               <Button
                                 variant="outline"
@@ -470,10 +454,8 @@ export default function TeacherDashboard() {
                       <p className="text-muted-foreground mb-4">
                         Monitor individual student progress and provide personalized support.
                       </p>
-                      <Button asChild>
-                        <Link href="/teacher/students">
-                          View All Students
-                        </Link>
+                      <Button onClick={() => window.location.href = '/teacher/students'}>
+                        View All Students
                       </Button>
                     </div>
                   </CardContent>
@@ -494,10 +476,8 @@ export default function TeacherDashboard() {
                       <p className="text-muted-foreground mb-4">
                         Create engaging lessons, quizzes, and activities for your students.
                       </p>
-                      <Button asChild>
-                        <Link href="/teacher/content/new">
-                          Create New Content
-                        </Link>
+                      <Button onClick={() => window.location.href = '/teacher/content/new'}>
+                        Create New Content
                       </Button>
                     </div>
                   </CardContent>

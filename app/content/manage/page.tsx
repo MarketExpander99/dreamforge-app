@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -131,11 +133,9 @@ export default function ContentManagementPage() {
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
                   </Button>
-                  <Button asChild>
-                    <Link href="/admin/content/new">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Create Content
-                    </Link>
+                  <Button onClick={() => window.location.href = '/admin/content/new'}>
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Create Content
                   </Button>
                 </div>
               </div>
@@ -237,15 +237,11 @@ export default function ContentManagementPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/content/${item.id}/edit`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
+                          <Button variant="ghost" size="sm" onClick={() => window.location.href = `/admin/content/${item.id}/edit`}>
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/content/${item.id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
+                          <Button variant="ghost" size="sm" onClick={() => window.location.href = `/content/${item.id}`}>
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
@@ -267,11 +263,9 @@ export default function ContentManagementPage() {
                   <p className="text-muted-foreground mb-4">
                     You haven't created any content yet. Start by creating your first lesson or resource.
                   </p>
-                  <Button asChild>
-                    <Link href="/admin/content/new">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Create Your First Content
-                    </Link>
+                  <Button onClick={() => window.location.href = '/admin/content/new'}>
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Create Your First Content
                   </Button>
                 </CardContent>
               </Card>

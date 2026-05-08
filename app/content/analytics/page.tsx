@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -368,10 +370,8 @@ export default function ContentAnalyticsPage() {
                       <p className="text-muted-foreground mb-4">
                         View comprehensive performance metrics, engagement patterns, and student feedback for each content piece.
                       </p>
-                      <Button asChild>
-                        <Link href="/content/manage">
-                          View Content Library
-                        </Link>
+                      <Button onClick={() => window.location.href = '/content/manage'}>
+                        View Content Library
                       </Button>
                     </div>
                   </CardContent>

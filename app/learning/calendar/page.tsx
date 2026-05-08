@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -92,11 +94,9 @@ export default function LearningCalendarPage() {
                     Track your daily learning activities and maintain your streak
                   </p>
                 </div>
-                <Button variant="outline" asChild>
-                  <Link href="/learning">
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Back to Learning
-                  </Link>
+                <Button variant="outline" onClick={() => window.location.href = '/learning'}>
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Back to Learning
                 </Button>
               </div>
             </div>

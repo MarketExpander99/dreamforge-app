@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -177,30 +179,22 @@ export default function AdminDashboard() {
                       <CardDescription>Common administrative tasks</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/content/new">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create New Content
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/categories">
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          Manage Categories
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/content">
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          View All Content
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/users">
-                          <Users className="h-4 w-4 mr-2" />
-                          User Management
-                        </Link>
-                      </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new'}>
+                         <Plus className="h-4 w-4 mr-2" />
+                         Create New Content
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/categories'}>
+                         <BarChart3 className="h-4 w-4 mr-2" />
+                         Manage Categories
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content'}>
+                         <BookOpen className="h-4 w-4 mr-2" />
+                         View All Content
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/users'}>
+                         <Users className="h-4 w-4 mr-2" />
+                         User Management
+                       </Button>
                     </CardContent>
                   </Card>
 
@@ -268,10 +262,8 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         View, edit, and organize all learning content from this centralized interface.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/content">
-                          Go to Content Manager
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/content'}>
+                        Go to Content Manager
                       </Button>
                     </div>
                   </CardContent>
@@ -292,10 +284,8 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         View user accounts, manage roles, and monitor platform activity.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/users">
-                          Go to User Manager
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/users'}>
+                        Go to User Manager
                       </Button>
                     </div>
                   </CardContent>
@@ -316,10 +306,8 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         Monitor user engagement, content performance, and platform growth.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/analytics">
-                          View Analytics
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/analytics'}>
+                        View Analytics
                       </Button>
                     </div>
                   </CardContent>

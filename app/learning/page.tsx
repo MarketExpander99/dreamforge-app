@@ -248,10 +248,8 @@ export default function LearningPage() {
                         <p className="text-muted-foreground text-sm">
                           Track your daily learning activity and maintain your streak
                         </p>
-                        <Button className="mt-4" variant="outline" asChild>
-                          <Link href="/learning/calendar">
-                            View Full Calendar
-                          </Link>
+                        <Button className="mt-4" variant="outline" onClick={() => window.location.href = '/learning/calendar'}>
+                          View Full Calendar
                         </Button>
                       </div>
                     </CardContent>
@@ -284,8 +282,8 @@ export default function LearningPage() {
                         <div className="text-2xl mb-2">📝</div>
                         <h3 className="font-semibold mb-1">Grade Assessment</h3>
                         <p className="text-sm text-muted-foreground mb-3">Determine your child's grade level</p>
-                        <Button size="sm" asChild>
-                          <Link href="/assessment">Take Assessment</Link>
+                        <Button size="sm" onClick={() => window.location.href = '/assessment'}>
+                          Take Assessment
                         </Button>
                       </CardContent>
                     </Card>
@@ -295,8 +293,8 @@ export default function LearningPage() {
                         <div className="text-2xl mb-2">📚</div>
                         <h3 className="font-semibold mb-1">Browse Curriculum</h3>
                         <p className="text-sm text-muted-foreground mb-3">Explore CAPS curriculum</p>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href="/learning/curriculum">View Curriculum</Link>
+                        <Button size="sm" variant="outline" onClick={() => window.location.href = '/learning/curriculum'}>
+                          View Curriculum
                         </Button>
                       </CardContent>
                     </Card>
@@ -306,8 +304,8 @@ export default function LearningPage() {
                         <div className="text-2xl mb-2">🎯</div>
                         <h3 className="font-semibold mb-1">Lesson Plans</h3>
                         <p className="text-sm text-muted-foreground mb-3">Structured learning sequences</p>
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href="/learning/curriculum?tab=lessons">View Plans</Link>
+                        <Button size="sm" variant="outline" onClick={() => window.location.href = '/learning/curriculum?tab=lessons'}>
+                          View Plans
                         </Button>
                       </CardContent>
                     </Card>
