@@ -50,7 +50,11 @@ export default function LearningPage() {
       setUserStats(results[3].status === 'fulfilled' ? results[3].value : { totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
     } catch (error) {
       console.error('Error fetching user data:', error)
-      // Continue with empty data
+      // Continue with fallback data
+      setUserProgress([])
+      setUserBookmarks([])
+      setUserAchievements([])
+      setUserStats({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
     } finally {
       setLoading(false)
     }

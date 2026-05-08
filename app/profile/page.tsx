@@ -153,9 +153,65 @@ export default function ProfilePage() {
         })
       } else {
         console.error('Failed to load profile')
+        // Create fallback profile data
+        const fallbackProfile: UserProfile = {
+          id: user?.id || '',
+          fullName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+          email: user?.email || '',
+          avatar: user?.user_metadata?.avatar_url || '',
+          bio: 'Welcome to Skill Gain! Start your learning journey today.',
+          gradeLevel: 'Not specified',
+          interests: [],
+          learningGoals: 'Explore and learn new skills',
+          joinDate: new Date().toLocaleDateString(),
+          totalLearningTime: 0,
+          completedModules: 0,
+          currentStreak: 0,
+          achievementsCount: 0,
+          recentActivity: [],
+          achievements: [],
+          categoryProgress: []
+        }
+        setUserProfile(fallbackProfile)
+        setFormData({
+          fullName: fallbackProfile.fullName,
+          email: fallbackProfile.email,
+          bio: fallbackProfile.bio,
+          gradeLevel: fallbackProfile.gradeLevel,
+          interests: '',
+          learningGoals: fallbackProfile.learningGoals
+        })
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      // Create fallback profile data
+      const fallbackProfile: UserProfile = {
+        id: user?.id || '',
+        fullName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+        email: user?.email || '',
+        avatar: user?.user_metadata?.avatar_url || '',
+        bio: 'Welcome to Skill Gain! Start your learning journey today.',
+        gradeLevel: 'Not specified',
+        interests: [],
+        learningGoals: 'Explore and learn new skills',
+        joinDate: new Date().toLocaleDateString(),
+        totalLearningTime: 0,
+        completedModules: 0,
+        currentStreak: 0,
+        achievementsCount: 0,
+        recentActivity: [],
+        achievements: [],
+        categoryProgress: []
+      }
+      setUserProfile(fallbackProfile)
+      setFormData({
+        fullName: fallbackProfile.fullName,
+        email: fallbackProfile.email,
+        bio: fallbackProfile.bio,
+        gradeLevel: fallbackProfile.gradeLevel,
+        interests: '',
+        learningGoals: fallbackProfile.learningGoals
+      })
     } finally {
       setLoading(false)
     }

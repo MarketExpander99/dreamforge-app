@@ -93,8 +93,8 @@ export async function getCategories(): Promise<Category[]> {
     .order('name')
 
   if (error) {
-    console.error('Error fetching categories:', error)
-    throw new Error(`Failed to fetch categories: ${error.message}`)
+    // Silent failure - return empty array for graceful degradation
+    return []
   }
 
   return data || []
@@ -145,8 +145,8 @@ export async function getContentItems(options?: {
   const { data, error } = await query
 
   if (error) {
-    console.error('Error fetching content items:', error)
-    throw new Error(`Failed to fetch content items: ${error.message}`)
+    // Silent failure - return empty array for graceful degradation
+    return []
   }
 
   return data || []
@@ -193,7 +193,7 @@ export async function searchContent(query: string): Promise<ContentItem[]> {
     .limit(20)
 
   if (error) {
-    console.error('Error searching content:', error)
+    // Silent failure - return empty array for graceful degradation
     return []
   }
 
@@ -263,13 +263,12 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     .single()
 
   if (error) {
-    console.error('Error fetching user profile:', error, 'for userId:', userId)
-    // If no profile exists, try to create one
+    // If no profile exists, try to create one silently
     if (error.code === 'PGRST116') {
-      console.log('No profile found for user, attempting to create one')
       return await createUserProfile(userId)
     }
-    throw new Error(`Failed to fetch user profile: ${error.message}`)
+    // Silent failure for other errors - return null for graceful degradation
+    return null
   }
 
   return data
@@ -322,7 +321,7 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     .single()
 
   if (error) {
-    console.error('Error updating user profile:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -343,9 +342,8 @@ export async function getUserProgress(userId: string): Promise<UserProgress[]> {
       .eq('user_id', userId)
       .order('last_accessed_at', { ascending: false })
 
-    if (error) {
-      console.warn('Database not available for user progress, using fallback data:', error.message)
-      // Return fallback progress data
+  if (error) {
+    // Silent failure - return fallback progress data for graceful degradation
       return [
         {
           id: '1',
@@ -490,7 +488,7 @@ export async function updateUserProgress(
     .single()
 
   if (error) {
-    console.error('Error updating user progress:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -646,7 +644,7 @@ export async function addUserBookmark(userId: string, contentId: string): Promis
     .single()
 
   if (error) {
-    console.error('Error adding user bookmark:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -663,7 +661,7 @@ export async function removeUserBookmark(userId: string, contentId: string): Pro
     .eq('content_id', contentId)
 
   if (error) {
-    console.error('Error removing user bookmark:', error)
+    // Silent failure - return false for graceful degradation
     return false
   }
 
@@ -681,7 +679,7 @@ export async function isContentBookmarked(userId: string, contentId: string): Pr
     .single()
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error checking bookmark status:', error)
+    // Silent failure - return false for graceful degradation
     return false
   }
 

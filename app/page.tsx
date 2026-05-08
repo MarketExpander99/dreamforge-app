@@ -72,7 +72,7 @@ export default function Home() {
           const items = await response.json()
           setContentItems(items)
         } else {
-          console.error('Failed to fetch content')
+          // Silent failure - return empty array for graceful degradation
           setContentItems([])
         }
       } catch (error) {
@@ -98,7 +98,7 @@ export default function Home() {
           const completed = await hasCompletedAssessment(user.id)
           setHasCompletedAssessmentState(completed)
         } catch (error) {
-          console.error('Error checking assessment status:', error)
+          // Silent failure - set default state for graceful degradation
           setHasCompletedAssessmentState(false)
         }
       }

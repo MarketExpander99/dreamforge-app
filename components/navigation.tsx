@@ -48,7 +48,8 @@ export function Navigation() {
           const completed = await hasCompletedAssessment(user.id)
           setAssessmentCompleted(completed)
         } catch (error) {
-          console.error('Error fetching data:', error)
+          console.error('Error fetching student data:', error)
+          // Continue with defaults - navigation should still work
         }
       }
     }
