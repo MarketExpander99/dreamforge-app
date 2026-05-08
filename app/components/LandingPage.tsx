@@ -1,6 +1,6 @@
 'use client'
 
-import { Navigation } from '@/components/navigation'
+import { LandingNavigation } from '@/components/landing-navigation'
 import { BookOpen, GraduationCap, Target, Users, PenTool, CheckCircle, Star, ArrowRight, Play, Award, Shield, Zap, Heart } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,10 +13,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Navigation */}
-      <Navigation />
+      <LandingNavigation />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20"></div>
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -25,18 +25,18 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center">
             {/* Trust Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 mb-8 shadow-sm">
-              <Shield className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Trusted by 10,000+ South African learners</span>
+            <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-6 py-3 mb-12 shadow-lg">
+              <Shield className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Trusted by 10,000+ South African learners</span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-8 leading-tight">
               Unlock Your Potential with
-              <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mt-2">
                 CAPS-Aligned Learning
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl sm:text-2xl lg:text-3xl text-gray-600 dark:text-gray-300 mb-16 max-w-5xl mx-auto leading-relaxed font-light">
               South Africa's premier educational platform. Master any subject with AI-powered personalization, interactive content, and curriculum-aligned excellence.
             </p>
 
@@ -109,33 +109,34 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {/* For Students */}
-            <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 hover:-translate-y-2">
-              <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <GraduationCap className="h-10 w-10 text-white" />
+            <Card className="group relative border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-800 hover:-translate-y-3 hover:rotate-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <CardHeader className="text-center pb-8 relative z-10">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 ring-4 ring-blue-100 dark:ring-blue-900/50 group-hover:ring-blue-200 dark:group-hover:ring-blue-800/50">
+                  <GraduationCap className="h-12 w-12 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                   For Students
                 </CardTitle>
-                <p className="text-blue-600 dark:text-blue-400 font-semibold">Grades R-12</p>
+                <p className="text-blue-600 dark:text-blue-400 font-semibold text-lg">Grades R-12</p>
               </CardHeader>
-              <CardContent className="text-center space-y-6">
+              <CardContent className="text-center space-y-8 relative z-10 px-8">
                 <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
                   Transform your learning experience with AI-powered personalization, interactive content, and real-time progress tracking.
                 </p>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">CAPS-aligned curriculum</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Adaptive difficulty levels</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Instant feedback & explanations</span>
                   </div>
                 </div>
@@ -143,31 +144,32 @@ export default function LandingPage() {
             </Card>
 
             {/* For Teachers */}
-            <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 hover:-translate-y-2">
-              <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Users className="h-10 w-10 text-white" />
+            <Card className="group relative border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-800 hover:-translate-y-3 hover:-rotate-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <CardHeader className="text-center pb-8 relative z-10">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-green-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-125 group-hover:-rotate-12 transition-all duration-500 ring-4 ring-green-100 dark:ring-green-900/50 group-hover:ring-green-200 dark:group-hover:ring-green-800/50">
+                  <Users className="h-12 w-12 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300">
                   For Teachers
                 </CardTitle>
-                <p className="text-green-600 dark:text-green-400 font-semibold">Educators & Schools</p>
+                <p className="text-green-600 dark:text-green-400 font-semibold text-lg">Educators & Schools</p>
               </CardHeader>
-              <CardContent className="text-center space-y-6">
+              <CardContent className="text-center space-y-8 relative z-10 px-8">
                 <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
                   Powerful classroom management tools, curriculum-aligned content creation, and comprehensive student analytics.
                 </p>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl group-hover:bg-green-100 dark:group-hover:bg-green-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Class management suite</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl group-hover:bg-green-100 dark:group-hover:bg-green-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Content creation tools</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl group-hover:bg-green-100 dark:group-hover:bg-green-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Advanced analytics dashboard</span>
                   </div>
                 </div>
@@ -175,31 +177,32 @@ export default function LandingPage() {
             </Card>
 
             {/* For Parents */}
-            <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 hover:-translate-y-2">
-              <CardHeader className="text-center pb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Heart className="h-10 w-10 text-white" />
+            <Card className="group relative border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-800 hover:-translate-y-3 hover:rotate-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <CardHeader className="text-center pb-8 relative z-10">
+                <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 ring-4 ring-purple-100 dark:ring-purple-900/50 group-hover:ring-purple-200 dark:group-hover:ring-purple-800/50">
+                  <Heart className="h-12 w-12 text-white" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                   For Parents
                 </CardTitle>
-                <p className="text-purple-600 dark:text-purple-400 font-semibold">Family Learning</p>
+                <p className="text-purple-600 dark:text-purple-400 font-semibold text-lg">Family Learning</p>
               </CardHeader>
-              <CardContent className="text-center space-y-6">
+              <CardContent className="text-center space-y-8 relative z-10 px-8">
                 <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
                   Stay connected to your child's educational journey with detailed progress tracking and family collaboration tools.
                 </p>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-purple-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Real-time progress monitoring</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-purple-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Family goal setting</span>
                   </div>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                  <div className="flex items-center justify-center gap-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 transition-colors duration-300">
+                    <CheckCircle className="h-6 w-6 text-purple-600 flex-shrink-0" />
                     <span className="text-gray-700 dark:text-gray-300 font-medium">Achievement celebrations</span>
                   </div>
                 </div>

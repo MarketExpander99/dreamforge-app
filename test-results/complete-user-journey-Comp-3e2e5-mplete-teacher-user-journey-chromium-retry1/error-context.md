@@ -12,16 +12,70 @@
 # Error details
 
 ```
-Test timeout of 60000ms exceeded.
+Test timeout of 30000ms exceeded.
 ```
 
 ```
-Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
+Error: page.waitForLoadState: Test timeout of 30000ms exceeded.
 ```
 
 # Test source
 
 ```ts
+  171 |         if (await step3Next.isVisible()) {
+  172 |           await step3Next.click();
+  173 |           await page.waitForTimeout(1500);
+  174 |         }
+  175 | 
+  176 |         // Step 4: Complete onboarding
+  177 |         const skipButton = page.locator('button:has-text("Skip Tour")').first();
+  178 |         if (await skipButton.isVisible()) {
+  179 |           await skipButton.click();
+  180 |           await page.waitForTimeout(3000);
+  181 |         }
+  182 | 
+  183 |         // Verify onboarding completion
+  184 |         const modalStillVisible = await page.locator('[class*="fixed inset-0 z-50"]').isVisible();
+  185 |         if (!modalStillVisible) {
+  186 |           console.log('✅ Onboarding completed successfully');
+  187 |           await takeScreenshot(page, 'teacher-onboarding-complete');
+  188 |         } else {
+  189 |           console.log('❌ Onboarding modal still visible');
+  190 |           await takeScreenshot(page, 'teacher-onboarding-failed');
+  191 |         }
+  192 | 
+  193 |         // Verify database state
+  194 |         await verifyDatabaseState('teacher-onboarding');
+  195 | 
+  196 |       } else {
+  197 |         console.log('ℹ️ Onboarding not triggered - teacher may already be onboarded');
+  198 |       }
+  199 | 
+  200 |       // Step 4: Navigate to teacher dashboard
+  201 |       await page.goto('/teacher');
+  202 |       await page.waitForLoadState('networkidle');
+  203 |       await page.waitForTimeout(3000); // Increased wait time
+  204 | 
+  205 |       // Try to dismiss any modal that might be blocking interaction
+  206 |       const modalDismissButton = page.locator('button:has-text("Skip"), button:has-text("Close"), button:has-text("Continue"), button[aria-label="Close"]').first();
+  207 |       if (await modalDismissButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  208 |         console.log('Found modal dismiss button, clicking...');
+  209 |         await modalDismissButton.click();
+  210 |         await page.waitForTimeout(1000);
+  211 |       }
+  212 | 
+  213 |       // Check for any overlaying modal and try to close it
+  214 |       const modalOverlay = page.locator('[class*="fixed inset-0 z-50"], [role="dialog"], [data-state="open"]').first();
+  215 |       if (await modalOverlay.isVisible({ timeout: 2000 }).catch(() => false)) {
+  216 |         console.log('Found modal overlay, attempting to close...');
+  217 |         // Try clicking escape key
+  218 |         await page.keyboard.press('Escape');
+  219 |         await page.waitForTimeout(1000);
+  220 | 
+  221 |         // If still visible, try clicking outside the modal
+  222 |         if (await modalOverlay.isVisible({ timeout: 1000 }).catch(() => false)) {
+  223 |           await page.mouse.click(10, 10); // Click in top-left corner
+  224 |           await page.waitForTimeout(1000);
   225 |         }
   226 |       }
   227 | 
@@ -68,7 +122,8 @@ Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
   268 |       // Step 6: Create new class
   269 |       console.log('🏫 Creating new class');
   270 |       await page.goto('/teacher/classes/new');
-  271 |       await page.waitForLoadState('networkidle');
+> 271 |       await page.waitForLoadState('networkidle');
+      |                  ^ Error: page.waitForLoadState: Test timeout of 30000ms exceeded.
   272 |       await takeScreenshot(page, 'teacher-create-class-form');
   273 | 
   274 |       // Fill class creation form
@@ -122,8 +177,7 @@ Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
   322 |         await page.goto('/teacher/content/new');
   323 |       }
   324 | 
-> 325 |       await page.waitForLoadState('networkidle');
-      |                  ^ Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
+  325 |       await page.waitForLoadState('networkidle');
   326 |       await takeScreenshot(page, 'teacher-create-content-form');
   327 | 
   328 |       // Fill content creation form
@@ -170,58 +224,4 @@ Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
   369 |       ];
   370 | 
   371 |       for (const tab of teacherTabs) {
-  372 |         const element = page.locator(tab.selector).first();
-  373 |         if (await element.isVisible()) {
-  374 |           console.log(`✅ ${tab.name} tab found`);
-  375 |         } else {
-  376 |           console.log(`❌ ${tab.name} tab not found`);
-  377 |         }
-  378 |       }
-  379 | 
-  380 |       // Header navigation
-  381 |       const headerLinks = [
-  382 |         { selector: 'a:has-text("Home"), [href="/"]', name: 'Home' },
-  383 |         { selector: 'a:has-text("Explore"), [href*="explore"]', name: 'Explore' },
-  384 |         { selector: 'a:has-text("Profile"), [href*="profile"]', name: 'Profile' },
-  385 |       ];
-  386 | 
-  387 |       for (const link of headerLinks) {
-  388 |         const element = page.locator(link.selector).first();
-  389 |         if (await element.isVisible()) {
-  390 |           console.log(`✅ ${link.name} header link found`);
-  391 |         } else {
-  392 |           console.log(`❌ ${link.name} header link not found`);
-  393 |         }
-  394 |       }
-  395 | 
-  396 |       // Step 9: Check for broken links
-  397 |       const brokenLinks = await checkAllLinks(page);
-  398 |       if (brokenLinks.length > 0) {
-  399 |         console.log(`❌ Found ${brokenLinks.length} broken links:`, brokenLinks);
-  400 |       } else {
-  401 |         console.log('✅ No broken links found');
-  402 |       }
-  403 | 
-  404 |       // Step 10: Logout
-  405 |       console.log('🚪 Logging out teacher');
-  406 | 
-  407 |       // Aggressive modal dismissal - try multiple strategies
-  408 |       console.log('🔍 Checking for blocking modals...');
-  409 | 
-  410 |       // Strategy 1: Look for common modal close buttons
-  411 |       const closeSelectors = [
-  412 |         'button:has-text("×")',
-  413 |         'button:has-text("✕")',
-  414 |         'button[aria-label="Close"]',
-  415 |         'button[data-testid="close"]',
-  416 |         '.modal-close',
-  417 |         '.close-button',
-  418 |         '[data-state="open"] button:first-child' // First button in open modal
-  419 |       ];
-  420 | 
-  421 |       for (const selector of closeSelectors) {
-  422 |         try {
-  423 |           const closeButton = page.locator(selector).first();
-  424 |           if (await closeButton.isVisible({ timeout: 500 }).catch(() => false)) {
-  425 |             console.log(`Found close button with selector: ${selector}, clicking...`);
 ```
