@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Fix 406 errors by setting comprehensive headers
+  // Fix 406 errors by setting comprehensive headers..
   async headers() {
     return [
       {
