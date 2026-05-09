@@ -112,6 +112,8 @@ export default function ContentDetailPage() {
         progress_percentage: 10
       })
       setProgress(10)
+      // Navigate to learning page after starting content
+      router.push('/learning')
     } catch (err) {
       console.error('Error updating progress:', err)
     }
