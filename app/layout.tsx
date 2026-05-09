@@ -11,14 +11,14 @@ import Script from "next/script";
 
 export const metadata: Metadata = {
   title: {
-    default: "Skill Gain - Learn Through Discovery",
-    template: "%s | Skill Gain"
+    default: "Skill-Gain - Network-Driven Learning",
+    template: "%s | Skill-Gain"
   },
-  description: "Transform education with Skill Gain - an interactive learning platform featuring adaptive CAPS curriculum, gamification, and social learning. Join thousands of South African students mastering Mathematics, Sciences, and more through engaging, discovery-based learning.",
-  keywords: ["education", "learning", "CAPS curriculum", "South Africa", "Mathematics", "Science", "online learning", "gamification", "adaptive learning"],
-  authors: [{ name: "Skill Gain Team" }],
-  creator: "Skill Gain",
-  publisher: "Skill Gain",
+  description: "Transform education with Skill-Gain - the premier learning platform featuring AI-powered personalization, interactive content, and network-driven excellence. Master any subject through engaging, discovery-based learning.",
+  keywords: ["education", "learning", "skill-gain", "online learning", "AI-powered", "adaptive learning", "network learning", "personalized education"],
+  authors: [{ name: "Skill-Gain Team" }],
+  creator: "Skill-Gain",
+  publisher: "Skill-Gain",
   formatDetection: {
     telephone: false,
   },
@@ -28,24 +28,24 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_ZA',
+    locale: 'en',
     url: 'https://skill-gain.com',
-    title: 'Skill Gain - Learn Through Discovery',
-    description: 'Transform education with Skill Gain - an interactive learning platform featuring adaptive CAPS curriculum, gamification, and social learning.',
-    siteName: 'Skill Gain',
+    title: 'Skill-Gain - Network-Driven Learning',
+    description: 'Transform education with Skill-Gain - the premier learning platform featuring AI-powered personalization, interactive content, and network-driven excellence.',
+    siteName: 'Skill-Gain',
     images: [
       {
         url: 'https://skill-gain.com/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Skill Gain - Learn Through Discovery',
+        alt: 'Skill-Gain - Network-Driven Learning',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Skill Gain - Learn Through Discovery',
-    description: 'Transform education with Skill Gain - an interactive learning platform featuring adaptive CAPS curriculum, gamification, and social learning.',
+    title: 'Skill-Gain - Network-Driven Learning',
+    description: 'Transform education with Skill-Gain - the premier learning platform featuring AI-powered personalization, interactive content, and network-driven excellence.',
     images: ['https://skill-gain.com/og-image.jpg'],
     creator: '@skillgainapp',
   },

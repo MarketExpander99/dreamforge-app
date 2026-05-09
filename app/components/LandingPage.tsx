@@ -11,33 +11,42 @@ export default function LandingPage() {
   const router = useRouter()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       {/* Navigation */}
       <LandingNavigation />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20"></div>
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-3xl"></div>
+        {/* Hexagonal Network Background */}
+        <div className="absolute inset-0 opacity-10">
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="hexBg" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
+                <polygon points="30,0 60,17.32 60,34.64 30,52 0,34.64 0,17.32" fill="none" stroke="#64748b" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#hexBg)"/>
+          </svg>
+        </div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-slate-700/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-slate-600/20 rounded-full blur-3xl"></div>
 
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center">
             {/* Trust Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-6 py-3 mb-12 shadow-lg">
-              <Shield className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Trusted by 10,000+ South African learners</span>
+            <div className="inline-flex items-center gap-2 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-full px-6 py-3 mb-12 shadow-lg">
+              <Shield className="h-5 w-5 text-emerald-400" />
+              <span className="text-sm font-semibold text-slate-300">Trusted by 10,000+ learners worldwide</span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-8 leading-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-white mb-8 leading-tight">
               Unlock Your Potential with
-              <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mt-2">
-                CAPS-Aligned Learning
+              <span className="block bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 bg-clip-text text-transparent mt-2">
+                skill-gain
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl lg:text-3xl text-gray-600 dark:text-gray-300 mb-16 max-w-5xl mx-auto leading-relaxed font-light">
-              South Africa's premier educational platform. Master any subject with AI-powered personalization, interactive content, and curriculum-aligned excellence.
+            <p className="text-xl sm:text-2xl lg:text-3xl text-slate-300 mb-16 max-w-5xl mx-auto leading-relaxed font-light">
+              The premier learning platform. Master any subject with AI-powered personalization, interactive content, and network-driven excellence.
             </p>
 
             {/* CTA Buttons */}
@@ -85,7 +94,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Award className="h-4 w-4 text-blue-600" />
-                <span>CAPS certified</span>
+                <span>Quality assured</span>
               </div>
             </div>
           </div>
@@ -93,19 +102,19 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 bg-slate-700 text-slate-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
               <Target className="h-4 w-4" />
-              Designed for South African Education
+              Network-Driven Learning
             </div>
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
               Everything You Need to
-              <span className="block text-blue-600 dark:text-blue-400">Excel Academically</span>
+              <span className="block text-slate-300">Excel Academically</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Join South Africa's most trusted educational platform with CAPS-aligned curriculum, personalized learning, and proven results
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              Join the most advanced learning platform with AI-powered personalization, interactive content, and proven results
             </p>
           </div>
 
@@ -244,8 +253,8 @@ export default function LandingPage() {
               Your Learning Journey
               <span className="block text-blue-600 dark:text-blue-400">Made Simple</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              From assessment to achievement, we've streamlined the learning process to help South African students excel in their studies
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              From assessment to achievement, we've streamlined the learning process to help students excel in their studies
             </p>
           </div>
 
@@ -332,7 +341,7 @@ export default function LandingPage() {
                   Ready to Start Your Journey?
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  Join 10,000+ South African learners already excelling
+                  Join 10,000+ learners already excelling
                 </p>
               </div>
               <Button
@@ -360,8 +369,8 @@ export default function LandingPage() {
               The Complete Learning
               <span className="block text-blue-600 dark:text-blue-400">Advantage</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Built specifically for South African education with unmatched curriculum alignment, privacy protection, and proven results that matter
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              Built for modern education with unmatched personalization, privacy protection, and proven results that matter
             </p>
           </div>
 
@@ -412,16 +421,16 @@ export default function LandingPage() {
                     <h3 className="text-2xl font-bold text-white mb-1">
                       Privacy-First Design
                     </h3>
-                    <p className="text-green-100">POPI Act & GDPR Compliant</p>
+                    <p className="text-green-100">Privacy & Security First</p>
                   </div>
                 </div>
                 <p className="text-green-50 text-lg leading-relaxed mb-8">
-                  Your privacy is our priority. We comply with POPI Act regulations and GDPR standards, ensuring your personal information stays protected.
+                  Your privacy is our priority. We comply with international privacy standards and regulations, ensuring your personal information stays protected.
                 </p>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
                     <CheckCircle className="h-6 w-6 text-green-300 flex-shrink-0" />
-                    <span className="text-white font-medium">POPI Act compliant data handling</span>
+                    <span className="text-white font-medium">GDPR compliant data handling</span>
                   </div>
                   <div className="flex items-center gap-3 p-4 bg-white/10 rounded-xl backdrop-blur-sm">
                     <CheckCircle className="h-6 w-6 text-green-300 flex-shrink-0" />
@@ -478,7 +487,7 @@ export default function LandingPage() {
               <span className="block text-blue-600 dark:text-blue-400">Real Learners</span>
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              See how Skill Gain is transforming education across South Africa, one student at a time
+              See how Skill-Gain is transforming education worldwide, one student at a time
             </p>
           </div>
 
@@ -501,7 +510,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white">Sarah M.</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Grade 11 Student • Johannesburg</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Grade 11 Student • New York</p>
                   </div>
                 </div>
               </CardContent>
@@ -525,7 +534,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white">Mr. Johnson</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Mathematics Teacher • Cape Town</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Mathematics Teacher • Los Angeles</p>
                   </div>
                 </div>
               </CardContent>
@@ -549,7 +558,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 dark:text-white">Linda K.</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Parent • Durban</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Parent • Chicago</p>
                   </div>
                 </div>
               </CardContent>
@@ -585,7 +594,7 @@ export default function LandingPage() {
             Ready to Start Your Learning Journey?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of South African learners already mastering new skills with Skill Gain.
+            Join thousands of learners already mastering new skills with Skill-Gain.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -618,7 +627,7 @@ export default function LandingPage() {
                 <span className="text-2xl font-bold">Skill Gain</span>
               </div>
               <p className="text-gray-400 mb-4">
-                Empowering South African learners with personalized, CAPS-aligned education that adapts to every student's unique journey.
+                Empowering learners worldwide with personalized, AI-driven education that adapts to every student's unique journey.
               </p>
               <p className="text-sm text-gray-500">
                 © 2024 Skill Gain. All rights reserved.
