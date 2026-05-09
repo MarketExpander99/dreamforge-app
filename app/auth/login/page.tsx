@@ -23,13 +23,14 @@ export default function LoginPage() {
 
     try {
       const supabase = createBrowserSupabaseClient()
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
       if (error) throw error
 
+      // Redirect to root - server-side logic will handle dashboard routing
       router.push('/')
     } catch (error: unknown) {
       console.error('Login error:', error)

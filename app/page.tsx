@@ -1,10 +1,9 @@
-// Server component for authentication checking
+// Server component for authentication checking and dashboard routing
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import LandingPage from './components/LandingPage'
-import HomeDashboard from './components/HomeDashboard'
 
-// Check authentication on server side
+// Check authentication on server side and redirect to appropriate dashboard
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -14,23 +13,40 @@ export default async function Home() {
     return <LandingPage />
   }
 
-  // If user is authenticated, show personalized home dashboard
+  // User is authenticated - redirect to their appropriate dashboard
   try {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, teacher_onboarding_completed, full_name, avatar')
+      .select('role, teacher_onboarding_completed')
       .eq('id', user.id)
       .single()
 
-    // If profile fetch fails, show basic dashboard
+    // If profile fetch fails, default to student dashboard
     if (profileError) {
-      return <HomeDashboard user={user} profile={null} />
+      redirect('/learning')
     }
 
-    // Show personalized home dashboard for all authenticated users
-    return <HomeDashboard user={user} profile={profile} />
+    // Redirect based on user role
+    const userRole = profile?.role
+    const userEmail = user.email
+
+    // Special admin email always gets teacher access
+    if (userEmail === 'eben.combrinck@proton.me') {
+      redirect('/teacher')
+    }
+
+    // Route based on role
+    switch (userRole) {
+      case 'teacher':
+        redirect('/teacher')
+      case 'parent':
+        redirect('/family')
+      case 'student':
+      default:
+        redirect('/learning')
+    }
   } catch (error) {
-    // If any error occurs, show basic dashboard as fallback
-    return <HomeDashboard user={user} profile={null} />
+    // If any error occurs, default to student dashboard
+    redirect('/learning')
   }
 }

@@ -160,7 +160,11 @@ npm run lint     # Run ESLint
 
 ## 📚 Documentation
 
-- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Comprehensive project status and roadmap
+- **[SPRINT_PLANNING_DOCUMENTATION.md](./SPRINT_PLANNING_DOCUMENTATION.md)** - **📌 MAIN DOCUMENTATION** - Comprehensive project overview, tech stack, features, sprint history, and planning guide
+- **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** - Detailed technical specification and architecture
+- **[SPRINT_TRACKING.json](./SPRINT_TRACKING.json)** - Sprint progress tracking and metrics
+- **[TESTING_INSTRUCTIONS_SPRINT2.md](./TESTING_INSTRUCTIONS_SPRINT2.md)** - Comprehensive testing guide
+- **[BUTTON_AUDIT_RESULTS.md](./BUTTON_AUDIT_RESULTS.md)** - QA audit results and test coverage
 - **[supabase-schema.sql](./supabase-schema.sql)** - Complete database schema
 - **[AGENTS.md](./AGENTS.md)** - Development guidelines and rules
 
