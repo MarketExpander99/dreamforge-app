@@ -4,7 +4,7 @@ import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import {
   BookOpen,
   Users,
@@ -161,16 +161,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* Main Dashboard Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              </TabsList>
+            <ProminentTabs defaultValue="overview" className="space-y-6">
+              <ProminentTabsList className="grid w-full grid-cols-4">
+                <ProminentTabsTrigger value="overview">Overview</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="content">Content</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="users">Users</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="analytics">Analytics</ProminentTabsTrigger>
+              </ProminentTabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
+              <ProminentTabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Quick Actions */}
                   <Card>
@@ -246,10 +246,10 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Content Tab */}
-              <TabsContent value="content" className="space-y-6">
+              <ProminentTabsContent value="content" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Content Management</CardTitle>
@@ -268,10 +268,10 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Users Tab */}
-              <TabsContent value="users" className="space-y-6">
+              <ProminentTabsContent value="users" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>User Management</CardTitle>
@@ -290,10 +290,10 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Analytics Tab */}
-              <TabsContent value="analytics" className="space-y-6">
+              <ProminentTabsContent value="analytics" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Platform Analytics</CardTitle>
@@ -312,8 +312,8 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </Tabs>
+              </ProminentTabsContent>
+            </ProminentTabs>
           </div>
         </main>
       </div>

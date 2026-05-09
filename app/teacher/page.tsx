@@ -5,7 +5,7 @@ import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import { TeacherOnboarding } from '@/components/teacher-onboarding'
 import {
   Users,
@@ -255,17 +255,17 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Main Dashboard Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="classes">My Classes</TabsTrigger>
-                <TabsTrigger value="students">Students</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="moderation">Moderation</TabsTrigger>
-              </TabsList>
+            <ProminentTabs defaultValue="overview" className="space-y-6">
+              <ProminentTabsList className="grid w-full grid-cols-5">
+                <ProminentTabsTrigger value="overview">Overview</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="classes">My Classes</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="students">Students</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="content">Content</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="moderation">Moderation</ProminentTabsTrigger>
+              </ProminentTabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
+              <ProminentTabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Quick Actions */}
                   <Card>
@@ -352,10 +352,10 @@ export default function TeacherDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Classes Tab */}
-              <TabsContent value="classes" className="space-y-6">
+              <ProminentTabsContent value="classes" className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold">My Classes</h2>
@@ -438,10 +438,10 @@ export default function TeacherDashboard() {
                     ))}
                   </div>
                 )}
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Students Tab */}
-              <TabsContent value="students" className="space-y-6">
+              <ProminentTabsContent value="students" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Student Management</CardTitle>
@@ -460,10 +460,10 @@ export default function TeacherDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Content Tab */}
-              <TabsContent value="content" className="space-y-6">
+              <ProminentTabsContent value="content" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Content Creation</CardTitle>
@@ -482,10 +482,10 @@ export default function TeacherDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Moderation Tab */}
-              <TabsContent value="moderation" className="space-y-6">
+              <ProminentTabsContent value="moderation" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-3 mb-6">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -593,8 +593,8 @@ export default function TeacherDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </Tabs>
+              </ProminentTabsContent>
+            </ProminentTabs>
           </div>
         </main>
       </div>

@@ -9,7 +9,7 @@ import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import { Progress } from '@/components/ui/progress'
 import {
   Select,
@@ -415,15 +415,15 @@ export default function CurriculumPage() {
         )}
       </div>
 
-      <Tabs defaultValue="curriculum" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="curriculum">Curriculum Browser</TabsTrigger>
-          <TabsTrigger value="path">My Path</TabsTrigger>
-          <TabsTrigger value="lessons">Lesson Plans</TabsTrigger>
-          <TabsTrigger value="progress">My Progress</TabsTrigger>
-        </TabsList>
+      <ProminentTabs defaultValue="curriculum" className="space-y-6">
+        <ProminentTabsList className="grid w-full grid-cols-4">
+          <ProminentTabsTrigger value="curriculum">Curriculum Browser</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="path">My Path</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="lessons">Lesson Plans</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="progress">My Progress</ProminentTabsTrigger>
+        </ProminentTabsList>
 
-        <TabsContent value="curriculum" className="space-y-6">
+        <ProminentTabsContent value="curriculum" className="space-y-6">
           {/* Curriculum Selection */}
           <Card>
             <CardHeader>
@@ -616,9 +616,9 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="path" className="space-y-6">
+        <ProminentTabsContent value="path" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -746,9 +746,9 @@ export default function CurriculumPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="lessons" className="space-y-6">
+        <ProminentTabsContent value="lessons" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Lesson Plans for {selectedGrade}</CardTitle>
@@ -803,9 +803,9 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="progress" className="space-y-6">
+        <ProminentTabsContent value="progress" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>My Learning Progress</CardTitle>
@@ -849,8 +849,8 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </ProminentTabsContent>
+      </ProminentTabs>
     </div>
   </>
 )
