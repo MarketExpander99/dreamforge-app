@@ -959,6 +959,27 @@ export const clientData = {
   }
 }
 
+// Bulk Content Operations
+export async function bulkInsertContentItems(items: Omit<ContentItem, 'id' | 'created_at' | 'updated_at'>[]): Promise<ContentItem[]> {
+  const supabase = createBrowserSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('content_items')
+    .insert(items.map(item => ({
+      ...item,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })))
+    .select()
+
+  if (error) {
+    console.error('Error bulk inserting content items:', error)
+    return []
+  }
+
+  return data || []
+}
+
 // Analytics Functions
 export interface WeeklyData {
   week: string
