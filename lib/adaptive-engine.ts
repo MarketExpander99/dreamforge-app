@@ -40,7 +40,7 @@ export async function evaluatePerformance(
     // Get user's current proficiency data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('proficiency, grade_level')
+      .select('proficiency, grade_level, assessment_completed')
       .eq('id', userId)
       .single()
 
@@ -50,6 +50,7 @@ export async function evaluatePerformance(
 
     const currentProficiency: ProficiencyData = profile.proficiency || {}
     const gradeLevel = profile.grade_level
+    const hasCompletedAssessment = profile.assessment_completed
 
     // Prepare context for Grok evaluation
     const context = {
@@ -442,5 +443,87 @@ export async function checkGradeAdvancementReadiness(userId: string): Promise<bo
   } catch (error) {
     console.error('Error checking grade advancement readiness:', error)
     return false
+  }
+}
+
+/**
+ * Initialize adaptive engine with diagnostic assessment results
+ * This should be called after a user completes their diagnostic assessment
+ */
+export async function initializeWithDiagnosticResults(
+  userId: string,
+  diagnosticResults: {
+    recommended_grade: string
+    subject_proficiency: {
+      Mathematics: number
+      English: number
+      Science: number
+      'General Knowledge': number
+    }
+    suggested_topics: string[]
+  }
+): Promise<void> {
+  const supabase = await createClient()
+
+  try {
+    // Convert diagnostic results to proficiency format
+    const proficiencyData: ProficiencyData = {
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_mathematics`]: diagnosticResults.subject_proficiency.Mathematics,
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_english`]: diagnosticResults.subject_proficiency.English,
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_science`]: diagnosticResults.subject_proficiency.Science,
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_general_knowledge`]: diagnosticResults.subject_proficiency['General Knowledge']
+    }
+
+    // Update profile with diagnostic-based proficiency
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        proficiency: proficiencyData,
+        grade_level: diagnosticResults.recommended_grade,
+        assessment_completed: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+
+    if (updateError) {
+      console.error('Failed to initialize with diagnostic results:', updateError)
+      return
+    }
+
+    // Generate initial personalized content based on weak areas
+    const weakSubjects = Object.entries(diagnosticResults.subject_proficiency)
+      .filter(([, score]) => score < 70)
+      .map(([subject]) => subject.toLowerCase().replace(' ', '_'))
+
+    // If no weak areas, generate for all subjects
+    const subjectsToGenerate = weakSubjects.length > 0 ? weakSubjects : ['mathematics', 'english', 'science', 'general_knowledge']
+
+    // Generate initial content for each subject (limited to avoid overwhelming)
+    for (const subject of subjectsToGenerate.slice(0, 2)) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/content/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gradeLevel: diagnosticResults.recommended_grade,
+            subject: subject,
+            count: 2, // Start with 2 items per subject
+            style: 'diagnostic-remediation',
+            priorityTopics: diagnosticResults.suggested_topics.slice(0, 3)
+          })
+        })
+
+        if (!response.ok) {
+          console.warn(`Failed to generate initial content for ${subject}`)
+        }
+      } catch (error) {
+        console.warn(`Error generating initial content for ${subject}:`, error)
+      }
+    }
+
+    console.log(`Initialized adaptive engine for user ${userId} with diagnostic results`)
+
+  } catch (error) {
+    console.error('Error initializing with diagnostic results:', error)
   }
 }

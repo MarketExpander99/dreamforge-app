@@ -682,12 +682,12 @@ export default function CurriculumPage() {
                       <p className="text-gray-600 mb-4">
                         Complete your grade assessment or start some lessons to get personalized recommendations.
                       </p>
-                      <Button
-                        onClick={() => router.push('/assessment')}
-                        className="mr-2"
-                      >
-                        Take Assessment
-                      </Button>
+                       <Button
+                         onClick={() => router.push('/learning/curriculum/assessment')}
+                         className="mr-2"
+                       >
+                         Take Assessment
+                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => router.push('/learning/curriculum')}
