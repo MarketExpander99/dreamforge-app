@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Mic, MessageSquare, Loader2, Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/user-context'
 
 interface AssessmentQuestion {
   id: string
@@ -51,9 +52,12 @@ export default function AssessmentPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<AssessmentResult | null>(null)
   const [isRecording, setIsRecording] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
   const router = useRouter()
+  const { refreshAuth } = useAuth()
 
   useEffect(() => {
     loadAssessmentQuestions()
@@ -103,6 +107,9 @@ export default function AssessmentPage() {
     if (responses.length === 0) return
 
     setSubmitting(true)
+    setError(null)
+    setSuccess(false)
+
     try {
       const response = await fetch('/api/assessment/grade', {
         method: 'POST',
@@ -124,12 +131,21 @@ export default function AssessmentPage() {
 
       const data = await response.json()
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setResult(data.assessment)
+        setSuccess(true)
+        // Refresh auth context to update profile data with new grade
+        try {
+          await refreshAuth()
+        } catch (refreshError) {
+          console.warn('Failed to refresh auth after assessment:', refreshError)
+        }
       } else {
+        setError(data.error || 'Failed to submit assessment')
         console.error('Assessment submission failed:', data.error)
       }
     } catch (error) {
+      setError('Network error. Please try again.')
       console.error('Error submitting assessment:', error)
     } finally {
       setSubmitting(false)
@@ -243,6 +259,12 @@ export default function AssessmentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
             <div className="space-y-2">
               {responses.map((response, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

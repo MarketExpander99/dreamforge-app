@@ -188,7 +188,8 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
 
     if (profileError) {
-      console.warn('Failed to update user profile grade:', profileError)
+      console.error('Failed to update user profile grade:', profileError)
+      return NextResponse.json({ error: 'Failed to save grade to profile' }, { status: 500 })
     }
 
     // Generate adaptive learning paths based on assessment results

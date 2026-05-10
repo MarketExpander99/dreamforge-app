@@ -42,6 +42,8 @@ export default function ContentDetailPage() {
   const [quizAnswers, setQuizAnswers] = useState<number[]>([])
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [quizScore, setQuizScore] = useState(0)
+  const [startingContent, setStartingContent] = useState(false)
+  const [completingContent, setCompletingContent] = useState(false)
 
   useEffect(() => {
     const loadContent = async () => {
@@ -106,22 +108,26 @@ export default function ContentDetailPage() {
   const handleStartContent = async () => {
     if (!user || !content) return
 
+    setStartingContent(true)
     try {
       await updateUserProgress(user.id, content.id, {
         status: 'in_progress',
         progress_percentage: 10
       })
       setProgress(10)
-      // Navigate to learning page after starting content
-      router.push('/learning')
+      // Stay on the same page to continue learning
     } catch (err) {
       console.error('Error updating progress:', err)
+      // Could add toast notification here
+    } finally {
+      setStartingContent(false)
     }
   }
 
   const handleCompleteContent = async () => {
     if (!user || !content) return
 
+    setCompletingContent(true)
     try {
       await updateUserProgress(user.id, content.id, {
         status: 'completed',
@@ -132,6 +138,9 @@ export default function ContentDetailPage() {
       setIsCompleted(true)
     } catch (err) {
       console.error('Error completing content:', err)
+      // Could add toast notification here
+    } finally {
+      setCompletingContent(false)
     }
   }
 
@@ -270,15 +279,33 @@ export default function ContentDetailPage() {
 
               <div className="flex gap-2">
                 {!isCompleted && progress === 0 && (
-                  <Button onClick={handleStartContent}>
-                    <PlayCircle className="mr-2 h-4 w-4" />
-                    Start Learning
+                  <Button onClick={handleStartContent} disabled={startingContent}>
+                    {startingContent ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b border-current mr-2"></div>
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                        Start Learning
+                      </>
+                    )}
                   </Button>
                 )}
                 {!isCompleted && progress > 0 && progress < 100 && (
-                  <Button onClick={handleCompleteContent}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark Complete
+                  <Button onClick={handleCompleteContent} disabled={completingContent}>
+                    {completingContent ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b border-current mr-2"></div>
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Mark Complete
+                      </>
+                    )}
                   </Button>
                 )}
                 {isCompleted && (

@@ -31,6 +31,7 @@ export default function LearningPage() {
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
   const [loading, setLoading] = useState(true)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const fetchUserData = useCallback(async () => {
     if (!user) return
@@ -217,10 +218,24 @@ export default function LearningPage() {
                                 <div className="text-xs text-muted-foreground">complete</div>
                               </div>
                             </div>
-                            <Progress value={item.progress} className="mb-4" />
-                             <Button size="sm">
-                               {item.progress === 0 ? 'Start' : item.progress === 100 ? 'Review' : 'Continue'}
-                             </Button>
+                             <Progress value={item.progress} className="mb-4" />
+                              <Button
+                                size="sm"
+                                disabled={navigatingTo === item.id}
+                                onClick={() => {
+                                  setNavigatingTo(item.id)
+                                  router.push(`/content/${item.id}`)
+                                }}
+                              >
+                                {navigatingTo === item.id ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b border-current mr-2"></div>
+                                    Loading...
+                                  </>
+                                ) : (
+                                  item.progress === 0 ? 'Start' : item.progress === 100 ? 'Review' : 'Continue'
+                                )}
+                              </Button>
                           </CardContent>
                         </Card>
                       ))}
