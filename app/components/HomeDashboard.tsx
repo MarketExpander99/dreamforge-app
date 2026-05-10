@@ -112,14 +112,14 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
 
-      <main className="ml-64 max-w-7xl py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="py-6">
           {/* Welcome Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-mobile-display text-gray-900 dark:text-white">
               {isNewUser ? `Welcome to Skill Gain, ${userName}! 🎉` : `Welcome back, ${userName}! 👋`}
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-3 text-mobile-body text-gray-600 dark:text-gray-400">
               {isNewUser
                 ? "Let's start your learning journey together. Explore our curriculum and begin your first lesson!"
                 : "Ready to continue your learning journey?"
@@ -128,18 +128,18 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
           </div>
 
           {/* Quick Actions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {quickActions.map((action) => (
               <Link key={action.title} href={action.href}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer touch-manipulation min-h-[120px] sm:min-h-[140px]">
                   <CardHeader className="pb-3">
                     <div className="flex items-center space-x-3">
-                      <div className={`${action.color} p-2 rounded-lg`}>
-                        <action.icon className="h-6 w-6 text-white" />
+                      <div className={`${action.color} p-2 rounded-lg flex-shrink-0`}>
+                        <action.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                       </div>
-                      <div>
-                        <CardTitle className="text-lg">{action.title}</CardTitle>
-                        <CardDescription>{action.description}</CardDescription>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base sm:text-lg leading-tight">{action.title}</CardTitle>
+                        <CardDescription className="text-sm leading-relaxed">{action.description}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -150,41 +150,41 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
 
           {/* Stats Overview - Only show for users with activity */}
           {!isNewUser && userStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <Card className="touch-manipulation">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Learning Streak</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <TrendingUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{userStats.currentStreak} days</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl sm:text-3xl font-bold">{userStats.currentStreak} days</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {userStats.currentStreak > 0 ? 'Keep it up!' : 'Start your streak today!'}
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="touch-manipulation">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Completed Modules</CardTitle>
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
+                  <Trophy className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{userStats.totalCompleted}</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-2xl sm:text-3xl font-bold">{userStats.totalCompleted}</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {userStats.totalStarted > 0 ? `${userStats.totalStarted - userStats.totalCompleted} in progress` : 'Begin your journey!'}
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="sm:col-span-2 lg:col-span-1 touch-manipulation">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Study Time</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{Math.round(userStats.totalTime / 60)}h</div>
-                  <p className="text-xs text-muted-foreground">Total learning time</p>
+                  <div className="text-2xl sm:text-3xl font-bold">{Math.round(userStats.totalTime / 60)}h</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Total learning time</p>
                 </CardContent>
               </Card>
             </div>

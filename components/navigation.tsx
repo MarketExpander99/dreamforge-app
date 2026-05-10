@@ -283,8 +283,8 @@ export function Navigation() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <nav className="flex justify-around py-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-bottom">
+        <nav className="flex justify-around py-2 px-2">
           {[
             { name: 'Home', href: '/', icon: Home },
             { name: 'Explore', href: '/explore', icon: Search },
@@ -294,16 +294,18 @@ export function Navigation() {
           ].map((item) => {
             const isActive = pathname === item.href
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} className="flex-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  className={`flex flex-col items-center gap-1 h-auto py-3 px-2 min-h-[60px] w-full touch-manipulation rounded-lg mx-1 transition-all duration-200 ${
+                    isActive
+                      ? 'text-primary bg-primary/10 shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-xs">{item.name}</span>
+                  <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                  <span className="text-xs font-medium leading-tight">{item.name}</span>
                 </Button>
               </Link>
             )
