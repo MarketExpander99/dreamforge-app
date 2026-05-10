@@ -25,13 +25,15 @@ interface UserStats {
 
 export default function LearningPage() {
   const router = useRouter()
-  const { user, authLoading } = useAuth()
+  const { user, profile, authLoading } = useAuth()
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [userBookmarks, setUserBookmarks] = useState<UserBookmark[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
   const [loading, setLoading] = useState(true)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+
+  const hasGradeLevel = profile?.grade_level !== null
 
   const fetchUserData = useCallback(async () => {
     if (!user) return
@@ -327,38 +329,74 @@ export default function LearningPage() {
                   </div>
 
                   {/* Current Learning Path */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Target className="h-5 w-5" />
-                        Current Learning Path
-                      </CardTitle>
-                      <CardDescription>
-                        Your personalized curriculum progress
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold">Mathematics - Grade 3</h3>
-                            <p className="text-sm text-muted-foreground">CAPS Curriculum</p>
+                  {hasGradeLevel ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Target className="h-5 w-5" />
+                          Current Learning Path
+                        </CardTitle>
+                        <CardDescription>
+                          Your personalized curriculum progress
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold">
+                                {profile?.interests?.[0] || 'General Studies'} - Grade {profile?.grade_level}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">CAPS Curriculum</p>
+                            </div>
+                            <Badge variant="secondary">Active</Badge>
                           </div>
-                          <Badge variant="secondary">Active</Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Overall Progress</span>
-                            <span>0%</span>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Overall Progress</span>
+                              <span>{userStats.totalCompleted > 0 ? Math.round((userStats.totalCompleted / (userStats.totalCompleted + userProgress.length)) * 100) : 0}%</span>
+                            </div>
+                            <Progress value={userStats.totalCompleted > 0 ? Math.round((userStats.totalCompleted / (userStats.totalCompleted + userProgress.length)) * 100) : 0} className="w-full" />
                           </div>
-                          <Progress value={0} className="w-full" />
+                          <div className="text-sm text-muted-foreground">
+                            Continue your personalized learning journey
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          Complete assessment to unlock personalized curriculum
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Target className="h-5 w-5 text-blue-600" />
+                          Unlock Your Learning Path
+                        </CardTitle>
+                        <CardDescription>
+                          Complete your grade assessment to get a personalized curriculum
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Personalized Curriculum</h3>
+                              <p className="text-sm text-blue-700 dark:text-blue-300">Tailored to your grade level and interests</p>
+                            </div>
+                            <Badge variant="outline" className="border-blue-300 text-blue-700">Locked</Badge>
+                          </div>
+                          <div className="text-sm text-blue-700 dark:text-blue-300">
+                            Take the quick assessment to unlock your personalized learning path
+                          </div>
+                          <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => window.location.href = '/learning/curriculum'}
+                          >
+                            Take Grade Assessment
+                          </Button>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Available Subjects */}
                   <div className="mt-6">

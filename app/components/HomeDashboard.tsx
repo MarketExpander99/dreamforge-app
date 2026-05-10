@@ -112,7 +112,7 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="md:ml-64 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="py-6">
           {/* Welcome Header */}
           <div className="mb-6 sm:mb-8">

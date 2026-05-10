@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target, GraduationCap, Download, Smartphone } from 'lucide-react'
+import { Home, Search, BookOpen, User, LogOut, Settings, PenTool, Users, Flame, Trophy, Target, GraduationCap, Download, Smartphone, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getCurrentStreak, hasCompletedAssessment } from '@/lib/data'
 
 const navigation = [
@@ -36,6 +36,7 @@ export function Navigation() {
   const { user, profile, signOut, loading } = useAuth()
   const [currentStreak, setCurrentStreak] = useState(0)
   const [assessmentCompleted, setAssessmentCompleted] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Fetch current streak and assessment status for students
   useEffect(() => {
@@ -83,10 +84,36 @@ export function Navigation() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4 mb-8">
-            <h1 className="text-2xl font-bold text-primary">Skill Gain</h1>
+      <AnimatePresence>
+        <motion.div
+          initial={{ width: sidebarCollapsed ? 80 : 256 }}
+          animate={{ width: sidebarCollapsed ? 80 : 256 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="hidden md:flex md:flex-col md:fixed md:inset-y-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
+        >
+          {/* Header with Logo and Collapse Toggle */}
+          <div className="flex items-center justify-between flex-shrink-0 px-4 mb-8">
+            <AnimatePresence>
+              {!sidebarCollapsed && (
+                <motion.h1
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-2xl font-bold text-primary"
+                >
+                  Skill Gain
+                </motion.h1>
+              )}
+            </AnimatePresence>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Follow Us on X */}
@@ -279,8 +306,8 @@ export function Navigation() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-bottom">

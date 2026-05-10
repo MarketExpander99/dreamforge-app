@@ -4,6 +4,7 @@ import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { ExploreGraph } from '@/components/explore-graph'
 import { Recommendations } from '@/components/recommendations'
+import { GradeGateCTA } from '@/components/GradeGateCTA'
 import { clientData, Category, ContentItem } from '@/lib/data'
 import { Search, Filter, TrendingUp, Star, BookOpen, Network, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { useAuth } from '@/lib/user-context'
 import { useState, useEffect, use } from 'react'
 
 interface ExplorePageProps {
@@ -18,6 +20,7 @@ interface ExplorePageProps {
 }
 
 export default function ExplorePage({ searchParams }: ExplorePageProps) {
+  const { user, profile } = useAuth()
   const [viewMode, setViewMode] = useState<'list' | 'graph'>('list')
   const [categories, setCategories] = useState<Category[]>([])
   const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([])
@@ -29,6 +32,8 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
   const categoryParam = (params?.category as string) || undefined
   const searchQuery = (params?.q as string) || undefined
 
+  const hasGradeLevel = profile?.grade_level !== null
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
@@ -36,11 +41,11 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
         // Fetch data from database with error handling
         const results = await Promise.allSettled([
           clientData.getCategories(),
-          clientData.getContentItems({ featured: true, limit: 3 }),
-          clientData.getContentItems({
+          hasGradeLevel ? clientData.getContentItems({ featured: true, limit: 3 }) : Promise.resolve([]),
+          hasGradeLevel ? clientData.getContentItems({
             limit: 20,
             category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined
-          }),
+          }) : Promise.resolve([]),
           clientData.getContentItems({ limit: 1000 }) // Get all content for accurate category counts
         ])
 
@@ -62,7 +67,7 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
     }
 
     fetchData()
-  }, [categoryParam, searchQuery])
+  }, [categoryParam, searchQuery, hasGradeLevel])
 
   // Create category stats using all content (not filtered)
   const categoryStats = categories.map(category => ({
@@ -162,6 +167,13 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
               </div>
             </div>
 
+            {/* Grade Gate CTA - Show if user doesn't have grade_level */}
+            {!hasGradeLevel && (
+              <div className="mb-8">
+                <GradeGateCTA />
+              </div>
+            )}
+
             {viewMode === 'graph' ? (
               /* Graph View */
               <div className="mb-8">
@@ -174,106 +186,112 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
             ) : (
               /* List View */
               <>
-                {/* Featured Content */}
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Star className="h-5 w-5 text-yellow-500" />
-                    <h2 className="text-xl font-semibold">Featured Content</h2>
-                  </div>
-                  {featuredContent.length > 0 ? (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {featuredContent.map((item) => (
-                        <Card key={item.id} className="hover:shadow-md transition-shadow">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between">
-                              <Badge variant="secondary" className="text-xs">
-                                {item.category?.name || 'General'}
-                              </Badge>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <TrendingUp className="h-3 w-3" />
-                                {item.likes}
+                {/* Featured Content - Only show if user has grade_level */}
+                {hasGradeLevel && (
+                  <div className="mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      <h2 className="text-xl font-semibold">Featured Content</h2>
+                    </div>
+                    {featuredContent.length > 0 ? (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {featuredContent.map((item) => (
+                          <Card key={item.id} className="hover:shadow-md transition-shadow">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.category?.name || 'General'}
+                                </Badge>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <TrendingUp className="h-3 w-3" />
+                                  {item.likes}
+                                </div>
                               </div>
-                            </div>
-                            <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
-                        <CardDescription className="line-clamp-2">
-                          {item.content}
-                        </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between text-sm text-muted-foreground">
-                              <span>{item.read_time} min read</span>
-                              <Link href={`/content/${item.id}`}>
-                                <Button size="sm" variant="outline">
-                                  View Details
-                                </Button>
-                              </Link>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No Featured Content Yet</h3>
-                        <p className="text-muted-foreground">
-                          Featured content will appear here once it's added to the platform.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Personalized Recommendations */}
-                <div className="mb-8">
-                  <Recommendations
-                    title="Recommended for You"
-                    subtitle="Discover content tailored to your interests and learning progress"
-                    limit={6}
-                  />
-                </div>
-
-                {/* All Content */}
-                <div>
-                  <div className="flex items-center gap-2 mb-6">
-                    <TrendingUp className="h-5 w-5 text-blue-500" />
-                    <h2 className="text-xl font-semibold">All Content</h2>
+                              <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {item.content}
+                          </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>{item.read_time} min read</span>
+                                <Link href={`/content/${item.id}`}>
+                                  <Button size="sm" variant="outline">
+                                    View Details
+                                  </Button>
+                                </Link>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="font-semibold mb-2">No Featured Content Yet</h3>
+                          <p className="text-muted-foreground">
+                            Featured content will appear here once it's added to the platform.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
+                )}
 
-                  {allContent.length > 0 ? (
-                    <div className="space-y-6">
-                      {allContent.map((item) => {
-                        // Convert database item to FeedCard format
-                        const feedCardItem = {
-                          id: item.id,
-                          type: item.type,
-                          title: item.title,
-                          content: item.content,
-                          imageUrl: item.image_url || undefined,
-                          videoUrl: item.video_url || undefined,
-                          audioUrl: item.audio_url || undefined,
-                          quiz: item.quiz || undefined,
-                          category: item.category?.name || 'General',
-                          readTime: item.read_time,
-                          likes: item.likes,
-                          comments: 0 // Not implemented yet
-                        }
-                        return <FeedCard key={item.id} card={feedCardItem} />
-                      })}
+                {/* Personalized Recommendations - Only show if user has grade_level */}
+                {hasGradeLevel && (
+                  <div className="mb-8">
+                    <Recommendations
+                      title="Recommended for You"
+                      subtitle="Discover content tailored to your interests and learning progress"
+                      limit={6}
+                    />
+                  </div>
+                )}
+
+                {/* All Content - Only show if user has grade_level */}
+                {hasGradeLevel && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-6">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                      <h2 className="text-xl font-semibold">All Content</h2>
                     </div>
-                  ) : (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No Content Available</h3>
-                        <p className="text-muted-foreground">
-                          Learning content will appear here once it's added to the platform.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+
+                    {allContent.length > 0 ? (
+                      <div className="space-y-6">
+                        {allContent.map((item) => {
+                          // Convert database item to FeedCard format
+                          const feedCardItem = {
+                            id: item.id,
+                            type: item.type,
+                            title: item.title,
+                            content: item.content,
+                            imageUrl: item.image_url || undefined,
+                            videoUrl: item.video_url || undefined,
+                            audioUrl: item.audio_url || undefined,
+                            quiz: item.quiz || undefined,
+                            category: item.category?.name || 'General',
+                            readTime: item.read_time,
+                            likes: item.likes,
+                            comments: 0 // Not implemented yet
+                          }
+                          return <FeedCard key={item.id} card={feedCardItem} />
+                        })}
+                      </div>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="font-semibold mb-2">No Content Available</h3>
+                          <p className="text-muted-foreground">
+                            Learning content will appear here once it's added to the platform.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>

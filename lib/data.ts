@@ -2057,14 +2057,21 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     const completedTags = completedContent.flatMap(p => p.content?.[0]?.tags || []).filter(Boolean) as string[]
     const completedDifficulties = completedContent.map(p => p.content?.[0]?.difficulty).filter(Boolean) as string[]
 
-    // Get all available content
-    const { data: allContent, error: contentError } = await supabase
+    // Get all available content, filtered by grade level if available
+    let contentQuery = supabase
       .from('content_items')
       .select(`
         *,
         category:categories(*)
       `)
       .eq('is_published', true)
+
+    // If user has a grade level, filter content to match their grade
+    if (profile.grade_level) {
+      contentQuery = contentQuery.contains('tags', [profile.grade_level])
+    }
+
+    const { data: allContent, error: contentError } = await contentQuery
 
     if (contentError) throw contentError
 
