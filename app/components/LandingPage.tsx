@@ -31,7 +31,7 @@ export default function LandingPage() {
         <div className="absolute top-20 left-10 w-72 h-72 bg-slate-700/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-slate-600/20 rounded-full blur-3xl"></div>
 
-        <div className="relative mobile-container">
+        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Trust Badge */}
             <div className="inline-flex items-center gap-2 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-8 sm:mb-12 shadow-lg">
