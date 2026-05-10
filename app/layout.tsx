@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     title: 'Skill-Gain - Network-Driven Learning',
     description: 'Transform education with Skill-Gain - the premier learning platform featuring AI-powered personalization, interactive content, and network-driven excellence.',
     images: ['https://skill-gain.com/og-image.jpg'],
-    creator: '@skillgainapp',
+    creator: '@Skill_GainX',
   },
   robots: {
     index: true,

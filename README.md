@@ -183,7 +183,7 @@ This project follows standard Next.js and TypeScript development practices. See 
 
 ## 📄 License
 
-This project is part of the DreamForge initiative.
+
 
 ---
 

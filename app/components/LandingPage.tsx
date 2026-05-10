@@ -96,6 +96,19 @@ export default function LandingPage() {
                 <Award className="h-4 w-4 text-blue-600" />
                 <span>Quality assured</span>
               </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://x.com/Skill_GainX"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <span>Join us on X @Skill_GainX</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -629,6 +642,19 @@ export default function LandingPage() {
               <p className="text-gray-400 mb-4">
                 Empowering learners worldwide with personalized, AI-driven education that adapts to every student's unique journey.
               </p>
+              <div className="flex items-center space-x-4 mb-4">
+                <a
+                  href="https://x.com/Skill_GainX"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-blue-400 transition-colors"
+                  aria-label="Follow us on X (Twitter)"
+                >
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </a>
+              </div>
               <p className="text-sm text-gray-500">
                 © 2024 Skill Gain. All rights reserved.
               </p>
