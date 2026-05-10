@@ -2180,5 +2180,96 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
   }
 }
 
+// Get next recommended content based on proficiency gaps (adaptive learning)
+export async function getNextRecommendedContent(userId: string, limit: number = 5): Promise<ContentItem[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user proficiency data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('proficiency, grade_level')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.proficiency) {
+      // Fallback to regular personalized recommendations
+      return getPersonalizedRecommendations(userId, limit)
+    }
+
+    const proficiency = profile.proficiency as { [topic: string]: number }
+    const gradeLevel = profile.grade_level
+
+    // Find topics with lowest proficiency (adaptive prioritization)
+    const topicScores = Object.entries(proficiency)
+      .filter(([key]) => gradeLevel ? key.startsWith(`${gradeLevel}_`) : true)
+      .sort(([, a], [, b]) => a - b) // Sort by lowest proficiency first
+
+    if (topicScores.length === 0) {
+      // Fallback to regular recommendations
+      return getPersonalizedRecommendations(userId, limit)
+    }
+
+    // Get content for weak topics (prioritize areas needing improvement)
+    const weakTopics = topicScores.slice(0, 3).map(([key]) => key.split('_').slice(1).join('_'))
+
+    const { data: adaptiveContent, error: adaptiveError } = await supabase
+      .from('content_items')
+      .select(`
+        *,
+        category:categories(*)
+      `)
+      .eq('is_published', true)
+      .or(weakTopics.map(topic => `tags.cs.{${topic}}`).join(','))
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (!adaptiveError && adaptiveContent && adaptiveContent.length > 0) {
+      return adaptiveContent
+    }
+
+    // Fallback to regular personalized recommendations if no adaptive content found
+    return getPersonalizedRecommendations(userId, limit)
+
+  } catch (error) {
+    console.error('Error getting next recommended content:', error)
+    // Fallback to regular recommendations
+    return getPersonalizedRecommendations(userId, limit)
+  }
+}
+
+// Check if user is ready for grade advancement based on proficiency
+export async function checkGradeAdvancementReadiness(userId: string): Promise<boolean> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('proficiency, grade_level')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.proficiency || !profile.grade_level) {
+      return false
+    }
+
+    const proficiency = profile.proficiency as { [topic: string]: number }
+    const gradeLevel = profile.grade_level
+
+    // Calculate average proficiency for current grade topics
+    const gradeTopics = Object.keys(proficiency).filter(key => key.startsWith(`${gradeLevel}_`))
+    if (gradeTopics.length === 0) return false
+
+    const averageProficiency = gradeTopics.reduce((sum, key) => sum + proficiency[key], 0) / gradeTopics.length
+
+    // Ready for advancement if average proficiency >= 85%
+    return averageProficiency >= 85
+
+  } catch (error) {
+    console.error('Error checking grade advancement readiness:', error)
+    return false
+  }
+}
+
 
 
