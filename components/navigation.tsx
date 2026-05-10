@@ -285,7 +285,13 @@ export function Navigation() {
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <nav className="flex justify-around py-2">
-          {navigation.map((item) => {
+          {[
+            { name: 'Home', href: '/', icon: Home },
+            { name: 'Explore', href: '/explore', icon: Search },
+            { name: 'My Learning', href: '/learning', icon: BookOpen },
+            { name: 'Curriculum', href: '/learning/curriculum', icon: Target },
+            { name: 'Profile', href: '/profile', icon: User },
+          ].map((item) => {
             const isActive = pathname === item.href
             return (
               <Link key={item.name} href={item.href}>

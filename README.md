@@ -110,10 +110,10 @@ Complete schema with 6 tables:
 ### Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/MarketExpander99/dreamforge-app.git
-   cd dreamforge-app
-   ```
+    ```bash
+    git clone https://github.com/MarketExpander99/skill-gain.git
+    cd skill-gain
+    ```
 
 2. **Install dependencies**
    ```bash
