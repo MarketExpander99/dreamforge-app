@@ -392,14 +392,14 @@ export default function CurriculumPage() {
   return (
     <>
       <Navigation />
-      <div className="md:ml-64 container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">CAPS Curriculum Browser</h1>
-        <p className="text-gray-600">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
+      <div className="md:ml-64 mobile-container py-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-mobile-heading mb-2">CAPS Curriculum Browser</h1>
+        <p className="text-mobile-body text-muted-secondary">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
         {isParent && children.length > 0 && (
           <div className="mt-4">
             <Select value={selectedUserId || ''} onValueChange={(value) => setSelectedUserId(value)}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
                 <SelectValue placeholder="Select child" />
               </SelectTrigger>
               <SelectContent>
@@ -415,12 +415,12 @@ export default function CurriculumPage() {
         )}
       </div>
 
-      <ProminentTabs defaultValue="curriculum" className="space-y-6">
-        <ProminentTabsList className="grid w-full grid-cols-4">
-          <ProminentTabsTrigger value="curriculum">Curriculum Browser</ProminentTabsTrigger>
-          <ProminentTabsTrigger value="path">My Path</ProminentTabsTrigger>
-          <ProminentTabsTrigger value="lessons">Lesson Plans</ProminentTabsTrigger>
-          <ProminentTabsTrigger value="progress">My Progress</ProminentTabsTrigger>
+      <ProminentTabs defaultValue="curriculum" className="space-y-4 sm:space-y-6">
+        <ProminentTabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0">
+          <ProminentTabsTrigger value="curriculum" className="text-xs sm:text-sm px-2 sm:px-6">Curriculum Browser</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="path" className="text-xs sm:text-sm px-2 sm:px-6">My Path</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="lessons" className="text-xs sm:text-sm px-2 sm:px-6">Lesson Plans</ProminentTabsTrigger>
+          <ProminentTabsTrigger value="progress" className="text-xs sm:text-sm px-2 sm:px-6">My Progress</ProminentTabsTrigger>
         </ProminentTabsList>
 
         <ProminentTabsContent value="curriculum" className="space-y-6">

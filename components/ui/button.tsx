@@ -31,11 +31,11 @@ const buttonVariants = cva(
         link: "text-blue-600 underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3 text-sm",
-        lg: "h-12 rounded-lg px-8 text-base",
-        xl: "h-14 rounded-lg px-10 text-lg",
-        icon: "h-10 w-10",
+        default: "h-11 px-4 py-2 min-h-[44px]", // Enhanced for mobile touch targets
+        sm: "h-10 rounded-md px-3 text-sm min-h-[40px]",
+        lg: "h-12 rounded-lg px-8 text-base min-h-[48px]",
+        xl: "h-14 rounded-lg px-10 text-lg min-h-[52px]",
+        icon: "h-11 w-11 min-h-[44px] min-w-[44px]", // Square touch targets
       },
     },
     defaultVariants: {

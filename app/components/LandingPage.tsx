@@ -16,7 +16,7 @@ export default function LandingPage() {
       <LandingNavigation />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 mobile-section overflow-hidden">
         {/* Hexagonal Network Background */}
         <div className="absolute inset-0 opacity-10">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -31,30 +31,30 @@ export default function LandingPage() {
         <div className="absolute top-20 left-10 w-72 h-72 bg-slate-700/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-slate-600/20 rounded-full blur-3xl"></div>
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative mobile-container">
           <div className="text-center">
             {/* Trust Badge */}
-            <div className="inline-flex items-center gap-2 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-full px-6 py-3 mb-12 shadow-lg">
-              <Shield className="h-5 w-5 text-emerald-400" />
-              <span className="text-sm font-semibold text-slate-300">Trusted by 10,000+ learners worldwide</span>
+            <div className="inline-flex items-center gap-2 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-full px-4 sm:px-6 py-2 sm:py-3 mb-8 sm:mb-12 shadow-lg">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-300">Trusted by 10,000+ learners worldwide</span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold text-white mb-8 leading-tight">
+            <h1 className="text-mobile-display text-white mb-6 sm:mb-8 leading-tight">
               Unlock Your Potential with
               <span className="block bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 bg-clip-text text-transparent mt-2">
                 skill-gain
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl lg:text-3xl text-slate-300 mb-16 max-w-5xl mx-auto leading-relaxed font-light">
+            <p className="text-mobile-body text-slate-300 mb-12 sm:mb-16 max-w-5xl mx-auto leading-relaxed font-light">
               The premier learning platform. Master any subject with AI-powered personalization, interactive content, and network-driven excellence.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 sm:mb-12">
               <Button
                 size="xl"
                 onClick={() => router.push('/auth/signup?role=teacher')}
-                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-10 py-5 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full sm:w-auto min-w-[200px]"
               >
                 Start Teaching Free
                 <Users className="ml-2 h-5 w-5" />
@@ -62,7 +62,7 @@ export default function LandingPage() {
               <Button
                 size="xl"
                 onClick={() => router.push('/auth/signup?role=student')}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-10 py-5 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full sm:w-auto min-w-[200px]"
               >
                 Browse as Student
                 <GraduationCap className="ml-2 h-5 w-5" />
@@ -71,7 +71,7 @@ export default function LandingPage() {
                 size="xl"
                 variant="outline"
                 onClick={() => router.push('/auth/signup?role=parent')}
-                className="border-2 border-purple-300 hover:border-purple-500 text-purple-700 dark:text-purple-300 hover:text-purple-600 px-10 py-5 text-lg font-semibold rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition-all duration-300"
+                className="border-2 border-purple-300 hover:border-purple-500 text-purple-700 dark:text-purple-300 hover:text-purple-600 px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-semibold rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition-all duration-300 w-full sm:w-auto min-w-[200px]"
               >
                 <Heart className="mr-2 h-5 w-5" />
                 Join as Parent
@@ -631,15 +631,15 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
+      <footer className="bg-gray-900 text-white py-8 sm:py-12 mobile-section">
+        <div className="mobile-container">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            <div className="col-span-1 sm:col-span-2 lg:col-span-2">
               <div className="flex items-center mb-4">
-                <BookOpen className="h-8 w-8 text-blue-400 mr-2" />
-                <span className="text-2xl font-bold">Skill Gain</span>
+                <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 mr-2" />
+                <span className="text-xl sm:text-2xl font-bold">Skill Gain</span>
               </div>
-              <p className="text-gray-400 mb-4">
+              <p className="text-mobile-body text-gray-400 mb-4 leading-relaxed">
                 Empowering learners worldwide with personalized, AI-driven education that adapts to every student's unique journey.
               </p>
               <div className="flex items-center space-x-4 mb-4">
@@ -647,36 +647,36 @@ export default function LandingPage() {
                   href="https://x.com/Skill_GainX"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-blue-400 transition-colors"
+                  className="text-gray-400 hover:text-blue-400 transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label="Follow us on X (Twitter)"
                 >
-                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                   </svg>
                 </a>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 © 2024 Skill Gain. All rights reserved.
               </p>
             </div>
 
             <div>
-              <h3 className="font-semibold mb-4">Platform</h3>
+              <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Platform</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">For Students</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">For Teachers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">For Parents</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Content Library</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">For Students</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">For Teachers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">For Parents</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Content Library</a></li>
               </ul>
             </div>
 
             <div>
-              <h3 className="font-semibold mb-4">Support</h3>
+              <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Support</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Contact Us</a></li>
               </ul>
             </div>
           </div>
