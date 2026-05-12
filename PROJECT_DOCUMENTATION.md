@@ -487,3 +487,17 @@ Skill Gain represents a solid foundation for a modern, engaging learning platfor
 The suggested next features focus on enhancing user engagement through social learning, personalization through AI, and expanding the platform's reach through institutional and mobile features. These enhancements will position Skill Gain as a comprehensive educational ecosystem that serves diverse learning needs and scales to support educational institutions worldwide.
 
 The technical foundation is robust and ready for these expansions, with the current architecture supporting modular feature development and scalable growth.
+
+---
+
+## Recent Updates
+
+### Profile Picture Upload Fix (2026-12-05)
+- **Issue**: Internal server error when uploading profile pictures due to missing Supabase Storage bucket
+- **Solution**: Modified `app/api/profile/avatar/route.ts` to automatically create the `avatars` bucket if it doesn't exist
+- **Changes**:
+  - Added bucket existence check before upload
+  - Automatic bucket creation with proper configuration (public access, image MIME types, 5MB file size limit)
+  - Enhanced error handling for storage setup failures
+- **Files Modified**: `app/api/profile/avatar/route.ts`
+- **Testing**: Verified build passes without errors and upload functionality works end-to-end
