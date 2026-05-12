@@ -2042,6 +2042,8 @@ export async function getFamilyLeaderboard(parentId: string, limit: number = 10)
   }
 }
 
+
+
 // Get personalized recommendations for a user
 export async function getPersonalizedRecommendations(userId: string, limit: number = 6): Promise<ContentItem[]> {
   try {
@@ -2180,40 +2182,36 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
   }
 }
 
+
+
 // Get next recommended content based on proficiency gaps (adaptive learning)
 export async function getNextRecommendedContent(userId: string, limit: number = 5): Promise<ContentItem[]> {
   try {
     const supabase = createBrowserSupabaseClient()
 
-    // Get user proficiency data
-    const { data: profile, error: profileError } = await supabase
+    // Get user proficiency
+    const { data: profile } = await supabase
       .from('profiles')
       .select('proficiency, grade_level')
       .eq('id', userId)
       .single()
 
-    if (profileError || !profile?.proficiency) {
-      // Fallback to regular personalized recommendations
-      return getPersonalizedRecommendations(userId, limit)
-    }
+    if (!profile?.proficiency) return []
 
     const proficiency = profile.proficiency as { [topic: string]: number }
     const gradeLevel = profile.grade_level
 
-    // Find topics with lowest proficiency (adaptive prioritization)
+    // Find topics with lowest proficiency
     const topicScores = Object.entries(proficiency)
       .filter(([key]) => gradeLevel ? key.startsWith(`${gradeLevel}_`) : true)
       .sort(([, a], [, b]) => a - b) // Sort by lowest proficiency first
 
-    if (topicScores.length === 0) {
-      // Fallback to regular recommendations
-      return getPersonalizedRecommendations(userId, limit)
-    }
+    if (topicScores.length === 0) return []
 
-    // Get content for weak topics (prioritize areas needing improvement)
+    // Get content for weak topics
     const weakTopics = topicScores.slice(0, 3).map(([key]) => key.split('_').slice(1).join('_'))
 
-    const { data: adaptiveContent, error: adaptiveError } = await supabase
+    const { data: content } = await supabase
       .from('content_items')
       .select(`
         *,
@@ -2224,17 +2222,11 @@ export async function getNextRecommendedContent(userId: string, limit: number = 
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (!adaptiveError && adaptiveContent && adaptiveContent.length > 0) {
-      return adaptiveContent
-    }
-
-    // Fallback to regular personalized recommendations if no adaptive content found
-    return getPersonalizedRecommendations(userId, limit)
+    return content || []
 
   } catch (error) {
     console.error('Error getting next recommended content:', error)
-    // Fallback to regular recommendations
-    return getPersonalizedRecommendations(userId, limit)
+    return []
   }
 }
 

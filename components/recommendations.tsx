@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/user-context'
-import { getPersonalizedRecommendations, getNextRecommendedContent, ContentItem } from '@/lib/data'
+import { getPersonalizedRecommendations, ContentItem } from '@/lib/data'
 import { FeedCard } from '@/components/feed/feed-card'
 import Image from 'next/image'
 
@@ -59,11 +59,7 @@ export function Recommendations({
 
       setLoading(true)
       try {
-        // Try adaptive recommendations first, fallback to personalized
-        let data = await getNextRecommendedContent(user.id, limit)
-        if (!data || data.length === 0) {
-          data = await getPersonalizedRecommendations(user.id, limit)
-        }
+        const data = await getPersonalizedRecommendations(user.id, limit)
         setRecommendations(data)
       } catch (error) {
         console.error('Error fetching recommendations:', error)

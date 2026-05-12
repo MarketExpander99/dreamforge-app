@@ -2,7 +2,7 @@
 
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
-import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
+import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, getNextRecommendedContent, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
 import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,8 +13,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 import { Leaderboard } from '@/components/leaderboard'
+import { AnalyticsDashboard } from '@/components/analytics-dashboard'
 
 interface UserStats {
   totalCompleted: number
@@ -30,10 +30,41 @@ export default function LearningPage() {
   const [userBookmarks, setUserBookmarks] = useState<UserBookmark[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
+  const [recommendedContent, setRecommendedContent] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+  const [navigationError, setNavigationError] = useState<string | null>(null)
 
   const hasGradeLevel = profile?.grade_level !== null
+
+  // Handle navigation with proper loading state management
+  const handleNavigation = useCallback(async (contentId: string) => {
+    setNavigatingTo(contentId)
+    setNavigationError(null)
+
+    try {
+      // Set a timeout to prevent infinite loading (10 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Navigation timeout')), 10000)
+      })
+
+      // Attempt navigation
+      const navigationPromise = router.push(`/content/${contentId}`)
+
+      // Race between navigation and timeout
+      await Promise.race([navigationPromise, timeoutPromise])
+
+      // Clear loading state on successful navigation
+      setNavigatingTo(null)
+    } catch (error) {
+      console.error('Navigation failed:', error)
+      setNavigationError(`Failed to load content. Please try again.`)
+      setNavigatingTo(null)
+
+      // Clear error after 5 seconds
+      setTimeout(() => setNavigationError(null), 5000)
+    }
+  }, [router])
 
   const fetchUserData = useCallback(async () => {
     if (!user) return
@@ -63,6 +94,19 @@ export default function LearningPage() {
     }
   }, [user])
 
+  // Fetch recommended content using adaptive engine
+  const fetchRecommendedContent = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const recommended = await getNextRecommendedContent(user.id, 5)
+      setRecommendedContent(recommended || [])
+    } catch (error) {
+      console.error('Error fetching recommended content:', error)
+      setRecommendedContent([])
+    }
+  }, [user])
+
   // Check authentication and fetch user profile data
   useEffect(() => {
     if (!authLoading) {
@@ -71,10 +115,11 @@ export default function LearningPage() {
         router.push('/auth/login')
         return
       }
-      // User is authenticated, fetch profile
+      // User is authenticated, fetch profile and recommended content
       fetchUserData()
+      fetchRecommendedContent()
     }
-  }, [user, authLoading, router, fetchUserData])
+  }, [user, authLoading, router, fetchUserData, fetchRecommendedContent])
 
   // Format achievements for display
   const formattedAchievements = userAchievements.map(achievement => ({
@@ -201,7 +246,56 @@ export default function LearningPage() {
               <TabsContent value="progress" className="space-y-6">
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Continue Learning</h2>
-                  {formattedProgress.length > 0 ? (
+                  {navigationError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      {navigationError}
+                    </div>
+                  )}
+                  {recommendedContent.length > 0 ? (
+                    <div className="space-y-4">
+                      {recommendedContent.map((item) => (
+                        <Card key={item.id}>
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <h3 className="font-semibold">{item.title}</h3>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Badge variant="secondary" className="text-xs">{item.category?.name || 'General'}</Badge>
+                                  <span>•</span>
+                                  <span>{item.difficulty || 'Beginner'}</span>
+                                  <span>•</span>
+                                  <span>{item.read_time || 5} min read</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium">Recommended</div>
+                                <div className="text-xs text-muted-foreground">Next in your path</div>
+                              </div>
+                            </div>
+                            {item.content && (
+                              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                                {item.content.substring(0, 150)}...
+                              </p>
+                            )}
+                            <Button
+                              size="sm"
+                              disabled={navigatingTo === item.id}
+                              onClick={() => handleNavigation(item.id)}
+                            >
+                              {navigatingTo === item.id ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-current mr-2"></div>
+                                  Loading...
+                                </>
+                              ) : (
+                                'Start Learning'
+                              )}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : formattedProgress.length > 0 ? (
                     <div className="space-y-4">
                       {formattedProgress.map((item) => (
                         <Card key={item.id}>
@@ -224,10 +318,7 @@ export default function LearningPage() {
                               <Button
                                 size="sm"
                                 disabled={navigatingTo === item.id}
-                                onClick={() => {
-                                  setNavigatingTo(item.id)
-                                  router.push(`/content/${item.id}`)
-                                }}
+                                onClick={() => handleNavigation(item.id)}
                               >
                                 {navigatingTo === item.id ? (
                                   <>
@@ -246,10 +337,13 @@ export default function LearningPage() {
                     <Card>
                       <CardContent className="p-8 text-center">
                         <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="font-semibold mb-2">No Progress Yet</h3>
-                        <p className="text-muted-foreground">
-                          Start learning to see your progress here.
+                        <h3 className="font-semibold mb-2">Ready to Start Learning?</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Take our quick assessment to get personalized learning recommendations.
                         </p>
+                        <Button onClick={() => window.location.href = '/assessment'}>
+                          Take Assessment
+                        </Button>
                       </CardContent>
                     </Card>
                   )}
