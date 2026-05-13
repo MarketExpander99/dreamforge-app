@@ -50,6 +50,29 @@ export default function SignupPage() {
 
       if (error) throw error
 
+      // Send branded confirmation email
+      try {
+        // Generate confirmation URL - Supabase handles the token internally
+        const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
+
+        const response = await fetch('/api/auth/send-confirmation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            confirmationUrl
+          }),
+        })
+
+        if (!response.ok) {
+          console.error('Failed to send branded confirmation email')
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError)
+      }
+
       // Show success message for email confirmation
       alert('Account created successfully! Please check your email and click the confirmation link to activate your account.')
 

@@ -8,9 +8,35 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, createContext, useContext, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCurrentStreak, hasCompletedAssessment } from '@/lib/data'
+
+// Create a context for sidebar state
+interface SidebarContextType {
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (collapsed: boolean) => void
+}
+
+const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
+
+export function SidebarProvider({ children }: { children: ReactNode }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  return (
+    <SidebarContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
+      {children}
+    </SidebarContext.Provider>
+  )
+}
+
+export function useSidebar() {
+  const context = useContext(SidebarContext)
+  if (context === undefined) {
+    throw new Error('useSidebar must be used within a SidebarProvider')
+  }
+  return context
+}
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -34,9 +60,9 @@ export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, profile, signOut, loading } = useAuth()
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar()
   const [currentStreak, setCurrentStreak] = useState(0)
   const [assessmentCompleted, setAssessmentCompleted] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Fetch current streak and assessment status for students
   useEffect(() => {
@@ -63,11 +89,11 @@ export function Navigation() {
   const handleLogout = async () => {
     try {
       await signOut()
-      router.push('/auth/login')
+      router.push('/')
     } catch (error) {
       console.error('Logout error:', error)
-      // If sign out fails, just redirect to login
-      router.push('/auth/login')
+      // If sign out fails, just redirect to landing page
+      router.push('/')
     }
   }
 
@@ -86,10 +112,11 @@ export function Navigation() {
       {/* Desktop Sidebar */}
       <AnimatePresence>
     <motion.div
-      initial={{ width: sidebarCollapsed ? 80 : 256 }}
-      animate={{ width: sidebarCollapsed ? 80 : 256 }}
+      data-collapsed={sidebarCollapsed.toString()}
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
+      className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 z-50 w-64 data-[collapsed]:w-20 box-border bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
     >
           {/* Header with Logo and Collapse Toggle */}
           <div className="flex items-center justify-between flex-shrink-0 px-4 mb-8">

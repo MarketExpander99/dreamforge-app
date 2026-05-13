@@ -7,6 +7,7 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { ServiceWorkerProvider } from "@/components/service-worker-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { SidebarProvider } from "@/components/navigation";
 import Script from "next/script";
 
 export const metadata: Metadata = {
@@ -125,13 +126,15 @@ export default function RootLayout({
 
         <ErrorBoundary>
           <AuthProvider>
-            <NotificationProvider>
-              {children}
-              <NotificationContainer />
-              <InstallPrompt />
-              <OfflineIndicator />
-              <ServiceWorkerProvider />
-            </NotificationProvider>
+            <SidebarProvider>
+              <NotificationProvider>
+                {children}
+                <NotificationContainer />
+                <InstallPrompt />
+                <OfflineIndicator />
+                <ServiceWorkerProvider />
+              </NotificationProvider>
+            </SidebarProvider>
           </AuthProvider>
         </ErrorBoundary>
       </body>

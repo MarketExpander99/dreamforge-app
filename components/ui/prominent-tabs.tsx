@@ -14,9 +14,9 @@ const ProminentTabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1.5 shadow-lg border border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide",
-      // Mobile: allow horizontal scrolling, Desktop: wrap if needed
-      "sm:flex-wrap sm:justify-start",
+      "flex h-12 items-stretch p-1 rounded-xl bg-gray-100 dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700",
+      // Mobile: allow horizontal scrolling, Desktop: flex-nowrap
+      "sm:flex-nowrap",
       className
     )}
     {...props}
@@ -31,9 +31,8 @@ const ProminentTabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 sm:px-6 py-3 text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-md min-h-[44px] min-w-[44px] flex-shrink-0",
+      "box-border flex flex-1 items-center justify-center min-w-[140px] whitespace-nowrap rounded-lg px-6 py-3.5 text-base font-bold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=active]:shadow-xl data-[state=active]:border-2 data-[state=active]:border-current data-[state=active]:ring-2 data-[state=active]:ring-current/30 data-[state=active]:ring-offset-2 data-[state=active]:ring-offset-background hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] touch-manipulation",
       // Mobile: ensure touch targets are adequate
-      "touch-manipulation active:scale-95",
       className
     )}
     {...props}

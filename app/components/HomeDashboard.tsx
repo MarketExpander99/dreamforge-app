@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { BookOpen, Users, Trophy, Target, Calendar, TrendingUp, Star, Clock, Sparkles, Compass } from 'lucide-react'
 import Link from 'next/link'
-import { Navigation } from '@/components/navigation'
+import { Navigation, useSidebar } from '@/components/navigation'
 import { getUserStats, getUserProgress, getUserAchievements, UserProgress, UserAchievement } from '@/lib/data'
 import { useEffect, useState } from 'react'
 
@@ -112,7 +112,7 @@ export default function HomeDashboard({ user, profile }: HomeDashboardProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
 
-      <main className="md:ml-64 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="md:ml-64 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 transition-all duration-300">
         <div className="py-6">
           {/* Welcome Header */}
           <div className="mb-6 sm:mb-8">

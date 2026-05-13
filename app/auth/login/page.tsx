@@ -8,6 +8,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogOverlay,
+} from '@/components/ui/dialog'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -15,7 +24,49 @@ export default function LoginPage() {
     password: ''
   })
   const [loading, setLoading] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalConfig, setModalConfig] = useState<{
+    title: string
+    description: string
+    onConfirm: () => void
+  } | null>(null)
   const router = useRouter()
+
+  const showPasswordResetModal = () => {
+    setModalConfig({
+      title: 'Reset Password',
+      description: 'Invalid email or password. Would you like to reset your password?',
+        onConfirm: async () => {
+          try {
+            const response = await fetch('/api/auth/send-password-reset', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: formData.email
+              }),
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to send password reset email')
+            }
+
+            const result = await response.json()
+            if (!result.success) {
+              throw new Error(result.error || 'Failed to send password reset email')
+            }
+
+            alert('Password reset email sent! Please check your inbox.')
+            setShowModal(false)
+          } catch (error: unknown) {
+            console.error('Password reset error:', error)
+            alert('Failed to send password reset email. Please try again later.')
+          }
+        }
+    })
+    setShowModal(true)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +84,6 @@ export default function LoginPage() {
       // Redirect to root - server-side logic will handle dashboard routing
       router.push('/')
     } catch (error: unknown) {
-      console.error('Login error:', error)
       const errorMessage = error instanceof Error ? error.message : String(error)
 
       if (errorMessage.includes('Email not confirmed')) {
@@ -53,14 +103,14 @@ export default function LoginPage() {
 
             alert('Confirmation email has been resent. Please check your inbox and spam folder.')
           } catch (resendError: unknown) {
-            console.error('Resend error:', resendError)
             alert('Failed to resend confirmation email. Please try again later.')
           }
         }
       } else if (errorMessage.includes('Supabase environment variables not configured')) {
         alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
       } else if (errorMessage.includes('Invalid login credentials')) {
-        alert('Invalid email or password. Please check your credentials and try again.')
+        // Show forgot password modal
+        showPasswordResetModal()
       } else if (errorMessage.includes('Too many requests')) {
         alert('Too many login attempts. Please wait a few minutes before trying again.')
       } else {
@@ -119,6 +169,24 @@ export default function LoginPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogOverlay className="fixed inset-0 z-50 bg-black data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{modalConfig?.title}</DialogTitle>
+            <DialogDescription>{modalConfig?.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={modalConfig?.onConfirm}>
+              Reset Password Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
