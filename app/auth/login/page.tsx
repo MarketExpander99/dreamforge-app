@@ -81,8 +81,51 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      // Redirect to root - server-side logic will handle dashboard routing
-      router.push('/')
+      // Fetch user profile to determine role and onboarding status
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, onboarding_completed, teacher_onboarding_completed')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = profile?.role
+        const isOnboardingComplete = profile?.onboarding_completed
+        const isTeacherOnboardingComplete = profile?.teacher_onboarding_completed
+
+        let redirectPath = '/'
+
+        if (!isOnboardingComplete) {
+          if (userRole === 'teacher') {
+            redirectPath = '/teacher/onboarding'
+          } else if (userRole === 'student') {
+            redirectPath = '/student/onboarding'
+          } else if (userRole === 'parent') {
+            redirectPath = '/family/onboarding'
+          } else {
+            redirectPath = '/onboarding'
+          }
+        } else {
+          if (userRole === 'teacher') {
+            if (!isTeacherOnboardingComplete) {
+              redirectPath = '/teacher/onboarding'
+            } else {
+              redirectPath = '/teacher'
+            }
+          } else if (userRole === 'student') {
+            redirectPath = '/student'
+          } else if (userRole === 'parent') {
+            redirectPath = '/family'
+          } else {
+            redirectPath = '/learning'
+          }
+        }
+
+        router.push(redirectPath)
+      } else {
+        router.push('/')
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error)
 

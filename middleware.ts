@@ -84,6 +84,80 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect teacher routes
+  if (request.nextUrl.pathname.startsWith('/teacher')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const userRole = profile?.role
+    const userEmail = user.email
+
+    const hasTeacherAccess = userRole === 'teacher' || userRole === 'content-creator' || userEmail === 'eben.combrinck@proton.me'
+
+    if (!hasTeacherAccess) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    // Check onboarding for teachers
+    const { data: teacherProfile } = await supabase
+      .from('profiles')
+      .select('teacher_onboarding_completed')
+      .eq('id', user.id)
+      .single()
+
+    if (userRole === 'teacher' && !teacherProfile?.teacher_onboarding_completed) {
+      return NextResponse.redirect(new URL('/teacher/onboarding', request.url))
+    }
+  }
+
+  // Protect student routes
+  if (request.nextUrl.pathname.startsWith('/student')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'student') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
+
+  // Protect family routes
+  if (request.nextUrl.pathname.startsWith('/family')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'parent') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
+
+  // Protect learning routes (requires authentication)
+  if (request.nextUrl.pathname.startsWith('/learning')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
