@@ -15,26 +15,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const admin = createServiceClient()
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
-      }
+    // Call Supabase resetPasswordForEmail to trigger default email with reset URL
+    const supabase = await createClient()
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
     })
 
-    if (error) {
-      console.error('Supabase reset error:', error)
+    if (resetError) {
+      console.error('Supabase reset error:', resetError)
       return NextResponse.json(
         { error: 'Failed to send password reset email' },
         { status: 500 }
       )
     }
 
-    const resetUrl = data.properties.action_link
-
-    // Send branded password reset email via Resend
+    // Send branded notification email via Resend (like confirmation route)
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Skill Gain <noreply@skillgain.app>',
       to: email,
@@ -54,25 +49,21 @@ export async function POST(request: NextRequest) {
             </p>
 
             <p style="color: #666; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-              To reset your password, please click the button below:
+              We've sent a secure password reset link to your email address. Please check your inbox (including spam/junk folder) to complete the process.
             </p>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                Reset Password
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                Go to Reset Password
               </a>
             </div>
 
             <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 20px 0;">
-              If the button doesn't work, you can copy and paste this link into your browser:
-            </p>
-
-            <p style="background: #f8f9fa; padding: 15px; border-radius: 6px; font-size: 12px; color: #666; word-break: break-all; margin: 20px 0;">
-              ${resetUrl}
+              If you don't see the email within a few minutes, check your spam folder or try requesting a new reset.
             </p>
 
             <p style="color: #666; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-              This reset link will expire in 1 hour. For security, please do not share this link.
+              The reset link will expire in 1 hour. For security, please do not share this information.
             </p>
           </div>
         </div>
@@ -82,10 +73,11 @@ Skill Gain - Reset Your Password
 
 You requested to reset your password for your Skill Gain account.
 
-To reset your password, visit this link:
-${resetUrl}
+We've sent a secure password reset link to your email address.
 
-This reset link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+Please check your inbox (including spam) to complete the process. The link expires in 1 hour.
+
+If you didn't request this, please ignore this email.
 
 Where Learning Feels Like Discovery
       `.trim()
