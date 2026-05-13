@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -483,15 +483,15 @@ export default function ProfilePage() {
             </div>
 
             {/* Main Content Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
-              </TabsList>
+            <ProminentTabs defaultValue="overview" className="space-y-6">
+              <ProminentTabsList className="grid w-full grid-cols-3">
+                <ProminentTabsTrigger value="overview">Overview</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="settings">Settings</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="achievements">Achievements</ProminentTabsTrigger>
+              </ProminentTabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
+              <ProminentTabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Bio Section */}
                   <Card>
@@ -560,10 +560,10 @@ export default function ProfilePage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Settings Tab */}
-              <TabsContent value="settings" className="space-y-6">
+              <ProminentTabsContent value="settings" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Profile Information</CardTitle>
@@ -889,10 +889,10 @@ export default function ProfilePage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Achievements Tab */}
-              <TabsContent value="achievements" className="space-y-6">
+              <ProminentTabsContent value="achievements" className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <Trophy className="h-5 w-5 text-yellow-500" />
@@ -921,8 +921,8 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </ProminentTabsContent>
+            </ProminentTabs>
           </div>
         </main>
       </div>

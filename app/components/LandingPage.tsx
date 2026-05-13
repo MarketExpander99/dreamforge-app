@@ -22,7 +22,7 @@ export default function LandingPage() {
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="hexBg" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
-                <polygon points="30,0 60,17.32 60,34.64 30,52 0,34.64 0,17.32" fill="none" stroke="#64748b" stroke-width="0.5"/>
+                <polygon points="30,0 60,17.32 60,34.64 30,52 0,34.64 0,17.32" fill="none" stroke="#64748b" strokeWidth="0.5"/>
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#hexBg)"/>

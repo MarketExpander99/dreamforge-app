@@ -85,12 +85,12 @@ export function Navigation() {
     <>
       {/* Desktop Sidebar */}
       <AnimatePresence>
-        <motion.div
-          initial={{ width: sidebarCollapsed ? 80 : 256 }}
-          animate={{ width: sidebarCollapsed ? 80 : 256 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="hidden md:flex md:flex-col md:fixed md:inset-y-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
-        >
+    <motion.div
+      initial={{ width: sidebarCollapsed ? 80 : 256 }}
+      animate={{ width: sidebarCollapsed ? 80 : 256 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
+    >
           {/* Header with Logo and Collapse Toggle */}
           <div className="flex items-center justify-between flex-shrink-0 px-4 mb-8">
             <AnimatePresence>

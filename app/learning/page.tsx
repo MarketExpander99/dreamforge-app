@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
 import { useEffect, useState, useCallback } from 'react'
@@ -232,18 +232,18 @@ export default function LearningPage() {
             </div>
 
             {/* Main Content Tabs */}
-            <Tabs defaultValue="progress" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-6 h-12">
-                <TabsTrigger value="progress" className="text-sm font-medium">My Progress</TabsTrigger>
-                <TabsTrigger value="analytics" className="text-sm font-medium">Analytics</TabsTrigger>
-                <TabsTrigger value="leaderboard" className="text-sm font-medium">Leaderboard</TabsTrigger>
-                <TabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</TabsTrigger>
-                <TabsTrigger value="bookmarks" className="text-sm font-medium">Bookmarks</TabsTrigger>
-                <TabsTrigger value="achievements" className="text-sm font-medium">Achievements</TabsTrigger>
-              </TabsList>
+            <ProminentTabs defaultValue="progress" className="space-y-6">
+              <ProminentTabsList className="grid w-full grid-cols-6 h-12">
+                <ProminentTabsTrigger value="progress" className="text-sm font-medium">My Progress</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="analytics" className="text-sm font-medium">Analytics</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="leaderboard" className="text-sm font-medium">Leaderboard</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="bookmarks" className="text-sm font-medium">Bookmarks</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="achievements" className="text-sm font-medium">Achievements</ProminentTabsTrigger>
+              </ProminentTabsList>
 
               {/* Progress Tab */}
-              <TabsContent value="progress" className="space-y-6">
+              <ProminentTabsContent value="progress" className="space-y-6">
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Continue Learning</h2>
                   {navigationError && (
@@ -366,20 +366,20 @@ export default function LearningPage() {
                     </CardContent>
                   </Card>
                 </div>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Analytics Tab */}
-              <TabsContent value="analytics" className="space-y-6">
+              <ProminentTabsContent value="analytics" className="space-y-6">
                 <AnalyticsDashboard />
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Leaderboard Tab */}
-              <TabsContent value="leaderboard" className="space-y-6">
+              <ProminentTabsContent value="leaderboard" className="space-y-6">
                 <Leaderboard />
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Curriculum Tab */}
-              <TabsContent value="curriculum" className="space-y-6">
+              <ProminentTabsContent value="curriculum" className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <GraduationCap className="h-5 w-5 text-green-500" />
@@ -513,10 +513,10 @@ export default function LearningPage() {
                     </div>
                   </div>
                 </div>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Bookmarks Tab */}
-              <TabsContent value="bookmarks" className="space-y-6">
+              <ProminentTabsContent value="bookmarks" className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <Bookmark className="h-5 w-5 text-blue-500" />
@@ -541,10 +541,10 @@ export default function LearningPage() {
                     </Card>
                   )}
                 </div>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Achievements Tab */}
-              <TabsContent value="achievements" className="space-y-6">
+              <ProminentTabsContent value="achievements" className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <Trophy className="h-5 w-5 text-yellow-500" />
@@ -585,8 +585,8 @@ export default function LearningPage() {
                     </Card>
                   )}
                 </div>
-              </TabsContent>
-            </Tabs>
+              </ProminentTabsContent>
+            </ProminentTabs>
           </div>
         </main>
       </div>
