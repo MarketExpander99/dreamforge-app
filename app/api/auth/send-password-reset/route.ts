@@ -84,11 +84,8 @@ Where Learning Feels Like Discovery
     })
 
     if (emailError) {
-      console.error('Resend error:', emailError)
-      return NextResponse.json(
-        { error: 'Failed to send password reset email' },
-        { status: 500 }
-      )
+      console.error('Resend notification error (reset still sent via Supabase):', emailError)
+      // Continue to success since Supabase already sent the reset email
     }
 
     return NextResponse.json({
