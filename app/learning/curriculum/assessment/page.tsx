@@ -26,8 +26,8 @@ interface DiagnosticResults {
   subject_proficiency: {
     Mathematics: number
     English: number
-    Science: number
-    'General Knowledge': number
+    'Natural Sciences': number
+    'Life Skills': number
   }
   overall_score: number
   strengths: string[]
@@ -39,15 +39,15 @@ interface DiagnosticResults {
 const subjectColors = {
   Mathematics: 'bg-blue-100 text-blue-800 border-blue-200',
   English: 'bg-green-100 text-green-800 border-green-200',
-  Science: 'bg-purple-100 text-purple-800 border-purple-200',
-  'General Knowledge': 'bg-orange-100 text-orange-800 border-orange-200'
+  'Natural Sciences': 'bg-purple-100 text-purple-800 border-purple-200',
+  'Life Skills': 'bg-orange-100 text-orange-800 border-orange-200'
 }
 
 const subjectIcons = {
   Mathematics: '🔢',
   English: '📚',
-  Science: '🧪',
-  'General Knowledge': '🌍'
+  'Natural Sciences': '🧪',
+  'Life Skills': '🌍'
 }
 
 export default function DiagnosticAssessmentPage() {

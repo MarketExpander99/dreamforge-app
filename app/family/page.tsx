@@ -16,7 +16,8 @@ async function getFamilyData(userId: string) {
       full_name,
       avatar_url,
       grade_level,
-      created_at
+      created_at,
+      diagnostic_grade
     `)
     .eq('parent_id', userId)
     .eq('role', 'student')

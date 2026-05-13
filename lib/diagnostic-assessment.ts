@@ -3,7 +3,7 @@ import { createClient } from './supabase-server'
 
 export interface DiagnosticQuestion {
   id: string
-  subject: 'Mathematics' | 'English' | 'Science' | 'General Knowledge'
+  subject: 'Mathematics' | 'English' | 'Natural Sciences' | 'Life Skills'
   question: string
   options?: string[]
   correct_answer?: string
@@ -16,8 +16,8 @@ export interface DiagnosticResult {
   subject_proficiency: {
     Mathematics: number
     English: number
-    Science: number
-    'General Knowledge': number
+    'Natural Sciences': number
+    'Life Skills': number
   }
   overall_score: number
   strengths: string[]
@@ -56,22 +56,23 @@ export async function generateDiagnosticQuestions(userId: string): Promise<Diagn
 
   const age = profile.age
 
-  const prompt = `You are an expert educational assessment designer. Create a balanced diagnostic assessment for a ${age}-year-old student.
+  const prompt = `You are an expert educational assessment designer specializing in the South African CAPS (Curriculum and Assessment Policy Statement) curriculum. Create a balanced diagnostic assessment for a ${age}-year-old student aligned with CAPS Foundation Phase (Grades R-3) or Intermediate Phase (Grades 4-6) depending on age.
 
 Requirements:
 - Generate exactly 12 questions total (3 from each subject)
-- Subjects: Mathematics, English, Science, General Knowledge
+- Subjects: Mathematics, English Home Language, Natural Sciences, Life Skills (Social Sciences focus for General Knowledge)
 - Mix of multiple choice (8 questions) and short answer (4 questions)
-- Age-appropriate difficulty and content
-- Questions should assess foundational knowledge and problem-solving skills
+- Age-appropriate difficulty and content based on CAPS curriculum outcomes for the student's estimated grade level
+- Questions should assess foundational knowledge, problem-solving skills, and CAPS-specific competencies like critical thinking and application
+- Ensure questions reflect South African context where appropriate (e.g., local examples, cultural relevance)
 
 For each question, provide:
-- subject: One of "Mathematics", "English", "Science", "General Knowledge"
-- question: Clear, age-appropriate question text
+- subject: One of "Mathematics", "English", "Natural Sciences", "Life Skills"
+- question: Clear, age-appropriate question text aligned with CAPS
 - question_type: "multiple_choice" or "short_answer"
-- options: For multiple choice, provide exactly 4 options (A, B, C, D)
-- correct_answer: For multiple choice, the correct option letter; for short answer, the expected answer
-- difficulty: "easy", "medium", or "hard"
+- options: For multiple choice, provide exactly 4 options (A, B, C, D) with one correct
+- correct_answer: For multiple choice, the correct option letter (A/B/C/D); for short answer, a brief expected response or key concept
+- difficulty: "easy", "medium", or "hard" relative to CAPS expectations
 
 Return only valid JSON array of questions.`
 
@@ -95,7 +96,7 @@ Return only valid JSON array of questions.`
               properties: {
                 subject: {
                   type: "string",
-                  enum: ["Mathematics", "English", "Science", "General Knowledge"]
+                  enum: ["Mathematics", "English", "Natural Sciences", "Life Skills"]
                 },
                 question: { type: "string" },
                 question_type: {
@@ -147,7 +148,7 @@ Return only valid JSON array of questions.`
 export async function evaluateDiagnosticAssessment(submission: AssessmentSubmission): Promise<DiagnosticResult> {
   const { responses, age } = submission
 
-  const prompt = `You are an expert educational assessor. Evaluate this ${age}-year-old student's diagnostic assessment responses and provide a comprehensive analysis.
+  const prompt = `You are an expert educational assessor specializing in South African CAPS curriculum. Evaluate this ${age}-year-old student's diagnostic assessment responses and provide a comprehensive analysis aligned with CAPS expectations.
 
 Assessment Responses:
 ${responses.map((r, i) => `
@@ -157,21 +158,22 @@ Student Answer: ${r.answer}
 
 Based on these responses, provide a detailed evaluation:
 
-1. **recommended_grade**: Recommended grade level (e.g., "Grade 3", "Grade 4") based on overall performance and age appropriateness
-2. **subject_proficiency**: Proficiency scores (0-100) for each subject based on accuracy and quality of responses
+1. **recommended_grade**: Recommended CAPS grade level (e.g., "Grade R", "Grade 1", "Grade 2", "Grade 3") based on overall performance and age appropriateness
+2. **subject_proficiency**: Proficiency scores (0-100) for each subject: Mathematics, English, Natural Sciences, Life Skills based on accuracy and quality of responses
 3. **overall_score**: Average proficiency across all subjects (0-100)
-4. **strengths**: Array of 2-4 specific strengths demonstrated
-5. **gaps**: Array of 2-4 areas needing improvement
-6. **suggested_topics**: Array of 5-8 specific topics to focus on initially, prioritized by knowledge gaps
-7. **assessment_summary**: A brief 2-3 sentence summary of the student's overall performance and readiness
+4. **strengths**: Array of 2-4 specific strengths demonstrated, referencing CAPS competencies
+5. **gaps**: Array of 2-4 areas needing improvement, aligned with CAPS outcomes
+6. **suggested_topics**: Array of 5-8 specific CAPS-aligned topics to focus on initially, prioritized by knowledge gaps
+7. **assessment_summary**: A brief 2-3 sentence summary of the student's overall performance and readiness for CAPS curriculum
 
 Consider:
-- Age-appropriate expectations (${age} years old)
-- Accuracy of answers
+- CAPS curriculum expectations for the estimated grade level
+- Age-appropriate benchmarks for South African education
+- Accuracy of answers and depth of understanding
 - Quality of responses (for short answers)
-- Subject-specific knowledge and skills
+- Subject-specific CAPS knowledge and skills
 - Areas of relative strength and weakness
-- Appropriate grade placement for continued learning
+- Appropriate grade placement for continued CAPS learning
 
 Return only valid JSON.`
 
@@ -197,10 +199,10 @@ Return only valid JSON.`
                 properties: {
                   Mathematics: { type: "number", minimum: 0, maximum: 100 },
                   English: { type: "number", minimum: 0, maximum: 100 },
-                  Science: { type: "number", minimum: 0, maximum: 100 },
-                  "General Knowledge": { type: "number", minimum: 0, maximum: 100 }
+                  "Natural Sciences": { type: "number", minimum: 0, maximum: 100 },
+                  "Life Skills": { type: "number", minimum: 0, maximum: 100 }
                 },
-                required: ["Mathematics", "English", "Science", "General Knowledge"]
+                required: ["Mathematics", "English", "Natural Sciences", "Life Skills"]
               },
               overall_score: { type: "number", minimum: 0, maximum: 100 },
               strengths: {
@@ -242,21 +244,39 @@ Return only valid JSON.`
 }
 
 /**
- * Save diagnostic assessment results to user profile
+ * Save diagnostic assessment results to diagnostic_results table
  */
 export async function saveDiagnosticResults(userId: string, results: DiagnosticResult): Promise<void> {
   const supabase = await createClient()
+
+  // Save to diagnostic_results table
+  const { error: insertError } = await supabase
+    .from('diagnostic_results')
+    .insert({
+      user_id: userId,
+      recommended_grade: results.recommended_grade,
+      overall_score: results.overall_score,
+      subject_proficiency: results.subject_proficiency,
+      strengths: results.strengths,
+      gaps: results.gaps,
+      suggested_topics: results.suggested_topics,
+      assessment_summary: results.assessment_summary
+    })
+
+  if (insertError) {
+    throw new Error(`Failed to save diagnostic results: ${insertError.message}`)
+  }
 
   // Convert subject proficiency to the format expected by adaptive engine
   const proficiencyData = {
     [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_mathematics`]: results.subject_proficiency.Mathematics,
     [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_english`]: results.subject_proficiency.English,
-    [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_science`]: results.subject_proficiency.Science,
-    [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_general_knowledge`]: results.subject_proficiency['General Knowledge']
+    [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_natural_sciences`]: results.subject_proficiency['Natural Sciences'],
+    [`${results.recommended_grade.toLowerCase().replace(' ', '_')}_life_skills`]: results.subject_proficiency['Life Skills']
   }
 
   // Update profile with diagnostic results
-  const { error } = await supabase
+  const { error: updateError } = await supabase
     .from('profiles')
     .update({
       grade_level: results.recommended_grade,
@@ -267,8 +287,8 @@ export async function saveDiagnosticResults(userId: string, results: DiagnosticR
     })
     .eq('id', userId)
 
-  if (error) {
-    throw new Error(`Failed to save diagnostic results: ${error.message}`)
+  if (updateError) {
+    console.error('Failed to update profile with diagnostic results:', updateError)
   }
 }
 
@@ -282,7 +302,11 @@ export async function triggerInitialContentGeneration(userId: string, results: D
     // Generate content for weak areas (proficiency < 70)
     const weakSubjects = Object.entries(results.subject_proficiency)
       .filter(([, score]) => score < 70)
-      .map(([subject]) => subject.toLowerCase().replace(' ', '_'))
+      .map(([subject]) => {
+        if (subject === 'Natural Sciences') return 'science';
+        if (subject === 'Life Skills') return 'general_knowledge';
+        return subject.toLowerCase().replace(' ', '_');
+      });
 
     // If no weak areas, generate for all subjects
     const subjectsToGenerate = weakSubjects.length > 0 ? weakSubjects : ['mathematics', 'english', 'science', 'general_knowledge']

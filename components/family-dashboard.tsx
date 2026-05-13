@@ -20,6 +20,7 @@ interface Child {
   avatar_url?: string
   grade_level?: string
   created_at: string
+  diagnostic_grade?: string
 }
 
 interface ActivityItem {
@@ -369,20 +370,20 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
 
                     {/* Assessment Status */}
                     <div className="ml-11 space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Target className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium">Grade Assessment</p>
-                            <p className="text-xs text-muted-foreground">
-                              {child.grade_level ? `Completed - Recommended: ${child.grade_level}` : 'Not completed yet'}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant={child.grade_level ? "default" : "secondary"}>
-                          {child.grade_level ? 'Completed' : 'Pending'}
-                        </Badge>
-                      </div>
+  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+    <div className="flex items-center space-x-3">
+      <Target className="h-5 w-5 text-blue-600" />
+      <div>
+        <p className="text-sm font-medium">Grade Assessment</p>
+        <p className="text-xs text-muted-foreground">
+          {child.diagnostic_grade ? `Completed - Recommended: ${child.diagnostic_grade}` : 'Not completed yet'}
+        </p>
+      </div>
+    </div>
+    <Badge variant={child.diagnostic_grade ? "default" : "secondary"}>
+      {child.diagnostic_grade ? 'Completed' : 'Pending'}
+    </Badge>
+  </div>
 
                       {/* Learning Paths */}
                       <div className="space-y-2">
