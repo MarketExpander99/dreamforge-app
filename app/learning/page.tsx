@@ -3,7 +3,7 @@
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { getUserProgress, getUserBookmarks, getUserAchievements, getUserStats, getNextRecommendedContent, UserProgress, UserBookmark, UserAchievement } from '@/lib/data'
-import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap, BarChart3 } from 'lucide-react'
+import { BookOpen, Bookmark, Trophy, Clock, Target, Calendar, Star, GraduationCap, BarChart3, Users, Plus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -15,6 +15,9 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Leaderboard } from '@/components/leaderboard'
 import { AnalyticsDashboard } from '@/components/analytics-dashboard'
+import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 
 interface UserStats {
   totalCompleted: number
@@ -29,11 +32,15 @@ export default function LearningPage() {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [userBookmarks, setUserBookmarks] = useState<UserBookmark[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
-  const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
-  const [recommendedContent, setRecommendedContent] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
-  const [navigationError, setNavigationError] = useState<string | null>(null)
+    const [userStats, setUserStats] = useState<UserStats>({ totalCompleted: 0, currentStreak: 0, totalTime: 0, achievements: 0 })
+    const [recommendedContent, setRecommendedContent] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+    const [navigationError, setNavigationError] = useState<string | null>(null)
+    const [enrolledClasses, setEnrolledClasses] = useState<any[]>([])
+    const [classLoading, setClassLoading] = useState(true)
+    const [joinCode, setJoinCode] = useState('')
+    const supabase = createBrowserSupabaseClient()
 
   const hasGradeLevel = profile?.grade_level !== null
 
@@ -107,6 +114,57 @@ export default function LearningPage() {
     }
   }, [user])
 
+  // Fetch enrolled classes
+  const fetchEnrolledClasses = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setClassLoading(true)
+      const { data, error } = await supabase
+        .from('class_students')
+        .select(`
+          *,
+          teacher_classes!inner(id, name, subject, grade_level, class_code, teacher_id)
+        `)
+        .eq('student_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setEnrolledClasses(data || [])
+    } catch (err: any) {
+      console.error('Error fetching classes:', err)
+    } finally {
+      setClassLoading(false)
+    }
+  }, [user, supabase])
+
+  // Real-time subscription for classes
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('student-classes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'class_students' }, 
+        (payload) => {
+          const newRecord = (payload as any).new
+          const oldRecord = (payload as any).old
+          if (newRecord?.student_id === user.id || oldRecord?.student_id === user.id) {
+            fetchEnrolledClasses()
+          }
+        }
+      )
+      .subscribe()
+
+    fetchEnrolledClasses()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, supabase, fetchEnrolledClasses])
+
   // Check authentication and fetch user profile data
   useEffect(() => {
     if (!authLoading) {
@@ -139,23 +197,29 @@ export default function LearningPage() {
     lastAccessed: progress.last_accessed_at ? new Date(progress.last_accessed_at).toLocaleDateString() : 'Recently'
   }))
 
-  // Format bookmarks for display
-  const formattedBookmarks = userBookmarks
-    .filter(bookmark => bookmark.content !== null)
-    .map(bookmark => ({
-      id: bookmark.content!.id,
-      type: bookmark.content!.type,
-      title: bookmark.content!.title,
-      content: bookmark.content!.content,
-      imageUrl: bookmark.content!.image_url || undefined,
-      videoUrl: bookmark.content!.video_url || undefined,
-      audioUrl: bookmark.content!.audio_url || undefined,
-      quiz: bookmark.content!.quiz || undefined,
-      category: bookmark.content!.category?.name || 'General',
-      readTime: bookmark.content!.read_time,
-      likes: bookmark.content!.likes,
-      comments: 0 // Not implemented yet
-    }))
+    // Format bookmarks for display
+    const formattedBookmarks = userBookmarks
+      .filter(bookmark => bookmark.content !== null)
+      .map(bookmark => ({
+        id: bookmark.content!.id,
+        type: bookmark.content!.type,
+        title: bookmark.content!.title,
+        content: bookmark.content!.content,
+        imageUrl: bookmark.content!.image_url || undefined,
+        videoUrl: bookmark.content!.video_url || undefined,
+        audioUrl: bookmark.content!.audio_url || undefined,
+        quiz: bookmark.content!.quiz || undefined,
+        category: bookmark.content!.category?.name || 'General',
+        readTime: bookmark.content!.read_time,
+        likes: bookmark.content!.likes,
+        comments: 0 // Not implemented yet
+      }))
+
+    const handleJoinClass = () => {
+      if (joinCode.trim()) {
+        router.push(`/join/${joinCode.trim().toUpperCase()}`)
+      }
+    }
 
   if (loading) {
     return (
@@ -233,8 +297,9 @@ export default function LearningPage() {
 
             {/* Main Content Tabs */}
             <ProminentTabs defaultValue="progress" className="space-y-6">
-              <ProminentTabsList className="grid w-full grid-cols-6 h-12">
+              <ProminentTabsList className="grid w-full grid-cols-7 h-12">
                 <ProminentTabsTrigger value="progress" className="text-sm font-medium">My Progress</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="classes" className="text-sm font-medium">Classes</ProminentTabsTrigger>
                 <ProminentTabsTrigger value="analytics" className="text-sm font-medium">Analytics</ProminentTabsTrigger>
                 <ProminentTabsTrigger value="leaderboard" className="text-sm font-medium">Leaderboard</ProminentTabsTrigger>
                 <ProminentTabsTrigger value="curriculum" className="text-sm font-medium">Curriculum</ProminentTabsTrigger>
@@ -363,6 +428,90 @@ export default function LearningPage() {
                           View Full Calendar
                         </Button>
                       </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </ProminentTabsContent>
+
+              {/* Classes Tab */}
+              <ProminentTabsContent value="classes" className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">My Classes</h2>
+                  <p className="text-muted-foreground mb-6">Join classes or view your enrolled classes</p>
+
+                  {/* Join Class Form */}
+                  <Card className="mb-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Join a Class
+                      </CardTitle>
+                      <CardDescription>Enter your class code to join</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter 6-character class code (e.g., ABC123)"
+                          value={joinCode}
+                          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                          className="flex-1"
+                        />
+                        <Button onClick={handleJoinClass} disabled={!joinCode.trim()}>
+                          Join
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Ask your teacher for the class code
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Enrolled Classes */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Enrolled Classes
+                      </CardTitle>
+                      <CardDescription>Your active classes</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {classLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                          <span>Loading classes...</span>
+                        </div>
+                      ) : enrolledClasses.length === 0 ? (
+                        <div className="text-center py-8">
+                          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="font-semibold mb-2">No Classes Enrolled</h3>
+                          <p className="text-muted-foreground">Join a class to get started with classroom learning.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {enrolledClasses.map((enrollment) => (
+                            <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-semibold">{enrollment.teacher_classes.name}</h3>
+                                  <Badge variant="outline" className="text-xs">
+                                    {enrollment.teacher_classes.class_code}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span>{enrollment.teacher_classes.subject.replace('-', ' ')}</span>
+                                  <span>{enrollment.teacher_classes.grade_level.replace('grade-', 'Grade ')}</span>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/learning/class/${enrollment.teacher_classes.id}`}>
+                                  View Class
+                                </Link>
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

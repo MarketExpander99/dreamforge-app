@@ -47,12 +47,14 @@ export default function TeacherClassCreation() {
     }
   })
 
-  // Generate unique class code
+  // Generate unique 6-character class code
   const generateClassCode = () => {
-    const subjectCode = formData.subject ? formData.subject.substring(0, 3).toUpperCase() : 'CLS'
-    const gradeCode = formData.gradeLevel ? formData.gradeLevel.replace('grade-', '') : 'X'
-    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase()
-    return `${subjectCode}${gradeCode}-${randomPart}`
+    let code = '';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   const handleInputChange = (field: string, value: any) => {
@@ -94,7 +96,7 @@ export default function TeacherClassCreation() {
         throw new Error('You must be logged in to create a class')
       }
 
-      // Generate final class code
+      // Generate final class code if not set
       const finalClassCode = classCode || generateClassCode()
 
       // Prepare learning goals array

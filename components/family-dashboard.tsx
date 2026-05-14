@@ -143,6 +143,39 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
         </motion.p>
       </div>
 
+      {/* Link Child Account */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Link Child Account
+          </CardTitle>
+          <CardDescription>Enter your child's email to link their account to your family dashboard</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="child@example.com"
+              value={childEmail}
+              onChange={(e) => setChildEmail(e.target.value)}
+            />
+            <Button onClick={handleLinkChild} disabled={!childEmail.trim() || linking}>
+              {linking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Link Account
+            </Button>
+          </div>
+          {linkError && (
+            <p className="text-sm text-red-600">{linkError}</p>
+          )}
+          {linkSuccess && (
+            <p className="text-sm text-green-600">Child account linked successfully!</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            The child will receive an email notification. They can confirm the link in their profile settings.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Children Cards */}
       {children.length === 0 ? (
         <motion.div
@@ -158,16 +191,12 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
             Link student accounts to start tracking their progress and achievements.
           </p>
           <Button
-            onClick={() => {
-              // For now, show an alert with instructions
-              // In a real implementation, this would open a dialog or navigate to a child linking flow
-              alert('To add a child account:\n\n1. Have your child create a student account\n2. Ask them to share their account details with you\n3. Contact support to link the accounts\n\nThis feature will be available in the next update.')
-            }}
+            onClick={() => setShowLinkForm(true)}
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
           >
             <GraduationCap className="h-5 w-5 mr-2" />
-            Add Child Account
+            Link Child Account
           </Button>
         </motion.div>
       ) : (
