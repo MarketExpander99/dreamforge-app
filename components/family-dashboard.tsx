@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { MessageCircle, Flame, TrendingUp, Send, Clock, BookOpen, GraduationCap, Route, Target } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { MessageCircle, Flame, TrendingUp, Send, Clock, BookOpen, GraduationCap, Route, Target, Loader2 } from 'lucide-react'
 import { useNotifications } from '@/lib/notification-context'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
@@ -84,6 +85,27 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
   const [nudgeMessage, setNudgeMessage] = useState('')
   const [sendingNudge, setSendingNudge] = useState(false)
+  const [childEmail, setChildEmail] = useState('')
+  const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState('')
+  const [linkSuccess, setLinkSuccess] = useState(false)
+  const [showLinkForm, setShowLinkForm] = useState(false)
+
+  const handleLinkChild = async () => {
+    if (!childEmail.trim()) return
+    setLinking(true)
+    setLinkError('')
+    setLinkSuccess(false)
+    try {
+      // Placeholder - implement Supabase link logic in future task
+      setLinkSuccess(true)
+      setChildEmail('')
+    } catch (err: any) {
+      setLinkError(err.message || 'Failed to link child')
+    } finally {
+      setLinking(false)
+    }
+  }
 
   const handleSendNudge = async () => {
     if (!selectedChild || !nudgeMessage.trim() || !user) return
