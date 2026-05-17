@@ -3,7 +3,7 @@
 Last updated: 2026-05-17
 
 ## Recent Completed Tasks
-( Cline will append new entries here automatically after every successful task )romp
+( Cline will append new entries here automatically after every successful task )
 
 [2026-05-17] – Task 1.1 – Logout now reliably redirects to landing page. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 1.2 – Forgot Password link + Supabase reset flow added. Build + Playwright passed with zero errors.
@@ -19,3 +19,4 @@ Last updated: 2026-05-17
 [2026-05-17] – Task 4.1 – Consistent prominent tab styling applied everywhere. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 4.2 – Desktop side-nav overlap on Curriculum page fixed. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 4.3 – Follow us on X + Install App moved to bottom of side nav. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 5.1 – All browser alerts replaced with toasts. Build + Playwright passed with zero errors.
