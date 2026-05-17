@@ -11,3 +11,4 @@ Last updated: [Cline will fill this]
 [2026-05-17] – Fix build error: Added missing Input import in family-dashboard.tsx. Build now succeeds with zero errors.
 [2026-05-17] – Global Build Fix complete. npm run build now succeeds with zero errors/warnings. All TypeScript and import issues resolved.
 [2026-05-17] – Task 2.1 – Explore + My Learning gated behind grading. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 2.2 – Grade_level + curriculum now used everywhere, fallbacks removed. Build + Playwright passed with zero errors.

@@ -46,7 +46,7 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
             limit: 20,
             category: categoryParam && categoryParam !== 'all' ? categoryParam : undefined
           }) : Promise.resolve([]),
-          clientData.getContentItems({ limit: 1000 }) // Get all content for accurate category counts
+          clientData.getContentItems({ limit: 1000 })
         ])
 
         const fetchedCategories = results[0].status === 'fulfilled' ? results[0].value : []
