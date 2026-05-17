@@ -143,22 +143,6 @@ export function Navigation() {
             </Button>
           </div>
 
-          {/* Follow Us on X */}
-          <div className="px-4 mb-6">
-            <a
-              href="https://x.com/Skill_GainX"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors group"
-            >
-              <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200">
-                Follow us
-              </span>
-            </a>
-          </div>
           <nav className="flex-1 px-2 space-y-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href
@@ -286,6 +270,23 @@ export function Navigation() {
               <Smartphone className="mr-3 h-5 w-5" />
               Install App
             </Button>
+          </div>
+
+          {/* Follow Us on X */}
+          <div className="px-4 mb-6">
+            <a
+              href="https://x.com/Skill_GainX"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors group"
+            >
+              <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200">
+                Follow us
+              </span>
+            </a>
           </div>
 
           <div className="flex-shrink-0 flex border-t p-4">

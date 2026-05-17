@@ -1,6 +1,6 @@
 # Skill Gain — Project Status & Task History
 
-Last updated: [Cline will fill this]
+Last updated: 2026-05-17
 
 ## Recent Completed Tasks
 ( Cline will append new entries here automatically after every successful task )romp
@@ -18,3 +18,4 @@ Last updated: [Cline will fill this]
 [2026-05-17] – Task 3.3 – Knowledge checks now update proficiency + dynamic inputs in feed. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 4.1 – Consistent prominent tab styling applied everywhere. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 4.2 – Desktop side-nav overlap on Curriculum page fixed. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 4.3 – Follow us on X + Install App moved to bottom of side nav. Build + Playwright passed with zero errors.
