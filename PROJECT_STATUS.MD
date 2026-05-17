@@ -3,7 +3,7 @@
 Last updated: [Cline will fill this]
 
 ## Recent Completed Tasks
-( Cline will append new entries here automatically after every successful task )
+( Cline will append new entries here automatically after every successful task )romp
 
 [2026-05-17] – Task 1.1 – Logout now reliably redirects to landing page. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 1.2 – Forgot Password link + Supabase reset flow added. Build + Playwright passed with zero errors.
@@ -12,3 +12,4 @@ Last updated: [Cline will fill this]
 [2026-05-17] – Global Build Fix complete. npm run build now succeeds with zero errors/warnings. All TypeScript and import issues resolved.
 [2026-05-17] – Task 2.1 – Explore + My Learning gated behind grading. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 2.2 – Grade_level + curriculum now used everywhere, fallbacks removed. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 2.3 – Grade assessment now fully consumed in curriculum/learning. Build + Playwright passed with zero errors.

@@ -71,7 +71,7 @@ export default function CurriculumPage() {
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([])
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([])
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('CAPS')
-  const [selectedGrade, setSelectedGrade] = useState<string>('Grade 3')
+  const [selectedGrade, setSelectedGrade] = useState<string>(profile?.grade_level || 'Grade 3')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [children, setChildren] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
