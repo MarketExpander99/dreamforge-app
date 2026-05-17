@@ -42,7 +42,6 @@ const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Explore', href: '/explore', icon: Search },
   { name: 'My Learning', href: '/learning', icon: BookOpen },
-  { name: 'Curriculum', href: '/learning/curriculum', icon: Target },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
@@ -344,7 +343,6 @@ export function Navigation() {
             { name: 'Home', href: '/', icon: Home },
             { name: 'Explore', href: '/explore', icon: Search },
             { name: 'My Learning', href: '/learning', icon: BookOpen },
-            { name: 'Curriculum', href: '/learning/curriculum', icon: Target },
             { name: 'Profile', href: '/profile', icon: User },
           ].map((item) => {
             const isActive = pathname === item.href
