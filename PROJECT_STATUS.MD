@@ -14,3 +14,5 @@ Last updated: [Cline will fill this]
 [2026-05-17] – Task 2.2 – Grade_level + curriculum now used everywhere, fallbacks removed. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 2.3 – Grade assessment now fully consumed in curriculum/learning. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 3.1 – Continue Learning no longer stuck on loading. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 3.2 – Featured Content Start Learning now persists progress. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 3.3 – Knowledge checks now update proficiency + dynamic inputs in feed. Build + Playwright passed with zero errors.
