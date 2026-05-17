@@ -89,11 +89,11 @@ export function Navigation() {
   const handleLogout = async () => {
     try {
       await signOut()
-      router.push('/')
+      window.location.href = '/'
     } catch (error) {
       console.error('Logout error:', error)
       // If sign out fails, just redirect to landing page
-      router.push('/')
+      window.location.href = '/'
     }
   }
 
