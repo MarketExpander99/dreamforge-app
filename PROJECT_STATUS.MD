@@ -17,3 +17,4 @@ Last updated: [Cline will fill this]
 [2026-05-17] – Task 3.2 – Featured Content Start Learning now persists progress. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 3.3 – Knowledge checks now update proficiency + dynamic inputs in feed. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 4.1 – Consistent prominent tab styling applied everywhere. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 4.2 – Desktop side-nav overlap on Curriculum page fixed. Build + Playwright passed with zero errors.

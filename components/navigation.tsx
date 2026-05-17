@@ -164,13 +164,13 @@ export function Navigation() {
               const isActive = pathname === item.href
               return (
                 <Link key={item.name} href={item.href} className="block">
-                  <Button
-                    variant={isActive ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                  >
-                    <item.icon className="mr-3 h-5 w-5" />
-                    {item.name}
-                  </Button>
+                    <Button
+                      variant={isActive ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                    >
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {!sidebarCollapsed && item.name}
+                    </Button>
                 </Link>
               )
             })}
