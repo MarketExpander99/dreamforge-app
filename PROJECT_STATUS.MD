@@ -21,3 +21,4 @@ Last updated: 2026-05-17
 [2026-05-17] – Task 4.3 – Follow us on X + Install App moved to bottom of side nav. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 5.1 – All browser alerts replaced with toasts. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 5.2 – Multiple children with independent curriculum paths supported. Build + Playwright passed with zero errors.
+[2026-05-17] – Task 5.3 – Basic parent dashboard progress overview added. Build + Playwright passed with zero errors.
