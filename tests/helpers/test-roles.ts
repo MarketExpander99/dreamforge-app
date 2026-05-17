@@ -63,13 +63,22 @@ export async function createTestParent(page: Page) {
 }
 
 export async function linkStudentToParent(page: Page, studentEmail: string, parentEmail: string) {
-  await page.evaluate(async (sEmail: string, pEmail: string) => {
+  await page.evaluate(async (args: string[]) => {
+    const [sEmail, pEmail] = args
     const supabase = createBrowserSupabaseClient()
     const { data: student } = await supabase.from('profiles').select('id').eq('email', sEmail).single()
     const { data: parent } = await supabase.from('profiles').select('id').eq('email', pEmail).single()
     if (student && parent) {
       await supabase.from('profiles').update({ parent_id: parent.id }).eq('id', student.id)
     }
-  }, studentEmail, parentEmail)
+  }, [studentEmail, parentEmail])
   await page.waitForTimeout(1000)
+}
+
+export type UserRole = 'student' | 'teacher' | 'parent' | 'admin'
+export const TEST_USERS: Record<UserRole, { email: string; password: string }> = {
+  student: { email: 'teststudent@example.com', password: 'password123' },
+  teacher: { email: 'testteacher@example.com', password: 'password123' },
+  parent: { email: 'testparent@example.com', password: 'password123' },
+  admin: { email: 'admin@example.com', password: 'password123' },
 }
