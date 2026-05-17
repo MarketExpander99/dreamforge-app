@@ -116,7 +116,7 @@ export function Navigation() {
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 z-50 w-64 data-[collapsed]:w-20 box-border bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
+      className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 z-50 w-72 box-border bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto"
     >
           {/* Header with Logo and Collapse Toggle */}
           <div className="flex items-center justify-between flex-shrink-0 px-4 mb-8">

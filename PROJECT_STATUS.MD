@@ -23,3 +23,4 @@ Last updated: 2026-05-17
 [2026-05-17] – Task 5.2 – Multiple children with independent curriculum paths supported. Build + Playwright passed with zero errors.
 [2026-05-17] – Task 5.3 – Basic parent dashboard progress overview added. Build + Playwright passed with zero errors.
 [2026-05-17] – Task Onboarding – Fixed 404 and completed onboarding flow. Build + Playwright passed.
+[2026-05-17] – Task Side Nav Polish – Desktop fixed + mobile consistent. Build + Playwright passed.
