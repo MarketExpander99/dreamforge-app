@@ -32,7 +32,7 @@ export default function ExplorePage({ searchParams }: ExplorePageProps) {
   const categoryParam = (params?.category as string) || undefined
   const searchQuery = (params?.q as string) || undefined
 
-  const hasGradeLevel = profile?.grade_level !== null
+  const hasGradeLevel = profile?.grade_level != null
 
   useEffect(() => {
     const fetchData = async () => {

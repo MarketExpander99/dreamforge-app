@@ -42,7 +42,7 @@ export default function LearningPage() {
     const [joinCode, setJoinCode] = useState('')
     const supabase = createBrowserSupabaseClient()
 
-  const hasGradeLevel = profile?.grade_level !== null
+  const hasGradeLevel = profile?.grade_level != null
 
   // Handle navigation with proper loading state management
   const handleNavigation = useCallback(async (contentId: string) => {
