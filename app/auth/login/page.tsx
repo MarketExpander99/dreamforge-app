@@ -100,11 +100,11 @@ export default function LoginPage() {
           if (userRole === 'teacher') {
             redirectPath = '/teacher/onboarding'
           } else if (userRole === 'student') {
-            redirectPath = '/student/onboarding'
+            redirectPath = '/auth/onboarding'
           } else if (userRole === 'parent') {
-            redirectPath = '/family/onboarding'
+            redirectPath = '/auth/onboarding'
           } else {
-            redirectPath = '/onboarding'
+            redirectPath = '/auth/onboarding'
           }
         } else {
           if (userRole === 'teacher') {
