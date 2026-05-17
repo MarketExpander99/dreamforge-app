@@ -457,8 +457,8 @@ export async function initializeWithDiagnosticResults(
     subject_proficiency: {
       Mathematics: number
       English: number
-      Science: number
-      'General Knowledge': number
+      'Natural Sciences': number
+      'Life Skills': number
     }
     suggested_topics: string[]
   }
@@ -470,8 +470,8 @@ export async function initializeWithDiagnosticResults(
     const proficiencyData: ProficiencyData = {
       [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_mathematics`]: diagnosticResults.subject_proficiency.Mathematics,
       [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_english`]: diagnosticResults.subject_proficiency.English,
-      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_science`]: diagnosticResults.subject_proficiency.Science,
-      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_general_knowledge`]: diagnosticResults.subject_proficiency['General Knowledge']
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_natural_sciences`]: diagnosticResults.subject_proficiency['Natural Sciences'],
+      [`${diagnosticResults.recommended_grade.toLowerCase().replace(' ', '_')}_life_skills`]: diagnosticResults.subject_proficiency['Life Skills']
     }
 
     // Update profile with diagnostic-based proficiency
