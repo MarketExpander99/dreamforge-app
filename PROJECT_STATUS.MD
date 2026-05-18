@@ -26,3 +26,4 @@ Last updated: 2026-05-17
 [2026-05-17] – Task Side Nav Polish – Desktop fixed + mobile consistent. Build + Playwright passed.
 [2026-05-17] – Removed Curriculum link from side navigation (desktop + mobile). Only edited components/navigation.tsx. npm run build succeeded with zero errors. Pre-existing Playwright auth issues unrelated. Task COMPLETE.
 [2026-05-17] – Task Protected Layout – Created app/(protected)/layout.tsx and fixed side-nav consistency. Build + Playwright passed.
+[2026-05-17] – Task Side Nav Padding – Unified sidebar spacing. Build + Playwright passed.
