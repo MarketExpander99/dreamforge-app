@@ -54,28 +54,24 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Color scheme for different relationship types
   const relationshipColors = {
-    prerequisite: '#ef4444', // red
-    extends: '#10b981', // green
-    gamified_link: '#f59e0b', // amber
-    similar: '#8b5cf6', // violet
+    prerequisite: '#ef4444',
+    extends: '#10b981',
+    gamified_link: '#f59e0b',
+    similar: '#8b5cf6',
   }
 
-  // Color scheme for difficulty levels
   const difficultyColors = {
-    beginner: '#10b981', // green
-    intermediate: '#f59e0b', // amber
-    advanced: '#ef4444', // red
+    beginner: '#10b981',
+    intermediate: '#f59e0b',
+    advanced: '#ef4444',
   }
 
-  // Fetch content and relationships
   const fetchGraphData = useCallback(async (contentId?: string) => {
     setLoading(true)
     try {
       const supabase = createBrowserSupabaseClient()
 
-      // Fetch content items with categories
       const { data: contentItems, error: contentError } = await supabase
         .from('content_items')
         .select(`
@@ -87,18 +83,16 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
           category:categories(name, color)
         `)
         .eq('is_published', true)
-        .limit(50) // Limit for performance
+        .limit(50)
 
       if (contentError) throw contentError
 
-      // Fetch relationships
       const { data: relationships, error: relError } = await supabase
         .from('content_relationships')
         .select('*')
 
       if (relError) throw relError
 
-      // Create nodes
       const graphNodes: Node[] = (contentItems || []).map((item: ContentItem, index: number) => {
         const isCentral = contentId && item.id === contentId
         const angle = (index * 2 * Math.PI) / (contentItems?.length || 1)
@@ -130,28 +124,22 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
         }
       })
 
-      // Create edges based on view mode
       const graphEdges: Edge[] = []
 
       if (relationships) {
         relationships.forEach((rel: ContentRelationship) => {
           let includeEdge = false
-
           switch (viewMode) {
             case 'connected':
-              // Show prerequisites and extensions
               includeEdge = rel.relationship_type === 'prerequisite' || rel.relationship_type === 'extends'
               break
             case 'affected':
-              // Show how this content affects other content and games
               includeEdge = rel.relationship_type === 'gamified_link' || rel.relationship_type === 'extends'
               break
             case 'self-similar':
-              // Show similar content
               includeEdge = rel.relationship_type === 'similar'
               break
           }
-
           if (includeEdge) {
             graphEdges.push({
               id: `${rel.source_id}-${rel.target_id}`,
@@ -172,9 +160,7 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
         })
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setNodes(graphNodes as any)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setEdges(graphEdges as any)
     } catch (error) {
       console.error('Error fetching graph data:', error)
@@ -183,30 +169,19 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
     }
   }, [viewMode])
 
-  // Update graph when view mode changes
   useEffect(() => {
     let isMounted = true
-
     const loadData = async () => {
-      if (isMounted) {
-        await fetchGraphData(initialContentId)
-      }
+      if (isMounted) await fetchGraphData(initialContentId)
     }
-
     loadData()
-
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [viewMode, initialContentId])
 
-  // Handle node clicks
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    // Navigate to content
     router.push(`/explore/${node.id}`)
   }, [router])
 
-  // Handle connections (for future editing features)
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
@@ -217,7 +192,7 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading knowledge graph...</p>
+          <p>Loading discover graph...</p>
         </div>
       </div>
     )
@@ -246,7 +221,7 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
         />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
 
-        {/* View Mode Toggle */}
+        {/* Professional View Mode Toggle */}
         <Panel position="top-right">
           <Card>
             <CardContent className="p-3">
@@ -256,27 +231,22 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
                   variant={viewMode === 'connected' ? 'default' : 'outline'}
                   onClick={() => setViewMode('connected')}
                 >
-                  Connected
+                  Core Components
                 </Button>
                 <Button
                   size="sm"
                   variant={viewMode === 'affected' ? 'default' : 'outline'}
                   onClick={() => setViewMode('affected')}
                 >
-                  Affected
+                  Real-World Uses
                 </Button>
                 <Button
                   size="sm"
                   variant={viewMode === 'self-similar' ? 'default' : 'outline'}
                   onClick={() => setViewMode('self-similar')}
                 >
-                  Similar
+                  Similar Topics
                 </Button>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {viewMode === 'connected' && 'Shows prerequisites and next lessons'}
-                {viewMode === 'affected' && 'Shows impact on other content and games'}
-                {viewMode === 'self-similar' && 'Shows similar difficulty/topic variations'}
               </div>
             </CardContent>
           </Card>
@@ -299,26 +269,6 @@ export function ExploreGraph({ initialContentId }: ExploreGraphProps) {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <span>Advanced</span>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 border-t">
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-red-500"></div>
-                    <span>Prerequisite</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-green-500"></div>
-                    <span>Extends</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-amber-500"></div>
-                    <span>Game Link</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-violet-500"></div>
-                    <span>Similar</span>
-                  </div>
                 </div>
               </div>
             </CardContent>
