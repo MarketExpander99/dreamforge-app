@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
-import { ExploreClient } from '../components/explore-client'
+import { ExploreClient } from '@/components/explore-client'
 
 export default async function ExplorePage({
   searchParams,
@@ -17,7 +17,6 @@ export default async function ExplorePage({
       <div className="md:pl-64">
         <main className="py-6 px-4 md:px-8 pb-20 md:pb-6">
           <div className="max-w-6xl mx-auto">
-            {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold mb-2">Discover</h1>
               <p className="text-muted-foreground">

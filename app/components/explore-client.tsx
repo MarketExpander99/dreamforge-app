@@ -15,8 +15,9 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`)
+    const trimmed = searchQuery.trim()
+    if (trimmed) {
+      router.push(`/explore?q=${encodeURIComponent(trimmed)}`)
     }
   }
 
@@ -26,7 +27,7 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
 
   return (
     <>
-      {/* Search */}
+      {/* Search Bar */}
       <form onSubmit={handleSearch} className="mb-8 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
