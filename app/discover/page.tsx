@@ -92,7 +92,7 @@ For the topic "${topic}", return ONLY valid JSON:
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -113,10 +113,10 @@ For the topic "${topic}", return ONLY valid JSON:
           </div>
         </div>
 
-        {/* Search Bar + Buttons */}
-        <div className="flex gap-3 mb-10 max-w-3xl">
+        {/* Search Bar */}
+        <div className="flex gap-3 mb-10">
           <Input
-            placeholder="Search anything... (cheese burger, car, laptop...)"
+            placeholder="Search anything... (cheese burger, car, laptop, photosynthesis...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
@@ -130,112 +130,86 @@ For the topic "${topic}", return ONLY valid JSON:
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left - Main Description */}
-          <div className="lg:col-span-7">
-            <Card className="min-h-[580px]">
-              <CardHeader>
-                <CardTitle className="text-2xl">
-                  {centerNode ? centerNode.label : 'Start Exploring'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-10 flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 min-h-[480px]">
-                {centerNode ? (
-                  <div className="max-w-2xl text-center">
-                    <p className="text-xl leading-relaxed">{centerNode.short_description}</p>
-                    {centerNode.deep_details && (
-                      <div className="mt-10 pt-8 border-t">
-                        <h4 className="font-semibold mb-3 text-blue-600">Deep Details</h4>
-                        <p className="text-blue-700 dark:text-blue-400">{centerNode.deep_details}</p>
-                      </div>
-                    )}
+        {/* Single Info Panel */}
+        {centerNode ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8 p-8">
+              <div>
+                <h4 className="font-semibold mb-2">What it is</h4>
+                <p className="text-lg leading-relaxed">{centerNode.short_description}</p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold mb-2">Main Function</h4>
+                <p className="text-lg">{centerNode.main_function}</p>
+              </div>
+
+              {centerNode.deep_details && (
+                <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-2xl">
+                  <h4 className="font-semibold mb-3 text-blue-700">Deep Query Details</h4>
+                  <p className="text-blue-800 dark:text-blue-300">{centerNode.deep_details}</p>
+                </div>
+              )}
+
+              {/* Self-Similar */}
+              {centerNode.self_similar?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {centerNode.self_similar.map((item, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSearchQuery(item);
+                          callGrok(item, false);
+                        }}
+                      >
+                        {item}
+                      </Button>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-muted-foreground text-xl">Search something above to begin</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              )}
 
-          {/* Right Sidebar - All Details */}
-          <div className="lg:col-span-5">
-            {centerNode ? (
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-2xl">{centerNode.label}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  <div>
-                    <h4 className="font-semibold mb-2">What it is</h4>
-                    <p className="text-sm leading-relaxed">{centerNode.short_description}</p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-2">Main Function</h4>
-                    <p className="text-sm">{centerNode.main_function}</p>
-                  </div>
-
-                  {/* Self-Similar */}
-                  {centerNode.self_similar?.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {centerNode.self_similar.map((item, i) => (
-                          <Button
-                            key={i}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSearchQuery(item);
-                              callGrok(item, false);
-                            }}
-                          >
-                            {item}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Components */}
-                  <div>
-                    <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {centerNode.components.map((comp, i) => (
-                        <Button
-                          key={i}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchQuery(comp);
-                            callGrok(comp, false);
-                          }}
-                        >
-                          {comp}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-6 border-t">
-                    <Button variant="outline" className="gap-2 flex-1">
-                      <BookOpen className="h-4 w-4" />
-                      Grokipedia
+              {/* Components */}
+              <div>
+                <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
+                <div className="flex flex-wrap gap-2">
+                  {centerNode.components.map((comp, i) => (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleComponentClick(comp)}
+                    >
+                      {comp}
                     </Button>
-                    <Button variant="outline" className="gap-2 flex-1">
-                      <Plus className="h-4 w-4" />
-                      Add to Path
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="h-full flex items-center justify-center text-center p-12">
-                <p className="text-muted-foreground">Search something to see its breakdown</p>
-              </Card>
-            )}
-          </div>
-        </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t">
+                <Button variant="outline" className="gap-2 flex-1">
+                  <BookOpen className="h-4 w-4" />
+                  Grokipedia
+                </Button>
+                <Button variant="outline" className="gap-2 flex-1">
+                  <Plus className="h-4 w-4" />
+                  Add to Path
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="p-16 text-center">
+            <p className="text-xl text-muted-foreground">Search something above to explore its components and details</p>
+          </Card>
+        )}
       </div>
     </div>
   );
