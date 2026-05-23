@@ -1,189 +1,175 @@
-// app/discover/page.tsx
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Search, ArrowLeft, BookOpen, Share2, Plus, Network, CreditCard, Crown } from 'lucide-react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { ChevronRight, ChevronDown, Search, BookOpen, Share2, Plus } from 'lucide-react';
+
+interface Node {
+  id: string;
+  label: string;
+  description: string;
+  function: string;
+  components: string[];
+  proficiency: number;
+}
 
 export default function DiscoverPage() {
-  const router = useRouter();
+  const [centerNode, setCenterNode] = useState<Node | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [history, setHistory] = useState<Node[]>([]);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [centerNode, setCenterNode] = useState('');
-  const [connectedNodes, setConnectedNodes] = useState<string[]>([]);
-  const [possibleUses, setPossibleUses] = useState<string[]>([]);
-  const [breadcrumb, setBreadcrumb] = useState<string[]>([]);
-  const [credits] = useState(12);
-  const [isDeepQuery, setIsDeepQuery] = useState(false);
+  // Mock Grok API call (replace with real /api/grok later)
+  const callGrok = async (topic: string) => {
+    setIsLoading(true);
+    try {
+      // For now we use realistic mock data
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-  const fetchConnectedData = (query: string) => {
-    if (!query.trim()) return;
-    
-    setCenterNode(query);
-    setBreadcrumb(prev => [...new Set([...prev, query])]);
+      const mockData = {
+        label: topic,
+        description: `Deep interconnected knowledge about ${topic}. This topic sits at the center of many systems and has rich relationships across domains.`,
+        function: `Serves as a core building block in its domain with multiple real-world applications.`,
+        components: ['Core Component 1', 'Core Component 2', 'Related System A', 'Related System B', 'Advanced Variant'],
+      };
 
-    // Mock connected nodes (you can replace with real logic later)
-    setTimeout(() => {
-      setConnectedNodes(['Engine', 'Transmission', 'Wheels', 'Brakes', 'Battery', 'ECU']);
-      setPossibleUses(['Daily Driving', 'Racing', 'Off-road', 'Electric Conversion', 'Restoration']);
-    }, 300);
-  };
+      const newNode: Node = {
+        id: Date.now().toString(),
+        label: mockData.label,
+        description: mockData.description,
+        function: mockData.function,
+        components: mockData.components,
+        proficiency: Math.floor(Math.random() * 40) + 35,
+      };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      fetchConnectedData(searchTerm.trim());
+      setCenterNode(newNode);
+      setHistory(prev => [newNode, ...prev].slice(0, 6));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleNodeClick = (node: string) => {
-    setSearchTerm(node);
-    fetchConnectedData(node);
+  const exploreTopic = (topic: string) => {
+    if (!topic.trim()) return;
+    callGrok(topic);
   };
 
-  const handleBack = () => {
-    if (breadcrumb.length > 1) {
-      const newBreadcrumb = breadcrumb.slice(0, -1);
-      setBreadcrumb(newBreadcrumb);
-      const previous = newBreadcrumb[newBreadcrumb.length - 1];
-      setCenterNode(previous);
-      setSearchTerm(previous);
-      fetchConnectedData(previous);
-    }
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedNodes);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+    setExpandedNodes(newSet);
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-foreground">
       <Navigation />
 
       <div className="md:pl-64">
         <main className="py-8 px-4 md:px-8 max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-4xl font-bold tracking-tight">Discover the Lattice</h1>
               <p className="text-muted-foreground">Infinite E8 Knowledge Lattice • Powered by Grok</p>
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-muted px-5 py-3 rounded-3xl">
-                <CreditCard className="h-5 w-5 text-emerald-600" />
-                <span className="font-semibold text-xl">{credits}</span>
-                <span className="text-sm text-muted-foreground">credits</span>
-              </div>
-              <Button variant="outline">Top Up</Button>
-              <Button className="gap-2">
-                <Crown className="h-4 w-4" />
-                View Plans
-              </Button>
-            </div>
           </div>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="mb-8 max-w-2xl">
-            <div className="relative">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search any topic... (e.g. Car, Gearbox, Fast Food, Quantum Computing)"
-                className="pl-14 py-8 text-lg rounded-3xl border-2"
-              />
-            </div>
-          </form>
+          {/* Search */}
+          <div className="flex gap-3 mb-8 max-w-2xl">
+            <Input
+              placeholder="Search anything... (Car, Gearbox, Fast Food Chef, Quantum Computing...)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && exploreTopic(searchQuery)}
+              className="py-6 text-lg"
+            />
+            <Button 
+              onClick={() => exploreTopic(searchQuery)} 
+              disabled={isLoading}
+              className="px-10"
+            >
+              {isLoading ? 'Exploring...' : 'Explore'}
+            </Button>
+          </div>
 
-          {/* Results Area */}
-          {centerNode && (
-            <>
-              {/* Breadcrumb + Back */}
-              <div className="flex items-center gap-4 mb-6">
-                <Button variant="ghost" size="sm" onClick={handleBack} disabled={breadcrumb.length <= 1}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <div className="flex gap-2 text-sm text-muted-foreground">
-                  {breadcrumb.map((crumb, i) => (
-                    <span key={i}>{crumb}{i < breadcrumb.length - 1 && ' → '}</span>
-                  ))}
-                </div>
-              </div>
-
-              <p className="text-sm font-medium mb-3 text-muted-foreground">Connected Nodes</p>
-              <div className="flex flex-wrap gap-3 mb-8">
-                {connectedNodes.map((node) => (
-                  <Button
-                    key={node}
-                    variant="outline"
-                    className="rounded-2xl px-6 py-6 text-base"
-                    onClick={() => handleNodeClick(node)}
-                  >
-                    {node}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Possible Uses */}
-              <Card className="mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Lattice / Visual Area */}
+            <div className="lg:col-span-7">
+              <Card className="h-[620px] flex flex-col">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Network className="h-5 w-5" />
-                    Possible uses for {centerNode}
+                  <CardTitle>
+                    {centerNode ? `Lattice — ${centerNode.label}` : 'Knowledge Lattice'}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {possibleUses.map((use) => (
-                      <Badge key={use} variant="secondary" className="px-5 py-2 text-sm">
-                        {use}
-                      </Badge>
-                    ))}
-                  </div>
+                <CardContent className="flex-1 flex items-center justify-center border-t bg-zinc-950 dark:bg-zinc-900 rounded-b-xl">
+                  {centerNode ? (
+                    <div className="text-center">
+                      <p className="text-2xl font-medium text-blue-400 mb-4">{centerNode.label}</p>
+                      <p className="text-muted-foreground">3D Lattice visualization coming soon...</p>
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <p className="text-lg">What would you like to explore?</p>
+                      <p className="text-sm mt-2">Search above to begin your journey</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-
-              {/* Quick Actions */}
-              <div className="flex gap-3 mb-10">
-                <Button variant="outline" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  View on Grokipedia
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  <Share2 className="h-4 w-4" />
-                  Share on X
-                </Button>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add to Learning Path
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* View Mode + DeepQuery */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2">
-              <Button variant="default">Knowledge Lattice</Button>
-              <Button variant="outline">List View</Button>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Switch checked={isDeepQuery} onCheckedChange={setIsDeepQuery} />
-              <span className="text-sm font-medium">DeepQuery Mode <span className="text-muted-foreground">(Premium)</span></span>
-            </div>
-          </div>
+            {/* Info Panel */}
+            <div className="lg:col-span-5">
+              {centerNode ? (
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{centerNode.label}</CardTitle>
+                    <Badge>Proficiency: {centerNode.proficiency}%</Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-8">
+                    <div>
+                      <h4 className="font-semibold mb-2">Deep Understanding</h4>
+                      <p className="text-sm leading-relaxed">{centerNode.description}</p>
+                    </div>
 
-          {/* Placeholder for Lattice / Graph */}
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-3xl h-96 flex items-center justify-center">
-            <p className="text-muted-foreground text-lg">
-              {centerNode ? `Lattice visualization for "${centerNode}" will appear here` : 'Search something to explore the lattice'}
-            </p>
+                    <div>
+                      <h4 className="font-semibold mb-2">Core Function</h4>
+                      <p className="text-sm">{centerNode.function}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-3">Connected Nodes</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {centerNode.components.map((comp, i) => (
+                          <Button
+                            key={i}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => exploreTopic(comp)}
+                            className="text-xs"
+                          >
+                            {comp}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="h-full flex items-center justify-center text-center p-12">
+                  <div>
+                    <p className="text-muted-foreground">The universe of knowledge awaits.</p>
+                    <p className="text-sm mt-4">Start by searching any topic above.</p>
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
         </main>
       </div>
