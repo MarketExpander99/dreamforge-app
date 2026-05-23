@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { ExploreGraph } from '@/components/explore-graph'
@@ -12,11 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 export default function ExplorePage() {
   const router = useRouter()
-  const searchParamsHook = useSearchParams()
 
   const [viewMode, setViewMode] = useState<'list' | 'graph'>('graph')
   const [categories, setCategories] = useState<Category[]>([])
@@ -26,11 +27,11 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
 
   // New Phase 1 state
-  const [searchTerm, setSearchTerm] = useState(searchParamsHook.get('q') || '')
-  const [centerNode, setCenterNode] = useState(searchParamsHook.get('q') || '')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [centerNode, setCenterNode] = useState('')
   const [connectedNodes, setConnectedNodes] = useState<string[]>([])
   const [possibleUses, setPossibleUses] = useState<string[]>([])
-  const [breadcrumb, setBreadcrumb] = useState<string[]>(searchParamsHook.get('q') ? [searchParamsHook.get('q')!] : [])
+  const [breadcrumb, setBreadcrumb] = useState<string[]>([])
   const [credits, setCredits] = useState(12)
   const [isDeepQuery, setIsDeepQuery] = useState(false)
 
@@ -56,6 +57,18 @@ export default function ExplorePage() {
       }
     }
     fetchData()
+  }, [])
+
+  // Sync initial ?q= from URL on client mount (preserves deep-link behaviour without useSearchParams hook / prerender bailout)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search).get('q')
+      if (q) {
+        setSearchTerm(q)
+        setCenterNode(q)
+        setBreadcrumb([q])
+      }
+    }
   }, [])
 
   // New Phase 1 functions
@@ -237,7 +250,7 @@ export default function ExplorePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
                 {allContent.map((content) => (
-                  <FeedCard key={content.id} content={content} />
+                  <FeedCard key={content.id} card={content as any} />
                 ))}
               </div>
               <div>
