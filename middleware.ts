@@ -2,14 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const url = request.nextUrl.clone()
-
-  // Redirect www.skill-gain.com to skill-gain.com
-  if (url.hostname === 'www.skill-gain.com') {
-    url.hostname = 'skill-gain.com'
-    return NextResponse.redirect(url, 301)
-  }
-
   // Skip middleware if Supabase is not configured
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -53,6 +45,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Protect the /explore route so unauthenticated users are redirected to /auth/login
+  if (request.nextUrl.pathname === '/explore' && !user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
   // Check if accessing admin routes
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
@@ -81,80 +78,6 @@ export async function middleware(request: NextRequest) {
     if (!hasAccess) {
       // Redirect to home page if not authorized
       return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // Protect teacher routes
-  if (request.nextUrl.pathname.startsWith('/teacher')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const userRole = profile?.role
-    const userEmail = user.email
-
-    const hasTeacherAccess = userRole === 'teacher' || userRole === 'content-creator' || userEmail === 'eben.combrinck@proton.me'
-
-    if (!hasTeacherAccess) {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-
-    // Check onboarding for teachers
-    const { data: teacherProfile } = await supabase
-      .from('profiles')
-      .select('teacher_onboarding_completed')
-      .eq('id', user.id)
-      .single()
-
-    if (userRole === 'teacher' && !teacherProfile?.teacher_onboarding_completed) {
-      return NextResponse.redirect(new URL('/teacher/onboarding', request.url))
-    }
-  }
-
-  // Protect student routes
-  if (request.nextUrl.pathname.startsWith('/student')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'student') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // Protect family routes
-  if (request.nextUrl.pathname.startsWith('/family')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'parent') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-  }
-
-  // Protect learning routes (requires authentication)
-  if (request.nextUrl.pathname.startsWith('/learning')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
     }
   }
 
