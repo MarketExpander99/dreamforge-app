@@ -22,10 +22,9 @@ export default function DiscoverPage() {
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeepQueryMode, setIsDeepQueryMode] = useState(false);
   const [credits, setCredits] = useState(8);
 
-  const callGrok = async (topic: string, deep: boolean = false) => {
+  const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
       alert("You've used your free credits for today. Buy more to continue.");
       return;
@@ -34,7 +33,7 @@ export default function DiscoverPage() {
     setIsLoading(true);
     try {
       const prompt = `You are a helpful exploration assistant.
-For the topic "${topic}", return ONLY valid JSON with this exact structure:
+For the topic "${topic}", return ONLY valid JSON:
 
 {
   "label": "${topic}",
@@ -42,7 +41,7 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure:
   "main_function": "What this thing does or its purpose",
   "components": ["component1", "component2", ...],
   "self_similar": ["similar item 1", "similar item 2", ...],
-  ${deep ? `"deep_details": "Detailed breakdown including manufacturing processes, materials, variations, cost factors, or advanced insights"` : ''}
+  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
 }`;
 
       const response = await fetch('/api/grok', {
@@ -66,7 +65,6 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure:
 
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
-      setIsDeepQueryMode(deep);
     } catch (error) {
       console.error(error);
       alert('Could not connect to Grok API.');
@@ -75,14 +73,14 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure:
     }
   };
 
-  const exploreTopic = (topic: string) => {
-    if (!topic.trim()) return;
-    callGrok(topic, false);
+  const exploreNormal = () => {
+    if (!searchQuery.trim()) return;
+    callGrok(searchQuery, false);
   };
 
-  const handleDeepQuery = () => {
-    if (!centerNode) return;
-    callGrok(centerNode.label, true);
+  const exploreDeep = () => {
+    if (!searchQuery.trim()) return;
+    callGrok(searchQuery, true);
   };
 
   const handleComponentClick = (comp: string) => {
@@ -102,75 +100,65 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure:
             <p className="text-muted-foreground">Explore anything • Break it down • Drill deeper</p>
           </div>
 
-          {/* Credits */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-muted px-5 py-3 rounded-3xl">
               <CreditCard className="h-5 w-5 text-emerald-600" />
               <span className="font-semibold text-2xl">{credits}</span>
               <span className="text-sm text-muted-foreground">credits</span>
             </div>
-            <Button variant="outline" className="gap-2" onClick={() => alert('Payment gateway coming soon!')}>
+            <Button variant="outline" className="gap-2">
               <Crown className="h-4 w-4" />
               Buy Credits
             </Button>
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar + Buttons */}
         <div className="flex gap-3 mb-10 max-w-3xl">
           <Input
-            placeholder="Search anything... (cheese burger, car, laptop, photosynthesis...)"
+            placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && exploreTopic(searchQuery)}
+            onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
             className="py-7 text-lg"
           />
-          <Button 
-            onClick={() => exploreTopic(searchQuery)} 
-            disabled={isLoading || credits <= 0}
-            className="px-12 text-lg"
-          >
+          <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
             {isLoading ? 'Exploring...' : 'Explore'}
+          </Button>
+          <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8">
+            Deep Query
           </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Content - Much wider now */}
-          <div className="lg:col-span-8">
-            <Card className="min-h-[580px] flex flex-col">
-              <CardHeader className="flex-row items-center justify-between">
+          {/* Left - Main Description */}
+          <div className="lg:col-span-7">
+            <Card className="min-h-[580px]">
+              <CardHeader>
                 <CardTitle className="text-2xl">
                   {centerNode ? centerNode.label : 'Start Exploring'}
                 </CardTitle>
-                {centerNode && (
-                  <Button 
-                    onClick={handleDeepQuery}
-                    variant="default"
-                    className="gap-2"
-                  >
-                    Deep Query
-                  </Button>
-                )}
               </CardHeader>
-              <CardContent className="flex-1 p-10 flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 rounded-b-xl">
+              <CardContent className="p-10 flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 min-h-[480px]">
                 {centerNode ? (
                   <div className="max-w-2xl text-center">
                     <p className="text-xl leading-relaxed">{centerNode.short_description}</p>
                     {centerNode.deep_details && (
-                      <p className="mt-8 text-blue-600 dark:text-blue-400 text-left">{centerNode.deep_details}</p>
+                      <div className="mt-10 pt-8 border-t">
+                        <h4 className="font-semibold mb-3 text-blue-600">Deep Details</h4>
+                        <p className="text-blue-700 dark:text-blue-400">{centerNode.deep_details}</p>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-2xl">What would you like to explore?</p>
-                  </div>
+                  <p className="text-muted-foreground text-xl">Search something above to begin</p>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-4">
+          {/* Right Sidebar - All Details */}
+          <div className="lg:col-span-5">
             {centerNode ? (
               <Card className="h-full">
                 <CardHeader>
@@ -218,7 +206,10 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure:
                           key={i}
                           variant="outline"
                           size="sm"
-                          onClick={() => handleComponentClick(comp)}
+                          onClick={() => {
+                            setSearchQuery(comp);
+                            callGrok(comp, false);
+                          }}
                         >
                           {comp}
                         </Button>
