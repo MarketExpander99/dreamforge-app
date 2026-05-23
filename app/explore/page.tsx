@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { Navigation } from '@/components/navigation'
-import { ExploreGraph } from '@/components/explore-graph'
-import { Search, Filter, List, Network } from 'lucide-react'
+import { ExploreClient } from '../components/explore-client'
 
 export default async function ExplorePage({
   searchParams,
@@ -36,7 +35,7 @@ export default async function ExplorePage({
                 </div>
               }
             >
-              <ExploreGraph initialQuery={initialQuery} />
+              <ExploreClient initialQuery={initialQuery} />
             </Suspense>
           </div>
         </main>
