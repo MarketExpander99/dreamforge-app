@@ -24,7 +24,14 @@ export default async function ExplorePage({
               </p>
             </div>
 
-            <Suspense fallback={<div className="h-96 flex items-center justify-center text-muted-foreground">Loading Discover...</div>}>
+            <Suspense fallback={
+              <div className="h-[600px] flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading Discover...</p>
+                </div>
+              </div>
+            }>
               <ExploreClient initialQuery={initialQuery} />
             </Suspense>
           </div>

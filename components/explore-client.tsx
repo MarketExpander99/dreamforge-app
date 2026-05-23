@@ -3,21 +3,20 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ExploreGraph } from '@/components/explore-graph'
-import { Search, Filter, List, Network } from 'lucide-react'
+import { Search, Network } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export function ExploreClient({ initialQuery }: { initialQuery: string }) {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [viewMode, setViewMode] = useState<'list' | 'graph'>('graph')
   const [searchQuery, setSearchQuery] = useState(initialQuery)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = searchQuery.trim()
     if (trimmed) {
-      router.push(`/explore?q=${encodeURIComponent(trimmed)}`)
+      router.push(`/explore?q=${encodeURIComponent(trimmed)}`, { scroll: false })
     }
   }
 
@@ -26,7 +25,7 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
   }, [searchParams, initialQuery])
 
   return (
-    <>
+    <div>
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="mb-8 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -44,25 +43,14 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
         </Button>
       </form>
 
-      {/* View Toggle */}
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={viewMode === 'graph' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setViewMode('graph')}
-        >
+      <div className="mb-8">
+        <Button variant="default" size="sm">
           <Network className="h-4 w-4 mr-2" />
           Graph View
         </Button>
       </div>
 
-      {viewMode === 'graph' ? (
-        <ExploreGraph initialQuery={searchQuery} />
-      ) : (
-        <div className="text-center py-12 border rounded-lg bg-gray-50">
-          <p className="text-muted-foreground">List view coming soon</p>
-        </div>
-      )}
-    </>
+      <ExploreGraph initialQuery={searchQuery} />
+    </div>
   )
 }
