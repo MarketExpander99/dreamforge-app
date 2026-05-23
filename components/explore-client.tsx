@@ -42,22 +42,10 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
           <Search className="h-4 w-4 mr-2" />
           Search
         </Button>
-        <Button type="button" variant="outline" className="sm:w-auto">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-        </Button>
       </form>
 
       {/* View Toggle */}
       <div className="flex gap-2 mb-6">
-        <Button
-          variant={viewMode === 'list' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setViewMode('list')}
-        >
-          <List className="h-4 w-4 mr-2" />
-          List View
-        </Button>
         <Button
           variant={viewMode === 'graph' ? 'default' : 'outline'}
           size="sm"
@@ -72,10 +60,7 @@ export function ExploreClient({ initialQuery }: { initialQuery: string }) {
         <ExploreGraph initialQuery={searchQuery} />
       ) : (
         <div className="text-center py-12 border rounded-lg bg-gray-50">
-          <p className="text-muted-foreground">List view coming soon in Phase 1</p>
-          <Button onClick={() => setViewMode('graph')} className="mt-4">
-            Switch to Graph View
-          </Button>
+          <p className="text-muted-foreground">List view coming soon</p>
         </div>
       )}
     </>
