@@ -256,16 +256,42 @@ CREATE POLICY "Anyone can view content relationships" ON content_relationships
 CREATE POLICY "Allow seeding content relationships" ON content_relationships
   FOR ALL USING (true);
 
+-- Privacy support: generate_anonymous_id (required because anonymous_id is NOT NULL + UNIQUE)
+CREATE OR REPLACE FUNCTION generate_anonymous_id()
+RETURNS TEXT AS $$
+DECLARE
+  new_id TEXT;
+  counter INTEGER := 0;
+BEGIN
+  LOOP
+    new_id := 'User_' || LPAD((10000 + floor(random() * 90000))::TEXT, 5, '0');
+    IF NOT EXISTS (SELECT 1 FROM profiles WHERE anonymous_id = new_id) THEN
+      RETURN new_id;
+    END IF;
+    counter := counter + 1;
+    IF counter > 1000 THEN
+      RAISE EXCEPTION 'Could not generate unique anonymous_id after 1000 attempts';
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Drop existing function and trigger if they exist
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
 
--- Create function to handle new user signup
+-- Create function to handle new user signup (ALWAYS student + anonymous_id)
+-- This fixes the "Database error saving new user" 500 and enforces the new default.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, role, full_name)
-  VALUES (NEW.id, 'student', COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'Student'));
+  INSERT INTO public.profiles (id, role, full_name, anonymous_id)
+  VALUES (
+    NEW.id,
+    'student',
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'Student'),
+    generate_anonymous_id()
+  );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

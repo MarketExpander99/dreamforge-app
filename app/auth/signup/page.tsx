@@ -7,27 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Users, PenTool, GraduationCap } from 'lucide-react'
 
 export default function SignupPage() {
-  const [step, setStep] = useState<'role' | 'details'>('role')
-  const [role, setRole] = useState<'parent' | 'student' | 'content-creator' | 'teacher' | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    childName: '',
-    childAge: '',
-    grade: '',
-    school: ''
+    grade: ''
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  const handleRoleSelect = (selectedRole: 'parent' | 'student' | 'content-creator' | 'teacher') => {
-    setRole(selectedRole)
-    setStep('details')
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,21 +30,9 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: formData.fullName,
-            role: role,
+            role: 'student',
             onboarding_completed: false,
-            ...(role === 'parent' && {
-              child_name: formData.childName,
-              child_age: formData.childAge
-            }),
-            ...(role === 'student' && {
-              grade: formData.grade
-            }),
-            ...(role === 'teacher' && {
-              school: formData.school
-            }),
-            ...(role === 'content-creator' && {
-              school: formData.school
-            })
+            grade: formData.grade
           }
         }
       })
@@ -91,12 +68,8 @@ export default function SignupPage() {
         email: '',
         password: '',
         fullName: '',
-        childName: '',
-        childAge: '',
-        grade: '',
-        school: ''
+        grade: ''
       })
-      setStep('role')
       router.push('/discover')
     } catch (error: any) {
       console.error('Signup error:', error)
@@ -117,55 +90,6 @@ export default function SignupPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  if (step === 'role') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Join Skill Gain</CardTitle>
-            <CardDescription>
-              Choose your role to get started
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button
-              onClick={() => handleRoleSelect('parent')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <Users className="h-8 w-8" />
-              <span>Parent registering a child</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('student')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <User className="h-8 w-8" />
-              <span>Student (13+ years old)</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('teacher')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <GraduationCap className="h-8 w-8" />
-              <span>Teacher</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('content-creator')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <PenTool className="h-8 w-8" />
-              <span>Content Creator</span>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -189,18 +113,9 @@ export default function SignupPage() {
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-zinc-950">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">
-              {role === 'parent' ? 'Parent Registration' :
-               role === 'content-creator' ? 'Content Creator Registration' :
-               'Student Registration'}
-            </CardTitle>
+            <CardTitle className="text-2xl font-bold">Student Registration</CardTitle>
             <CardDescription>
-              {role === 'parent'
-                ? 'Create an account for your child'
-                : role === 'content-creator'
-                ? 'Create your content creator account'
-                : 'Create your student account'
-              }
+              Create your student account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -229,92 +144,42 @@ export default function SignupPage() {
                 />
               </div>
 
-              {role === 'parent' ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Your Full Name</Label>
-                    <Input
-                      id="fullName"
-                      placeholder="Enter your full name"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="childName">Child's Full Name</Label>
-                    <Input
-                      id="childName"
-                      placeholder="Enter your child's full name"
-                      value={formData.childName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, childName: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="childAge">Child's Age</Label>
-                    <Input
-                      id="childAge"
-                      type="number"
-                      placeholder="Enter your child's age"
-                      value={formData.childAge}
-                      onChange={(e) => setFormData(prev => ({ ...prev, childAge: e.target.value }))}
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="Enter your full name"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    required
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Enter your full name"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  required
+                />
+              </div>
 
-              {role === 'student' && (
-                <div className="space-y-2">
-                  <Label htmlFor="grade">CAPS Grade</Label>
-                  <select
-                    id="grade"
-                    value={formData.grade}
-                    onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    required
-                  >
-                    <option value="">Select your grade</option>
-                    <option value="R">Grade R</option>
-                    <option value="1">Grade 1</option>
-                    <option value="2">Grade 2</option>
-                    <option value="3">Grade 3</option>
-                    <option value="4">Grade 4</option>
-                    <option value="5">Grade 5</option>
-                    <option value="6">Grade 6</option>
-                    <option value="7">Grade 7</option>
-                    <option value="8">Grade 8</option>
-                    <option value="9">Grade 9</option>
-                    <option value="10">Grade 10</option>
-                    <option value="11">Grade 11</option>
-                    <option value="12">Grade 12</option>
-                  </select>
-                </div>
-              )}
-
-              {(role === 'teacher' || role === 'content-creator') && (
-                <div className="space-y-2">
-                  <Label htmlFor="school">School / Organization</Label>
-                  <Input
-                    id="school"
-                    placeholder="Enter your school or organization"
-                    value={formData.school}
-                    onChange={(e) => setFormData(prev => ({ ...prev, school: e.target.value }))}
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="grade">CAPS Grade</Label>
+                <select
+                  id="grade"
+                  value={formData.grade}
+                  onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                >
+                  <option value="">Select your grade</option>
+                  <option value="R">Grade R</option>
+                  <option value="1">Grade 1</option>
+                  <option value="2">Grade 2</option>
+                  <option value="3">Grade 3</option>
+                  <option value="4">Grade 4</option>
+                  <option value="5">Grade 5</option>
+                  <option value="6">Grade 6</option>
+                  <option value="7">Grade 7</option>
+                  <option value="8">Grade 8</option>
+                  <option value="9">Grade 9</option>
+                  <option value="10">Grade 10</option>
+                  <option value="11">Grade 11</option>
+                  <option value="12">Grade 12</option>
+                </select>
+              </div>
 
               {/* Privacy Notice */}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -337,16 +202,6 @@ export default function SignupPage() {
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
-
-            <div className="mt-4 text-center">
-              <Button
-                variant="ghost"
-                onClick={() => setStep('role')}
-                className="text-sm"
-              >
-                ← Back to role selection
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
