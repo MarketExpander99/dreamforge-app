@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,12 +25,29 @@ interface ChatMessage {
 }
 
 export default function DiscoverPage() {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState<number>(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Protect the Discover page - redirect to login if not authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/auth/login');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [router, supabase]);
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
@@ -128,6 +147,15 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
+        <Navigation />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
