@@ -124,9 +124,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* LEFT SIDE - IMAGE / GRAPHIC */}
+      {/* LEFT SIDE - IMAGE / GRAPHIC */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <img
-          src="/images/auth/login-hero.jpg"   {/* ← Change this to your actual image path */}
+          src="/images/auth/login-hero.jpg"     // ← Change this path to your actual image
           alt="Skill Gain Login"
           className="absolute inset-0 w-full h-full object-cover"
         />
