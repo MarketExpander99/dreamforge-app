@@ -17,11 +17,18 @@ interface Node {
   deep_details?: string;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function DiscoverPage() {
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState(8);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
@@ -30,19 +37,19 @@ export default function DiscoverPage() {
     }
 
     setIsLoading(true);
-    setCenterNode(null); // Clear previous result while loading
+    setCenterNode(null);
 
     try {
       const prompt = `You are a helpful exploration assistant.
-For the topic "${topic}", return ONLY valid JSON with this structure (no extra text):
+For the topic "${topic}", return ONLY valid JSON with this exact structure (no extra text, no markdown):
 
 {
   "label": "${topic}",
   "short_description": "Clear 1-2 sentence description",
-  "main_function": "What this thing does or its purpose",
-  "components": ["item1", "item2", "item3"],
-  "self_similar": ["similar1", "similar2"],
-  ${isDeep ? `"deep_details": "Detailed information including manufacturing, materials, variations etc."` : ''}
+  "main_function": "What this thing does or its purpose in simple terms",
+  "components": ["component1", "component2", "component3", ...],
+  "self_similar": ["similar item 1", "similar item 2", ...],
+  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
 }`;
 
       const response = await fetch('/api/grok', {
@@ -52,13 +59,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure (no extra t
       });
 
       const rawData = await response.json();
-      let parsed;
-
-      if (typeof rawData === 'string') {
-        parsed = JSON.parse(rawData);
-      } else {
-        parsed = rawData;
-      }
+      const parsed = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
       const newNode: Node = {
         id: Date.now().toString(),
@@ -72,27 +73,47 @@ For the topic "${topic}", return ONLY valid JSON with this structure (no extra t
 
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
+      setChatMessages([]); // Clear chat when exploring new topic
     } catch (error) {
-      console.error("Explore error:", error);
-      alert("Failed to load results. Please try again.");
+      console.error(error);
+      alert("Failed to explore topic. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const exploreNormal = () => {
-    if (!searchQuery.trim()) return;
-    callGrok(searchQuery, false);
-  };
-
-  const exploreDeep = () => {
-    if (!searchQuery.trim()) return;
-    callGrok(searchQuery, true);
-  };
+  const exploreNormal = () => callGrok(searchQuery, false);
+  const exploreDeep = () => callGrok(searchQuery, true);
 
   const handleComponentClick = (comp: string) => {
     setSearchQuery(comp);
     callGrok(comp, false);
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || !centerNode) return;
+
+    const userMsg = { role: 'user' as const, content: chatInput };
+    setChatMessages(prev => [...prev, userMsg]);
+    const currentQuestion = chatInput;
+    setChatInput('');
+
+    try {
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `The current topic is "${centerNode.label}". Answer this question helpfully and clearly: ${currentQuestion}`
+        }),
+      });
+
+      const raw = await response.json();
+      const answer = typeof raw === 'string' ? raw : raw.content || "Sorry, I couldn't generate a response.";
+      
+      setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
+    } catch (e) {
+      setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
+    }
   };
 
   return (
@@ -119,24 +140,24 @@ For the topic "${topic}", return ONLY valid JSON with this structure (no extra t
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search Bar */}
         <div className="flex gap-3 mb-10">
           <Input
-            placeholder="Search anything... (car, cheese burger, laptop...)"
+            placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
             className="py-7 text-lg"
           />
           <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Explore'}
+            {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
           </Button>
           <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8">
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Deep Query'}
+            Deep Query
           </Button>
         </div>
 
-        {/* Result Card */}
+        {/* Main Result */}
         {centerNode ? (
           <Card>
             <CardHeader>
@@ -193,6 +214,34 @@ For the topic "${topic}", return ONLY valid JSON with this structure (no extra t
                   <Plus className="h-4 w-4" />
                   Add to Learning Path
                 </Button>
+              </div>
+
+              {/* Chat Section */}
+              <div className="pt-8 border-t">
+                <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
+                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">
+                  {chatMessages.length === 0 && (
+                    <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                        msg.role === 'user' ? 'bg-primary text-white' : 'bg-white dark:bg-zinc-800 border'
+                      }`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ask anything about this topic..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                  />
+                  <Button onClick={sendChatMessage}>Send</Button>
+                </div>
               </div>
             </CardContent>
           </Card>
