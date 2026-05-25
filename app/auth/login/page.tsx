@@ -36,34 +36,34 @@ export default function LoginPage() {
     setModalConfig({
       title: 'Reset Password',
       description: 'Invalid email or password. Would you like to reset your password?',
-        onConfirm: async () => {
-          try {
-            const response = await fetch('/api/auth/send-password-reset', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: formData.email
-              }),
-            })
+      onConfirm: async () => {
+        try {
+          const response = await fetch('/api/auth/send-password-reset', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email
+            }),
+          })
 
-            if (!response.ok) {
-              throw new Error('Failed to send password reset email')
-            }
-
-            const result = await response.json()
-            if (!result.success) {
-              throw new Error(result.error || 'Failed to send password reset email')
-            }
-
-            alert('Password reset email sent! Please check your inbox.')
-            setShowModal(false)
-          } catch (error: unknown) {
-            console.error('Password reset error:', error)
-            alert('Failed to send password reset email. Please try again later.')
+          if (!response.ok) {
+            throw new Error('Failed to send password reset email')
           }
+
+          const result = await response.json()
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to send password reset email')
+          }
+
+          alert('Password reset email sent! Please check your inbox.')
+          setShowModal(false)
+        } catch (error: unknown) {
+          console.error('Password reset error:', error)
+          alert('Failed to send password reset email. Please try again later.')
         }
+      }
     })
     setShowModal(true)
   }
@@ -110,7 +110,6 @@ export default function LoginPage() {
       } else if (errorMessage.includes('Supabase environment variables not configured')) {
         alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
       } else if (errorMessage.includes('Invalid login credentials')) {
-        // Show forgot password modal
         showPasswordResetModal()
       } else if (errorMessage.includes('Too many requests')) {
         alert('Too many login attempts. Please wait a few minutes before trying again.')
@@ -123,63 +122,82 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in to continue your learning journey
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
-            </div>
+    <div className="min-h-screen flex">
+      {/* LEFT SIDE - IMAGE / GRAPHIC */}
+      <div className="hidden lg:flex lg:w-1/2 relative">
+        <img
+          src="/images/auth/login-hero.jpg"   {/* ← Change this to your actual image path */}
+          alt="Skill Gain Login"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/50 to-transparent" />
+        
+        <div className="absolute bottom-12 left-12 text-white z-10">
+          <h2 className="text-5xl font-bold tracking-tight">Welcome back</h2>
+          <p className="mt-4 text-xl text-white/90">Continue your learning journey with Skill Gain</p>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <button
-                  type="button"
-                  onClick={showPasswordResetModal}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot password?
-                </button>
+      {/* RIGHT SIDE - FORM */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-zinc-950">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+            <CardDescription>
+              Sign in to continue your learning journey
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={showPasswordResetModal}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Button>
+            </form>
+
+            <div className="mt-4 text-center text-sm">
+              <span className="text-muted-foreground">Don't have an account? </span>
+              <Link href="/auth/signup" className="text-primary hover:underline">
+                Sign up
+              </Link>
             </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
-            </Button>
-          </form>
-
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link href="/auth/signup" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Password Reset Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogOverlay className="fixed inset-0 z-50 bg-black data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogContent>
