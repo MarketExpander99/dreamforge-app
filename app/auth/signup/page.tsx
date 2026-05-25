@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-react'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -16,77 +17,112 @@ export default function SignupPage() {
     grade: ''
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const router = useRouter()
+
+  const validateEmail = (email: string): boolean => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setSuccess('')
     setLoading(true)
+
+    // Client-side validation
+    if (!validateEmail(formData.email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.fullName.trim()) {
+      setError('Please enter your full name')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.grade) {
+      setError('Please select your grade')
+      setLoading(false)
+      return
+    }
 
     try {
       const supabase = createBrowserSupabaseClient()
-      const { data, error } = await supabase.auth.signUp({
+      
+      const { data, error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            full_name: formData.fullName,
+            full_name: formData.fullName.trim(),
             role: 'student',
             onboarding_completed: false,
             grade: formData.grade
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       })
 
-      if (error) throw error
+      if (signupError) throw signupError
 
-      // Send branded confirmation email
+      // Attempt to send branded confirmation (non-blocking)
       try {
         const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
-
-        const response = await fetch('/api/auth/send-confirmation', {
+        
+        await fetch('/api/auth/send-confirmation', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: formData.email,
             confirmationUrl
           }),
         })
-
-        if (!response.ok) {
-          console.error('Failed to send branded confirmation email')
-        }
       } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError)
+        console.warn('Branded confirmation email failed (this is non-blocking):', emailError)
       }
 
-      alert('Account created successfully! Please check your email and click the confirmation link to activate your account.')
-
-      // Reset form
+      setSuccess('Account created successfully! Please check your email for the confirmation link.')
+      
+      // Clear form
       setFormData({
         email: '',
         password: '',
         fullName: '',
         grade: ''
       })
-      router.push('/discover')
+
+      // Optional: redirect after delay
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 2500)
+
     } catch (error: any) {
       console.error('Signup error:', error)
 
-      if (error.message?.includes('Supabase environment variables not configured')) {
-        alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
-      } else if (error.message?.includes('User already registered')) {
-        alert('An account with this email already exists. Please try logging in instead.')
+      let message = 'Signup failed. Please try again.'
+
+      if (error.message?.includes('invalid') || error.message?.includes('Unable to validate email')) {
+        message = 'Please use a valid, deliverable email address (Gmail, Outlook, etc.). Test domains may be blocked by Supabase.'
+      } else if (error.message?.includes('User already registered') || error.message?.includes('already exists')) {
+        message = 'An account with this email already exists. Please login instead.'
       } else if (error.message?.includes('Password should be at least')) {
-        alert('Password must be at least 6 characters long.')
-      } else if (error.message?.includes('Unable to validate email address')) {
-        alert('Please enter a valid email address.')
+        message = 'Password must be at least 6 characters long.'
       } else if (error.message?.includes('signup is disabled')) {
-        alert('New user registration is currently disabled. Please contact support.')
-      } else {
-        alert('Signup failed. Please try again later.')
+        message = 'New registrations are temporarily disabled. Please contact support.'
       }
+
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -129,6 +165,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -141,6 +178,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -152,6 +190,7 @@ export default function SignupPage() {
                   value={formData.fullName}
                   onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -163,6 +202,7 @@ export default function SignupPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   required
+                  disabled={loading}
                 >
                   <option value="">Select your grade</option>
                   <option value="R">Grade R</option>
@@ -198,8 +238,27 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
+                  {success}
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
             </form>
           </CardContent>
