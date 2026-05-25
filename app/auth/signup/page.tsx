@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
@@ -17,10 +17,30 @@ export default function SignupPage() {
     learningGoal: '',
     interests: ''
   })
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)        // Initial auth check
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const router = useRouter()
+
+  const supabase = createBrowserSupabaseClient()
+
+  // Check if user is already signed in → redirect
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        console.log('User already signed in → redirecting')
+        router.replace('/discover')   // or '/dashboard' if you prefer
+        return
+      }
+      
+      setLoading(false)
+    }
+
+    checkSession()
+  }, [router, supabase])
 
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -31,36 +51,34 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
     setSuccess('')
-    setLoading(true)
+    setSubmitting(true)
 
     if (!validateEmail(formData.email)) {
       setError('Please enter a valid email address')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (!formData.fullName.trim()) {
       setError('Please enter your full name')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (!formData.learningGoal.trim()) {
       setError('Please tell us what you would like to learn or study for')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     try {
-      const supabase = createBrowserSupabaseClient()
-      
-      const { data, error: signupError } = await supabase.auth.signUp({
+      const { error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -78,16 +96,13 @@ export default function SignupPage() {
 
       if (signupError) throw signupError
 
+      // Branded confirmation attempt (non-blocking)
       try {
         const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
-        
         await fetch('/api/auth/send-confirmation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            confirmationUrl
-          }),
+          body: JSON.stringify({ email: formData.email, confirmationUrl }),
         })
       } catch (emailError) {
         console.warn('Branded confirmation email failed (non-blocking):', emailError)
@@ -95,13 +110,7 @@ export default function SignupPage() {
 
       setSuccess('Account created successfully! Please check your email for the confirmation link.')
       
-      setFormData({
-        email: '',
-        password: '',
-        fullName: '',
-        learningGoal: '',
-        interests: ''
-      })
+      setFormData({ email: '', password: '', fullName: '', learningGoal: '', interests: '' })
 
       setTimeout(() => {
         router.push('/auth/login')
@@ -118,19 +127,26 @@ export default function SignupPage() {
         message = 'An account with this email already exists. Please login instead.'
       } else if (error.message?.includes('Password should be at least')) {
         message = 'Password must be at least 6 characters long.'
-      } else if (error.message?.includes('signup is disabled')) {
-        message = 'New registrations are temporarily disabled. Please contact support.'
       }
 
       setError(message)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
+  }
+
+  // Show loading while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* HERO IMAGE - Visible on mobile and desktop */}
+      {/* HERO IMAGE */}
       <div className="lg:w-1/2 relative h-80 lg:h-auto flex items-end">
         <img
           src="/images/auth/register-hero.jpg"
@@ -165,7 +181,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   required
-                  disabled={loading}
+                  disabled={submitting}
                 />
               </div>
 
@@ -178,7 +194,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   required
-                  disabled={loading}
+                  disabled={submitting}
                 />
               </div>
 
@@ -190,7 +206,7 @@ export default function SignupPage() {
                   value={formData.fullName}
                   onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
                   required
-                  disabled={loading}
+                  disabled={submitting}
                 />
               </div>
 
@@ -202,7 +218,7 @@ export default function SignupPage() {
                   value={formData.learningGoal}
                   onChange={(e) => setFormData(prev => ({ ...prev, learningGoal: e.target.value }))}
                   required
-                  disabled={loading}
+                  disabled={submitting}
                 />
               </div>
 
@@ -213,7 +229,7 @@ export default function SignupPage() {
                   placeholder="e.g. Coding, Soccer, Music, Space exploration, History..."
                   value={formData.interests}
                   onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
-                  disabled={loading}
+                  disabled={submitting}
                   className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-y"
                 />
               </div>
@@ -243,8 +259,8 @@ export default function SignupPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating Account...
