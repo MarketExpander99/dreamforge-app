@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Textarea } from 'lucide-react'  // Textarea is from shadcn, but using native for now
+import { Loader2 } from 'lucide-react'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    learningGoal: '',     // New: What would you like to learn or study for?
-    interests: ''         // New: What are your interests?
+    learningGoal: '',
+    interests: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -69,7 +69,6 @@ export default function SignupPage() {
             full_name: formData.fullName.trim(),
             role: 'student',
             onboarding_completed: false,
-            // Grade defaulted to 1 as requested
             grade: '1',
             learning_goal: formData.learningGoal.trim(),
             interests: formData.interests.trim()
@@ -107,7 +106,6 @@ export default function SignupPage() {
         interests: ''
       })
 
-      // Optional: redirect after delay
       setTimeout(() => {
         router.push('/auth/login')
       }, 2500)
@@ -215,7 +213,7 @@ export default function SignupPage() {
                 <Label htmlFor="interests">What are your interests? (Optional)</Label>
                 <textarea
                   id="interests"
-                  placeholder="e.g. Coding, Soccer, Music, Space exploration..."
+                  placeholder="e.g. Coding, Soccer, Music, Space exploration, History..."
                   value={formData.interests}
                   onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
                   disabled={loading}
