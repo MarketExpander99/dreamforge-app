@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Textarea } from 'lucide-react'  // Textarea is from shadcn, but using native for now
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    grade: ''
+    learningGoal: '',     // New: What would you like to learn or study for?
+    interests: ''         // New: What are your interests?
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -51,8 +52,8 @@ export default function SignupPage() {
       return
     }
 
-    if (!formData.grade) {
-      setError('Please select your grade')
+    if (!formData.learningGoal.trim()) {
+      setError('Please tell us what you would like to learn or study for')
       setLoading(false)
       return
     }
@@ -68,7 +69,10 @@ export default function SignupPage() {
             full_name: formData.fullName.trim(),
             role: 'student',
             onboarding_completed: false,
-            grade: formData.grade
+            // Grade defaulted to 1 as requested
+            grade: '1',
+            learning_goal: formData.learningGoal.trim(),
+            interests: formData.interests.trim()
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
@@ -99,7 +103,8 @@ export default function SignupPage() {
         email: '',
         password: '',
         fullName: '',
-        grade: ''
+        learningGoal: '',
+        interests: ''
       })
 
       // Optional: redirect after delay
@@ -195,30 +200,27 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="grade">CAPS Grade</Label>
-                <select
-                  id="grade"
-                  value={formData.grade}
-                  onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                <Label htmlFor="learningGoal">What would you like to learn or study for?</Label>
+                <Input
+                  id="learningGoal"
+                  placeholder="e.g. Mathematics, Physical Science, Exam preparation"
+                  value={formData.learningGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, learningGoal: e.target.value }))}
                   required
                   disabled={loading}
-                >
-                  <option value="">Select your grade</option>
-                  <option value="R">Grade R</option>
-                  <option value="1">Grade 1</option>
-                  <option value="2">Grade 2</option>
-                  <option value="3">Grade 3</option>
-                  <option value="4">Grade 4</option>
-                  <option value="5">Grade 5</option>
-                  <option value="6">Grade 6</option>
-                  <option value="7">Grade 7</option>
-                  <option value="8">Grade 8</option>
-                  <option value="9">Grade 9</option>
-                  <option value="10">Grade 10</option>
-                  <option value="11">Grade 11</option>
-                  <option value="12">Grade 12</option>
-                </select>
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="interests">What are your interests? (Optional)</Label>
+                <textarea
+                  id="interests"
+                  placeholder="e.g. Coding, Soccer, Music, Space exploration..."
+                  value={formData.interests}
+                  onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                  disabled={loading}
+                  className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-y"
+                />
               </div>
 
               {/* Privacy Notice */}
