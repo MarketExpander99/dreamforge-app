@@ -65,6 +65,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const initializeAuth = async () => {
     if (isInitialized) return
+    // Safety timeout: guarantees setLoading(false) + isInitialized even if getSession retry await never settles (exact cause of infinite spinner on discover/profile for logged-in users)
+    setTimeout(() => { setLoading(false); setIsInitialized(true) }, 8000)
 
     try {
       setLoading(true)
