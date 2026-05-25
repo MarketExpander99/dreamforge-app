@@ -144,10 +144,19 @@ export default function DiscoverPage() {
             className="py-7 text-lg"
           />
           <div className="flex gap-3">
-            <Button onClick={exploreNormal} disabled={isLoading} className="px-8 whitespace-nowrap">
+            <Button 
+              onClick={exploreNormal} 
+              disabled={isLoading} 
+              className="px-8 whitespace-nowrap"
+            >
               {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
             </Button>
-            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8 whitespace-nowrap">
+            <Button 
+              onClick={exploreDeep} 
+              disabled={isLoading} 
+              variant="default" 
+              className="px-8 whitespace-nowrap"
+            >
               {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Deep Query'}
             </Button>
           </div>
