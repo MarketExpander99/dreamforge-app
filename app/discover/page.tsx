@@ -92,12 +92,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
   const viewOnGrokipedia = () => {
     if (!centerNode) return;
-    const slug = centerNode.label
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-    const url = `https://www.grokepedia.com/${slug}`;
+    const query = encodeURIComponent(centerNode.label);
+    const url = `https://grokipedia.com/search?q=${query}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
