@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +24,11 @@ interface ChatMessage {
 }
 
 export default function DiscoverPage() {
+  const router = useRouter();
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [credits, setCredits] = useState(8);
+  const [credits, setCredits] = useState<number>(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
 
@@ -90,13 +92,31 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     callGrok(comp, false);
   };
 
+  const viewOnGrokipedia = () => {
+    if (!centerNode) return;
+    const slug = centerNode.label
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    router.push(`/grokepedia/${slug}`);
+  };
+
   const sendChatMessage = async () => {
     if (!chatInput.trim() || !centerNode) return;
+
+    if (credits < 0.5) {
+      alert("Not enough credits for chat. Each chat message costs 0.5 credits.");
+      return;
+    }
 
     const userMsg = { role: 'user' as const, content: chatInput };
     setChatMessages(prev => [...prev, userMsg]);
     const currentQuestion = chatInput;
     setChatInput('');
+
+    // Deduct 0.5 credits immediately when user sends a chat message
+    setCredits(prev => prev - 0.5);
 
     try {
       const response = await fetch('/api/grok', {
@@ -208,7 +228,11 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-6 border-t">
-                <Button variant="outline" className="gap-2 flex-1">
+                <Button 
+                  variant="outline" 
+                  className="gap-2 flex-1"
+                  onClick={viewOnGrokipedia}
+                >
                   <BookOpen className="h-4 w-4" />
                   View on Grokipedia
                 </Button>
