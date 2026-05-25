@@ -33,7 +33,6 @@ export default function SignupPage() {
     setSuccess('')
     setLoading(true)
 
-    // Client-side validation
     if (!validateEmail(formData.email)) {
       setError('Please enter a valid email address')
       setLoading(false)
@@ -79,7 +78,6 @@ export default function SignupPage() {
 
       if (signupError) throw signupError
 
-      // Attempt to send branded confirmation (non-blocking)
       try {
         const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
         
@@ -92,12 +90,11 @@ export default function SignupPage() {
           }),
         })
       } catch (emailError) {
-        console.warn('Branded confirmation email failed (this is non-blocking):', emailError)
+        console.warn('Branded confirmation email failed (non-blocking):', emailError)
       }
 
       setSuccess('Account created successfully! Please check your email for the confirmation link.')
       
-      // Clear form
       setFormData({
         email: '',
         password: '',
@@ -116,7 +113,7 @@ export default function SignupPage() {
       let message = 'Signup failed. Please try again.'
 
       if (error.message?.includes('invalid') || error.message?.includes('Unable to validate email')) {
-        message = 'Please use a valid, deliverable email address (Gmail, Outlook, etc.). Test domains may be blocked by Supabase.'
+        message = 'Please use a valid, deliverable email address (Gmail, Outlook, etc.).'
       } else if (error.message?.includes('User already registered') || error.message?.includes('already exists')) {
         message = 'An account with this email already exists. Please login instead.'
       } else if (error.message?.includes('Password should be at least')) {
@@ -132,23 +129,23 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* LEFT SIDE - IMAGE */}
-      <div className="hidden lg:flex lg:w-1/2 relative">
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* HERO IMAGE - Visible on mobile and desktop */}
+      <div className="lg:w-1/2 relative h-80 lg:h-auto flex items-end">
         <img
           src="/images/auth/register-hero.jpg"
           alt="Skill Gain Register"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/30 to-transparent" />
         
-        <div className="absolute bottom-12 left-12 text-white z-10">
-          <h2 className="text-5xl font-bold tracking-tight">Join Skill Gain</h2>
-          <p className="mt-4 text-xl text-white/90">Start your learning journey today</p>
+        <div className="absolute bottom-12 left-12 text-white z-10 max-w-xs">
+          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Join Skill Gain</h2>
+          <p className="mt-4 text-lg lg:text-xl text-white/90">Start your learning journey today</p>
         </div>
       </div>
 
-      {/* RIGHT SIDE - FORM */}
+      {/* FORM SECTION */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-zinc-950">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
@@ -225,16 +222,12 @@ export default function SignupPage() {
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Privacy & Data Protection</h4>
                 <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                  <p>
-                    <strong>Your privacy matters to us.</strong> We comply with POPI Act and GDPR regulations.
-                  </p>
+                  <p><strong>Your privacy matters to us.</strong> We comply with POPI Act and GDPR regulations.</p>
                   <p>• Your real name is never displayed publicly</p>
                   <p>• You'll be assigned an anonymous ID (like "User_12345") for public display</p>
                   <p>• You can optionally choose a display name in your profile settings</p>
                   <p>• Students under 18 require parent/guardian consent for display names</p>
-                  <p className="text-xs mt-2">
-                    By creating an account, you agree to our privacy policy and data protection practices.
-                  </p>
+                  <p className="text-xs mt-2">By creating an account, you agree to our privacy policy and data protection practices.</p>
                 </div>
               </div>
 
