@@ -18,6 +18,11 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        primary: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Space Grotesk", "Inter", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -52,7 +57,7 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Skill-Gain brand colors - dark navy + hexagonal network aesthetic
+        // Skill-Gain brand colors
         brand: {
           navy: {
             900: '#0f172a',
