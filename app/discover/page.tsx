@@ -48,8 +48,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
   "short_description": "Clear 1-2 sentence description",
   "main_function": "What this thing does or its purpose",
   "components": ["component1", "component2", ...],
-  "self_similar": ["similar1", "similar2", ...],
-  ${isDeep ? `"deep_details": "Detailed information including manufacturing, materials, variations etc."` : ''}
+  "self_similar": ["similar item 1", "similar item 2", ...],
+  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
 }`;
 
       const response = await fetch('/api/grok', {
@@ -73,10 +73,10 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
-      setChatMessages([]);
+      setChatMessages([]); // Clear chat on new search
     } catch (error) {
       console.error(error);
-      alert("Failed to explore topic. Please try again.");
+      alert("Failed to explore topic.");
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +140,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         </div>
 
         {/* Search Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-10">
+        <div className="flex gap-3 mb-10">
           <Input
             placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
@@ -148,24 +148,21 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
             className="py-7 text-lg"
           />
-          <div className="flex gap-3">
-            <Button onClick={exploreNormal} disabled={isLoading} className="px-8 whitespace-nowrap">
-              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
-            </Button>
-            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8 whitespace-nowrap">
-              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Deep Query'}
-            </Button>
-          </div>
+          <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
+            {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
+          </Button>
+          <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8">
+            Deep Query
+          </Button>
         </div>
 
-        {/* Result */}
+        {/* Result Card */}
         {centerNode ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-8 p-8">
-              {/* ... same content as before ... */}
               <div>
                 <h4 className="font-semibold mb-2">What it is</h4>
                 <p className="text-lg leading-relaxed">{centerNode.short_description}</p>
@@ -183,8 +180,33 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </div>
               )}
 
-              {/* Self-Similar and Components sections remain the same */}
+              {/* Self-Similar */}
+              {centerNode.self_similar?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {centerNode.self_similar.map((item, i) => (
+                      <Button key={i} variant="outline" size="sm" onClick={() => { setSearchQuery(item); callGrok(item, false); }}>
+                        {item}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
+              {/* Components & Connected Parts */}
+              <div>
+                <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
+                <div className="flex flex-wrap gap-2">
+                  {centerNode.components.map((comp, i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={() => handleComponentClick(comp)}>
+                      {comp}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-6 border-t">
                 <Button variant="outline" className="gap-2 flex-1">
                   <BookOpen className="h-4 w-4" />
@@ -196,10 +218,28 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </Button>
               </div>
 
-              {/* Chat Section - same as before */}
+              {/* Chat Section */}
               <div className="pt-8 border-t">
                 <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
-                {/* ... chat UI ... */}
+                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">
+                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>}
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white dark:bg-zinc-800 border'}`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ask anything about this topic..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                  />
+                  <Button onClick={sendChatMessage}>Send</Button>
+                </div>
               </div>
             </CardContent>
           </Card>
