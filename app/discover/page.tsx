@@ -99,7 +99,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
-    router.push(`/grokepedia/${slug}`);
+    router.push(`/grokipedia/${slug}`);
   };
 
   const sendChatMessage = async () => {
@@ -115,7 +115,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     const currentQuestion = chatInput;
     setChatInput('');
 
-    // Deduct 0.5 credits immediately when user sends a chat message
     setCredits(prev => prev - 0.5);
 
     try {
