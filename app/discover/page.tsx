@@ -29,6 +29,7 @@ export default function DiscoverPage() {
   const [credits, setCredits] = useState(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
@@ -40,17 +41,7 @@ export default function DiscoverPage() {
     setCenterNode(null);
 
     try {
-      const prompt = `You are a helpful exploration assistant.
-For the topic "${topic}", return ONLY valid JSON with this exact structure (no extra text, no markdown):
-
-{
-  "label": "${topic}",
-  "short_description": "Clear 1-2 sentence description",
-  "main_function": "What this thing does or its purpose in simple terms",
-  "components": ["component1", "component2", "component3", ...],
-  "self_similar": ["similar item 1", "similar item 2", ...],
-  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
-}`;
+      const prompt = `You are a helpful exploration assistant.\nFor the topic "${topic}", return ONLY valid JSON with this exact structure...`;
 
       const response = await fetch('/api/grok', {
         method: 'POST',
@@ -73,10 +64,10 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
 
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
-      setChatMessages([]); // Clear chat when exploring new topic
+      setChatMessages([]);
     } catch (error) {
       console.error(error);
-      alert("Failed to explore topic. Please try again.");
+      alert("Failed to explore topic.");
     } finally {
       setIsLoading(false);
     }
@@ -97,13 +88,14 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
     setChatMessages(prev => [...prev, userMsg]);
     const currentQuestion = chatInput;
     setChatInput('');
+    setIsChatLoading(true);
 
     try {
       const response = await fetch('/api/grok', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `The current topic is "${centerNode.label}". Answer this question helpfully and clearly: ${currentQuestion}`
+          prompt: `The current topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
         }),
       });
 
@@ -113,6 +105,8 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
       setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch (e) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -141,7 +135,7 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
         </div>
 
         {/* Search Bar */}
-        <div className="flex gap-3 mb-10">
+        <div className="flex flex-col sm:flex-row gap-3 mb-10">
           <Input
             placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
@@ -149,12 +143,14 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
             className="py-7 text-lg"
           />
-          <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
-            {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
-          </Button>
-          <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8">
-            Deep Query
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={exploreNormal} disabled={isLoading} className="px-8 whitespace-nowrap">
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
+            </Button>
+            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8 whitespace-nowrap">
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Deep Query'}
+            </Button>
+          </div>
         </div>
 
         {/* Main Result */}
@@ -205,10 +201,12 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-6 border-t">
-                <Button variant="outline" className="gap-2 flex-1">
-                  <BookOpen className="h-4 w-4" />
-                  Grokipedia
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+                <Button variant="outline" className="gap-2 flex-1" asChild>
+                  <a href={`https://grokipedia.com/search?q=${encodeURIComponent(centerNode.label)}`} target="_blank" rel="noopener noreferrer">
+                    <BookOpen className="h-4 w-4" />
+                    View on Grokipedia
+                  </a>
                 </Button>
                 <Button variant="outline" className="gap-2 flex-1" onClick={() => alert("Add to Learning Path - Coming soon!")}>
                   <Plus className="h-4 w-4" />
@@ -219,6 +217,7 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
               {/* Chat Section */}
               <div className="pt-8 border-t">
                 <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
+                
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">
                   {chatMessages.length === 0 && (
                     <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>
@@ -232,7 +231,16 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
                       </div>
                     </div>
                   ))}
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-white dark:bg-zinc-800 border px-4 py-3 rounded-2xl flex items-center gap-2">
+                        <Loader2 className="animate-spin h-4 w-4" />
+                        Talking to Grok...
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <div className="flex gap-2">
                   <Input
                     placeholder="Ask anything about this topic..."
@@ -240,7 +248,9 @@ For the topic "${topic}", return ONLY valid JSON with this exact structure (no e
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
                   />
-                  <Button onClick={sendChatMessage}>Send</Button>
+                  <Button onClick={sendChatMessage} disabled={isChatLoading}>
+                    {isChatLoading ? <Loader2 className="animate-spin" /> : 'Send'}
+                  </Button>
                 </div>
               </div>
             </CardContent>
