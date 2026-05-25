@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +23,6 @@ interface ChatMessage {
 }
 
 export default function DiscoverPage() {
-  const router = useRouter();
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -99,7 +97,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
-    router.push(`/grokipedia/${slug}`);
+    const url = `https://www.grokepedia.com/${slug}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const sendChatMessage = async () => {
