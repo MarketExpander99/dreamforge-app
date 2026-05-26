@@ -225,46 +225,46 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
       </div>
     )
   }
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Profile not found</h2>
-          <p className="text-muted-foreground">Please try logging in again.</p>
+          <p className="text-zinc-500 dark:text-zinc-400">Please try logging in again.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <Navigation />
 
       <div className="md:pl-64">
-        <main className="py-6 px-4 md:px-8 pb-20 md:pb-6">
+        <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
           <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
+            {/* Header - exact Discover typography */}
+            <div className="mb-10">
+              <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardContent className="p-8">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+                    <div className="relative flex-shrink-0">
+                      <Avatar className="h-28 w-28 ring-2 ring-zinc-100 dark:ring-zinc-800">
                         <AvatarImage src={userProfile.avatar} />
-                        <AvatarFallback className="text-2xl">
+                        <AvatarFallback className="text-3xl font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                           {userProfile.fullName.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                        className="absolute -bottom-2 -right-2 h-9 w-9 rounded-full p-0 shadow-sm hover:shadow"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploadingAvatar}
                       >
@@ -279,18 +279,22 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div className="flex-1">
-                      <h1 className="text-2xl font-bold mb-1">{userProfile.fullName}</h1>
-                      <p className="text-muted-foreground mb-4">{userProfile.email}</p>
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
+                      <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-base">{userProfile.email}</p>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">{userProfile.gradeLevel}</Badge>
+                        <Badge variant="secondary" className="font-medium px-3 py-1 text-sm">{userProfile.gradeLevel}</Badge>
                         {userProfile.interests.map((interest) => (
-                          <Badge key={interest} variant="outline">{interest}</Badge>
+                          <Badge key={interest} variant="outline" className="font-medium px-3 py-1 text-sm">{interest}</Badge>
                         ))}
                       </div>
                     </div>
 
-                    <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditing(!isEditing)}
+                      className="shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       {isEditing ? 'Cancel' : 'Edit Profile'}
                     </Button>
@@ -299,45 +303,46 @@ export default function ProfilePage() {
               </Card>
             </div>
 
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="learning-path">Learning Path</TabsTrigger>
-                <TabsTrigger value="credits">Credits</TabsTrigger>
-                <TabsTrigger value="account">Account</TabsTrigger>
+            <Tabs defaultValue="overview" className="space-y-8">
+              <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm font-medium">Overview</TabsTrigger>
+                <TabsTrigger value="learning-path" className="rounded-xl data-[state=active]:shadow-sm font-medium">Learning Path</TabsTrigger>
+                <TabsTrigger value="credits" className="rounded-xl data-[state=active]:shadow-sm font-medium">Credits</TabsTrigger>
+                <TabsTrigger value="account" className="rounded-xl data-[state=active]:shadow-sm font-medium">Account</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
-                <Card>
+                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle>About Me</CardTitle>
+                    <CardTitle className="text-xl font-semibold tracking-tight">About Me</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{userProfile.bio || 'No bio yet.'}</p>
+                  <CardContent className="pt-0">
+                    <p className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                      {userProfile.bio || 'No bio yet. Tell the community a bit about yourself!'}
+                    </p>
                   </CardContent>
                 </Card>
               </TabsContent>
 
               {/* Learning Path Tab */}
               <TabsContent value="learning-path" className="space-y-6">
-                <Card>
+                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle>Your Personalized Learning Path</CardTitle>
-                    <CardDescription>Built from your saved queries and goals</CardDescription>
+                    <CardTitle className="text-xl font-semibold tracking-tight">Your Personalized Learning Path</CardTitle>
+                    <CardDescription className="text-zinc-500 dark:text-zinc-400">Built from your saved queries and goals</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
+                    <div className="space-y-6">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
                         Your learning path is dynamically generated based on saved queries, interests, and goals.
                       </p>
-                      {/* Placeholder for future learning path builder integration */}
-                      <div className="bg-muted p-4 rounded-lg">
-                        <p className="text-sm">📍 Next recommended module: Advanced React Patterns</p>
-                        <p className="text-xs text-muted-foreground mt-1">Based on your recent queries</p>
+                      <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-3xl">
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">📍 Next recommended module: Advanced React Patterns</p>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Based on your recent activity</p>
                       </div>
-                      <Progress value={65} className="h-3" />
-                      <p className="text-xs text-muted-foreground">65% complete • 8 modules remaining</p>
+                      <Progress value={65} className="h-2.5 bg-zinc-200 dark:bg-zinc-700" />
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">65% complete • 8 modules remaining</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -346,51 +351,51 @@ export default function ProfilePage() {
               {/* Credits Tab */}
               <TabsContent value="credits" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
+                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
                         <CreditCard className="h-5 w-5" />
                         Free Credits
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-4xl font-bold text-green-600">{creditsData.freeCreditsRemaining}</div>
-                      <p className="text-sm text-muted-foreground">remaining today • resets {creditsData.dailyFreeReset}</p>
+                      <div className="text-5xl font-semibold tracking-tighter text-emerald-600">{creditsData.freeCreditsRemaining}</div>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">remaining today • resets {creditsData.dailyFreeReset}</p>
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
                         <CreditCard className="h-5 w-5" />
                         Paid Credits
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-4xl font-bold">{creditsData.paidCredits}</div>
-                      <p className="text-sm text-muted-foreground">available • no expiry</p>
+                      <div className="text-5xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100">{creditsData.paidCredits}</div>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">available • no expiry</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card>
+                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
                       <History className="h-5 w-5" />
                       Purchase History
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {purchaseHistory.map((purchase) => (
-                        <div key={purchase.id} className="flex justify-between items-center border-b pb-3 last:border-none">
+                        <div key={purchase.id} className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
                           <div>
-                            <p className="font-medium">{purchase.type}</p>
-                            <p className="text-xs text-muted-foreground">{purchase.date}</p>
+                            <p className="font-medium text-zinc-900 dark:text-zinc-100">{purchase.type}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.date}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium">+{purchase.amount}</p>
-                            <p className="text-xs text-muted-foreground">{purchase.price}</p>
+                            <p className="font-semibold text-emerald-600">+{purchase.amount}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.price}</p>
                           </div>
                         </div>
                       ))}
@@ -401,20 +406,22 @@ export default function ProfilePage() {
 
               {/* Account Tab */}
               <TabsContent value="account" className="space-y-6">
-                <Card>
+                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle>Account Management</CardTitle>
+                    <CardTitle className="text-xl font-semibold tracking-tight">Account Management</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-8">
-                    {/* Username / Display Name */}
-                    <div className="space-y-2">
-                      <Label>Username / Display Name</Label>
-                      <Input value={formData.fullName} onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} />
+                    <div className="space-y-3">
+                      <Label className="text-zinc-600 dark:text-zinc-400 font-medium">Display Name</Label>
+                      <Input 
+                        value={formData.fullName} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} 
+                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                      />
                     </div>
 
-                    {/* Password Change */}
                     <div className="space-y-4">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 font-medium">
                         <Key className="h-4 w-4" />
                         Change Password
                       </Label>
@@ -423,20 +430,23 @@ export default function ProfilePage() {
                         placeholder="Current password"
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
                       />
                       <Input
                         type="password"
                         placeholder="New password"
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
                       />
                       <Input
                         type="password"
                         placeholder="Confirm new password"
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
                       />
-                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto">
+                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto font-medium">
                         {changingPassword ? 'Updating...' : 'Update Password'}
                       </Button>
                     </div>
@@ -446,8 +456,8 @@ export default function ProfilePage() {
             </Tabs>
 
             {isEditing && (
-              <div className="fixed bottom-6 right-6">
-                <Button onClick={handleSaveProfile} disabled={saving}>
+              <div className="fixed bottom-8 right-8 z-50">
+                <Button onClick={handleSaveProfile} disabled={saving} size="lg" className="shadow-lg hover:shadow-xl transition-shadow font-medium">
                   <Save className="h-4 w-4 mr-2" />
                   Save All Changes
                 </Button>
