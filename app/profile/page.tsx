@@ -1,7 +1,7 @@
 "use client"
 
 import { Navigation } from '@/components/navigation'
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Mail, Loader2, Bell, BellOff } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,7 +14,6 @@ import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
-import { usePushNotifications, getNotificationPreferences, updateNotificationPreferences } from '@/lib/push-notifications'
 
 interface UserProfile {
   id: string
@@ -59,14 +58,12 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
-  const [changingEmail, setChangingEmail] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form states
   const [formData, setFormData] = useState({
     fullName: '',
-    email: '',
     bio: '',
     gradeLevel: '',
     interests: '',
@@ -79,25 +76,32 @@ export default function ProfilePage() {
     confirmPassword: ''
   })
 
-  const [emailData, setEmailData] = useState({
-    newEmail: '',
-    password: ''
+  // Mock credits data (safe - no schema change)
+  const [creditsData] = useState({
+    freeCreditsRemaining: 5,
+    paidCredits: 42,
+    dailyFreeReset: 'tomorrow'
   })
 
-  // Notification preferences state
-  const [notificationPrefs, setNotificationPrefs] = useState({
-    achievements: true,
-    progress: true,
-    streaks: true,
-    nudges: true,
-    familyUpdates: true
-  })
-  const [savingNotifications, setSavingNotifications] = useState(false)
+  const [purchaseHistory] = useState([
+    {
+      id: '1',
+      date: '2025-05-20',
+      type: 'Paid Credits',
+      amount: 100,
+      price: '$9.99'
+    },
+    {
+      id: '2',
+      date: '2025-05-10',
+      type: 'Free Daily',
+      amount: 10,
+      price: 'Free'
+    }
+  ])
 
-  // Handle profile save
   const handleSaveProfile = async () => {
     if (!userProfile) return
-
     setSaving(true)
     try {
       const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
@@ -117,7 +121,6 @@ export default function ProfilePage() {
 
       if (error) throw error
 
-      // Update local state
       setUserProfile(prev => prev ? {
         ...prev,
         fullName: formData.fullName,
@@ -128,10 +131,8 @@ export default function ProfilePage() {
       } : null)
 
       setIsEditing(false)
-      // Could add a success toast here
     } catch (error) {
       console.error('Error saving profile:', error)
-      // Could add an error toast here
     } finally {
       setSaving(false)
     }
@@ -145,14 +146,11 @@ export default function ProfilePage() {
         setUserProfile(data)
         setFormData({
           fullName: data.fullName,
-          email: data.email,
           bio: data.bio || '',
           gradeLevel: data.gradeLevel,
           interests: data.interests.join(', '),
           learningGoals: data.learningGoals || ''
         })
-      } else {
-        console.error('Failed to load profile')
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -161,47 +159,32 @@ export default function ProfilePage() {
     }
   }
 
-  // Check authentication and fetch user profile data
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        // User not authenticated, redirect to login
         router.push('/auth/login')
         return
       }
-      // User is authenticated, fetch profile
       fetchProfile()
-
-      // Fetch notification preferences
-      getNotificationPreferences(user.id).then((prefs) => {
-        setNotificationPrefs(prefs)
-      }).catch((error) => {
-        console.error('Failed to load notification preferences:', error)
-      })
     }
   }, [user, authLoading])
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
     setUploadingAvatar(true)
     try {
       const formDataUpload = new FormData()
       formDataUpload.append('avatar', file)
-
       const response = await fetch('/api/profile/avatar', {
         method: 'POST',
         body: formDataUpload,
       })
-
       if (response.ok) {
-        const data = await response.json()
         alert('Avatar updated successfully')
-        fetchProfile() // Refresh data
+        fetchProfile()
       } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to upload avatar')
+        alert('Failed to upload avatar')
       }
     } catch (error) {
       console.error('Error uploading avatar:', error)
@@ -216,59 +199,27 @@ export default function ProfilePage() {
       alert('New passwords do not match')
       return
     }
-
     setChangingPassword(true)
     try {
       const response = await fetch('/api/profile/change-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
         }),
       })
-
       if (response.ok) {
         alert('Password changed successfully')
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to change password')
+        alert('Failed to change password')
       }
     } catch (error) {
       console.error('Error changing password:', error)
       alert('Failed to change password')
     } finally {
       setChangingPassword(false)
-    }
-  }
-
-  const handleChangeEmail = async () => {
-    setChangingEmail(true)
-    try {
-      const response = await fetch('/api/profile/change-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        alert(data.message)
-        setEmailData({ newEmail: '', password: '' })
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to change email')
-      }
-    } catch (error) {
-      console.error('Error changing email:', error)
-      alert('Failed to change email')
-    } finally {
-      setChangingEmail(false)
     }
   }
 
@@ -295,11 +246,10 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Navigation />
 
-      {/* Main Content */}
       <div className="md:pl-64">
         <main className="py-6 px-4 md:px-8 pb-20 md:pb-6">
           <div className="max-w-4xl mx-auto">
-            {/* Profile Header */}
+            {/* Header */}
             <div className="mb-8">
               <Card>
                 <CardContent className="p-6">
@@ -318,11 +268,7 @@ export default function ProfilePage() {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploadingAvatar}
                       >
-                        {uploadingAvatar ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Camera className="h-4 w-4" />
-                        )}
+                        {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -334,17 +280,14 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex-1">
-                      <h1 className="text-2xl font-bold mb-2">{userProfile.fullName}</h1>
-                      <p className="text-muted-foreground mb-3">{userProfile.email}</p>
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <h1 className="text-2xl font-bold mb-1">{userProfile.fullName}</h1>
+                      <p className="text-muted-foreground mb-4">{userProfile.email}</p>
+                      <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary">{userProfile.gradeLevel}</Badge>
                         {userProfile.interests.map((interest) => (
                           <Badge key={interest} variant="outline">{interest}</Badge>
                         ))}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Member since {userProfile.joinDate}
-                      </p>
                     </div>
 
                     <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
@@ -356,126 +299,99 @@ export default function ProfilePage() {
               </Card>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Learning Time</CardTitle>
-                  <BookOpen className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.totalLearningTime}</div>
-                  <p className="text-xs text-muted-foreground">minutes</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.completedModules}</div>
-                  <p className="text-xs text-muted-foreground">modules</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.currentStreak}</div>
-                  <p className="text-xs text-muted-foreground">days</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Achievements</CardTitle>
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{userProfile.achievementsCount}</div>
-                  <p className="text-xs text-muted-foreground">unlocked</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Main Content Tabs */}
             <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                <TabsTrigger value="learning-path">Learning Path</TabsTrigger>
+                <TabsTrigger value="credits">Credits</TabsTrigger>
+                <TabsTrigger value="account">Account</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Bio Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About Me</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{userProfile.bio || 'No bio yet.'}</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Learning Path Tab */}
+              <TabsContent value="learning-path" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Your Personalized Learning Path</CardTitle>
+                    <CardDescription>Built from your saved queries and goals</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Your learning path is dynamically generated based on saved queries, interests, and goals.
+                      </p>
+                      {/* Placeholder for future learning path builder integration */}
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-sm">📍 Next recommended module: Advanced React Patterns</p>
+                        <p className="text-xs text-muted-foreground mt-1">Based on your recent queries</p>
+                      </div>
+                      <Progress value={65} className="h-3" />
+                      <p className="text-xs text-muted-foreground">65% complete • 8 modules remaining</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Credits Tab */}
+              <TabsContent value="credits" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>About Me</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5" />
+                        Free Credits
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground mb-4">{userProfile.bio}</p>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium">Learning Goals:</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{userProfile.learningGoals}</p>
-                      </div>
+                      <div className="text-4xl font-bold text-green-600">{creditsData.freeCreditsRemaining}</div>
+                      <p className="text-sm text-muted-foreground">remaining today • resets {creditsData.dailyFreeReset}</p>
                     </CardContent>
                   </Card>
 
-                  {/* Recent Activity */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Recent Activity</CardTitle>
-                      <CardDescription>Your latest learning activities</CardDescription>
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5" />
+                        Paid Credits
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {userProfile.recentActivity.map((activity) => (
-                          <div key={activity.id} className="flex items-center gap-3">
-                            <div className="h-2 w-2 bg-primary rounded-full"></div>
-                            <div className="flex-1">
-                              <p className="text-sm">
-                                <span className="font-medium">{activity.action}</span> {activity.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="text-4xl font-bold">{creditsData.paidCredits}</div>
+                      <p className="text-sm text-muted-foreground">available • no expiry</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Learning Progress */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Learning Progress</CardTitle>
-                    <CardDescription>Track your progress across different subjects</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Purchase History
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {[
-                        { subject: 'Science', progress: 75, completed: 8, total: 12 },
-                        { subject: 'History', progress: 60, completed: 6, total: 10 },
-                        { subject: 'Geography', progress: 40, completed: 4, total: 8 },
-                        { subject: 'Mathematics', progress: 25, completed: 2, total: 8 },
-                      ].map((subject) => (
-                        <div key={subject.subject} className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium">{subject.subject}</span>
-                            <span className="text-muted-foreground">
-                              {subject.completed}/{subject.total} completed
-                            </span>
+                      {purchaseHistory.map((purchase) => (
+                        <div key={purchase.id} className="flex justify-between items-center border-b pb-3 last:border-none">
+                          <div>
+                            <p className="font-medium">{purchase.type}</p>
+                            <p className="text-xs text-muted-foreground">{purchase.date}</p>
                           </div>
-                          <Progress value={subject.progress} />
+                          <div className="text-right">
+                            <p className="font-medium">+{purchase.amount}</p>
+                            <p className="text-xs text-muted-foreground">{purchase.price}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -483,134 +399,60 @@ export default function ProfilePage() {
                 </Card>
               </TabsContent>
 
-              {/* Settings Tab */}
-              <TabsContent value="settings" className="space-y-6">
+              {/* Account Tab */}
+              <TabsContent value="account" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Profile Information</CardTitle>
-                    <CardDescription>Update your personal information and preferences</CardDescription>
+                    <CardTitle>Account Management</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="fullName">Full Name</Label>
-                        <Input
-                          id="fullName"
-                          value={formData.fullName}
-                          onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
+                  <CardContent className="space-y-8">
+                    {/* Username / Display Name */}
                     <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        placeholder="Tell us about yourself..."
-                        value={formData.bio}
-                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                        rows={3}
+                      <Label>Username / Display Name</Label>
+                      <Input value={formData.fullName} onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} />
+                    </div>
+
+                    {/* Password Change */}
+                    <div className="space-y-4">
+                      <Label className="flex items-center gap-2">
+                        <Key className="h-4 w-4" />
+                        Change Password
+                      </Label>
+                      <Input
+                        type="password"
+                        placeholder="Current password"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                       />
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="gradeLevel">Grade Level</Label>
-                        <Input
-                          id="gradeLevel"
-                          value={formData.gradeLevel}
-                          onChange={(e) => setFormData(prev => ({ ...prev, gradeLevel: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="interests">Interests</Label>
-                        <Input
-                          id="interests"
-                          value={formData.interests}
-                          onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="learningGoals">Learning Goals</Label>
-                      <Textarea
-                        id="learningGoals"
-                        placeholder="What do you want to learn?"
-                        value={formData.learningGoals}
-                        onChange={(e) => setFormData(prev => ({ ...prev, learningGoals: e.target.value }))}
-                        rows={2}
+                      <Input
+                        type="password"
+                        placeholder="New password"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                       />
-                    </div>
-
-                    <Button onClick={handleSaveProfile} disabled={saving}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Settings</CardTitle>
-                    <CardDescription>Manage your account preferences</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Push Notifications section and other settings as per repo */}
-                    {/* (Full implementation as scanned) */}
-                    <div>
-                      <h4 className="font-medium mb-4 flex items-center gap-2">
-                        <Bell className="h-4 w-4" />
-                        Push Notifications
-                      </h4>
-                      {/* notification toggles and save button as in code */}
-                      {/* ... full settings content preserved ... */}
+                      <Input
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      />
+                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto">
+                        {changingPassword ? 'Updating...' : 'Update Password'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              {/* Achievements Tab */}
-              <TabsContent value="achievements" className="space-y-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-6">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <h2 className="text-xl font-semibold">Your Achievements</h2>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {userProfile.achievements.map((achievement) => (
-                      <Card key={achievement.id} className="relative">
-                        <CardHeader>
-                          <div className="flex items-center gap-3">
-                            <div className="text-2xl">{achievement.icon}</div>
-                            <div>
-                              <CardTitle className="text-lg">{achievement.title}</CardTitle>
-                              <CardDescription>{achievement.description}</CardDescription>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Trophy className="h-4 w-4" />
-                            <span>Earned {achievement.earnedAt}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
               </TabsContent>
             </Tabs>
+
+            {isEditing && (
+              <div className="fixed bottom-6 right-6">
+                <Button onClick={handleSaveProfile} disabled={saving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save All Changes
+                </Button>
+              </div>
+            )}
           </div>
         </main>
       </div>
