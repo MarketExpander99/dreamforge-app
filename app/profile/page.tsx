@@ -242,10 +242,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
-        {/* Content page standard (aligned with discover design language): max-w-5xl for better use of space after sidebar */}
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
             {/* Header - exact Discover typography */}
             <div className="mb-10">
               <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
@@ -277,7 +276,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
+                      <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
                       <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-base">{userProfile.email}</p>
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary" className="font-medium px-3 py-1 text-sm">{userProfile.gradeLevel}</Badge>

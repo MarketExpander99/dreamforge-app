@@ -1,6 +1,5 @@
 "use client"
 
-import { Navigation } from '@/components/navigation'
 import { BookOpen, Search, Lightbulb, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -92,14 +91,11 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <Navigation />
-
-      <div className="md:pl-64">
-        <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
-          <div className="max-w-5xl mx-auto">
-            <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100 mb-2">Your Learning Path</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mb-10">Built from your searches and questions</p>
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">Your Learning Path</h1>
+          <p className="text-muted-foreground mb-10">Built from your searches and questions</p>
 
             {/* Saved History */}
             <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900 mb-10">
@@ -175,7 +171,6 @@ export default function LearningPage() {
             </Card>
           </div>
         </main>
-      </div>
     </div>
   )
 }
