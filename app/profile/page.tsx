@@ -230,9 +230,13 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Your AI-powered learning journey will appear here.</p>
-            <Button asChild className="mt-6 w-full" variant="default">
-              <Link href="/path">Manage My Learning Path →</Link>
-            </Button>
+            <div className="mt-6">
+              <Link href="/path">
+                <Button variant="default" className="w-full">
+                  Manage My Learning Path →
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
