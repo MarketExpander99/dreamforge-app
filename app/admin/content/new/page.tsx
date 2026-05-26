@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
@@ -222,14 +222,12 @@ export default function NewContentPage() {
           <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Link>
-                </Button>
-              </div>
+               <div className="flex items-center gap-4 mb-4">
+                 <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin'}>
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Dashboard
+                 </Button>
+               </div>
               <h1 className="text-3xl font-bold mb-2">Create New Content</h1>
               <p className="text-muted-foreground">
                 Add new learning content to the platform
@@ -375,265 +373,274 @@ export default function NewContentPage() {
                     <CardDescription>Create your learning content</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Tabs value={contentType} className="w-full">
-                      <TabsContent value="text" className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="content">Content *</Label>
-                          <Textarea
-                            id="content"
-                            placeholder="Write your content here..."
-                            rows={10}
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                          />
-                        </div>
-                      </TabsContent>
+                     {/* Content based on selected type */}
+                     {contentType === 'text' && (
+                       <div className="space-y-4">
+                         <div className="space-y-2">
+                           <Label htmlFor="content">Content *</Label>
+                           <Textarea
+                             id="content"
+                             placeholder="Write your content here..."
+                             rows={10}
+                             value={content}
+                             onChange={(e) => setContent(e.target.value)}
+                           />
+                         </div>
+                       </div>
+                     )}
 
-                      <TabsContent value="text-image" className="space-y-4">
-                        {/* File Upload Section */}
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Image Upload</CardTitle>
-                            <CardDescription>Upload an image or provide a URL</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                              <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                              <div className="space-y-2">
-                                <Label htmlFor="imageFile" className="text-sm font-medium">
-                                  Upload Image File
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  PNG, JPG, GIF, WebP up to 10MB
-                                </p>
-                                <Input
-                                  id="imageFile"
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleFileSelect(e, 'image')}
-                                  disabled={uploading}
-                                  className="max-w-xs mx-auto"
-                                />
-                                {uploading && (
-                                  <div className="flex items-center justify-center gap-2 mt-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Uploading...</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                     {contentType === 'text-image' && (
+                       <div className="space-y-4">
+                         {/* File Upload Section */}
+                         <Card>
+                           <CardHeader>
+                             <CardTitle className="text-lg">Image Upload</CardTitle>
+                             <CardDescription>Upload an image or provide a URL</CardDescription>
+                           </CardHeader>
+                           <CardContent className="space-y-4">
+                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                               <div className="space-y-2">
+                                 <Label htmlFor="imageFile" className="text-sm font-medium">
+                                   Upload Image File
+                                 </Label>
+                                 <p className="text-xs text-muted-foreground">
+                                   PNG, JPG, GIF, WebP up to 10MB
+                                 </p>
+                                 <Input
+                                   id="imageFile"
+                                   type="file"
+                                   accept="image/*"
+                                   onChange={(e) => handleFileSelect(e, 'image')}
+                                   disabled={uploading}
+                                   className="max-w-xs mx-auto"
+                                 />
+                                 {uploading && (
+                                   <div className="flex items-center justify-center gap-2 mt-2">
+                                     <Loader2 className="h-4 w-4 animate-spin" />
+                                     <span className="text-sm">Uploading...</span>
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor="imageUrl">Or Image URL</Label>
-                              <Input
-                                id="imageUrl"
-                                placeholder="https://example.com/image.jpg"
-                                value={imageUrl}
-                                onChange={(e) => setImageUrl(e.target.value)}
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
+                             <div className="space-y-2">
+                               <Label htmlFor="imageUrl">Or Image URL</Label>
+                               <Input
+                                 id="imageUrl"
+                                 placeholder="https://example.com/image.jpg"
+                                 value={imageUrl}
+                                 onChange={(e) => setImageUrl(e.target.value)}
+                               />
+                             </div>
+                           </CardContent>
+                         </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="content">Content *</Label>
-                          <Textarea
-                            id="content"
-                            placeholder="Write your content here..."
-                            rows={8}
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                          />
-                        </div>
-                      </TabsContent>
+                         <div className="space-y-2">
+                           <Label htmlFor="content">Content *</Label>
+                           <Textarea
+                             id="content"
+                             placeholder="Write your content here..."
+                             rows={8}
+                             value={content}
+                             onChange={(e) => setContent(e.target.value)}
+                           />
+                         </div>
+                       </div>
+                     )}
 
-                      <TabsContent value="video" className="space-y-4">
-                        {/* File Upload Section */}
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Video Upload</CardTitle>
-                            <CardDescription>Upload a video file or provide a URL</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                              <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                              <div className="space-y-2">
-                                <Label htmlFor="videoFile" className="text-sm font-medium">
-                                  Upload Video File
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  MP4, WebM, OGG up to 10MB
-                                </p>
-                                <Input
-                                  id="videoFile"
-                                  type="file"
-                                  accept="video/*"
-                                  onChange={(e) => handleFileSelect(e, 'video')}
-                                  disabled={uploading}
-                                  className="max-w-xs mx-auto"
-                                />
-                                {uploading && (
-                                  <div className="flex items-center justify-center gap-2 mt-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Uploading...</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                     {contentType === 'video' && (
+                       <div className="space-y-4">
+                         {/* File Upload Section */}
+                         <Card>
+                           <CardHeader>
+                             <CardTitle className="text-lg">Video Upload</CardTitle>
+                             <CardDescription>Upload a video file or provide a URL</CardDescription>
+                           </CardHeader>
+                           <CardContent className="space-y-4">
+                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                               <div className="space-y-2">
+                                 <Label htmlFor="videoFile" className="text-sm font-medium">
+                                   Upload Video File
+                                 </Label>
+                                 <p className="text-xs text-muted-foreground">
+                                   MP4, WebM, OGG up to 10MB
+                                 </p>
+                                 <Input
+                                   id="videoFile"
+                                   type="file"
+                                   accept="video/*"
+                                   onChange={(e) => handleFileSelect(e, 'video')}
+                                   disabled={uploading}
+                                   className="max-w-xs mx-auto"
+                                 />
+                                 {uploading && (
+                                   <div className="flex items-center justify-center gap-2 mt-2">
+                                     <Loader2 className="h-4 w-4 animate-spin" />
+                                     <span className="text-sm">Uploading...</span>
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor="videoUrl">Or Video URL</Label>
-                              <Input
-                                id="videoUrl"
-                                placeholder="https://example.com/video.mp4"
-                                value={videoUrl}
-                                onChange={(e) => setVideoUrl(e.target.value)}
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
+                             <div className="space-y-2">
+                               <Label htmlFor="videoUrl">Or Video URL</Label>
+                               <Input
+                                 id="videoUrl"
+                                 placeholder="https://example.com/video.mp4"
+                                 value={videoUrl}
+                                 onChange={(e) => setVideoUrl(e.target.value)}
+                               />
+                             </div>
+                           </CardContent>
+                         </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="content">Description</Label>
-                          <Textarea
-                            id="content"
-                            placeholder="Describe the video content..."
-                            rows={4}
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                          />
-                        </div>
-                      </TabsContent>
+                         <div className="space-y-2">
+                           <Label htmlFor="content">Description</Label>
+                           <Textarea
+                             id="content"
+                             placeholder="Describe the video content..."
+                             rows={4}
+                             value={content}
+                             onChange={(e) => setContent(e.target.value)}
+                           />
+                         </div>
+                       </div>
+                     )}
 
-                      <TabsContent value="audio" className="space-y-4">
-                        {/* File Upload Section */}
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Audio Upload</CardTitle>
-                            <CardDescription>Upload an audio file or provide a URL</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                              <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                              <div className="space-y-2">
-                                <Label htmlFor="audioFile" className="text-sm font-medium">
-                                  Upload Audio File
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                  MP3, WAV, OGG, M4A up to 10MB
-                                </p>
-                                <Input
-                                  id="audioFile"
-                                  type="file"
-                                  accept="audio/*"
-                                  onChange={(e) => handleFileSelect(e, 'audio')}
-                                  disabled={uploading}
-                                  className="max-w-xs mx-auto"
-                                />
-                                {uploading && (
-                                  <div className="flex items-center justify-center gap-2 mt-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span className="text-sm">Uploading...</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                     {contentType === 'audio' && (
+                       <div className="space-y-4">
+                         {/* File Upload Section */}
+                         <Card>
+                           <CardHeader>
+                             <CardTitle className="text-lg">Audio Upload</CardTitle>
+                             <CardDescription>Upload an audio file or provide a URL</CardDescription>
+                           </CardHeader>
+                           <CardContent className="space-y-4">
+                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                               <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                               <div className="space-y-2">
+                                 <Label htmlFor="audioFile" className="text-sm font-medium">
+                                   Upload Audio File
+                                 </Label>
+                                 <p className="text-xs text-muted-foreground">
+                                   MP3, WAV, OGG, M4A up to 10MB
+                                 </p>
+                                 <Input
+                                   id="audioFile"
+                                   type="file"
+                                   accept="audio/*"
+                                   onChange={(e) => handleFileSelect(e, 'audio')}
+                                   disabled={uploading}
+                                   className="max-w-xs mx-auto"
+                                 />
+                                 {uploading && (
+                                   <div className="flex items-center justify-center gap-2 mt-2">
+                                     <Loader2 className="h-4 w-4 animate-spin" />
+                                     <span className="text-sm">Uploading...</span>
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor="audioUrl">Or Audio URL</Label>
-                              <Input
-                                id="audioUrl"
-                                placeholder="https://example.com/audio.mp3"
-                                value={audioUrl}
-                                onChange={(e) => setAudioUrl(e.target.value)}
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
+                             <div className="space-y-2">
+                               <Label htmlFor="audioUrl">Or Audio URL</Label>
+                               <Input
+                                 id="audioUrl"
+                                 placeholder="https://example.com/audio.mp3"
+                                 value={audioUrl}
+                                 onChange={(e) => setAudioUrl(e.target.value)}
+                               />
+                             </div>
+                           </CardContent>
+                         </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="content">Transcript/Description</Label>
-                          <Textarea
-                            id="content"
-                            placeholder="Provide transcript or description..."
-                            rows={6}
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                          />
-                        </div>
-                      </TabsContent>
+                         <div className="space-y-2">
+                           <Label htmlFor="content">Transcript/Description</Label>
+                           <Textarea
+                             id="content"
+                             placeholder="Provide transcript or description..."
+                             rows={6}
+                             value={content}
+                             onChange={(e) => setContent(e.target.value)}
+                           />
+                         </div>
+                       </div>
+                     )}
 
-                      <TabsContent value="quiz" className="space-y-6">
-                        <div className="space-y-4">
-                          {quizQuestions.map((question, index) => (
-                            <Card key={question.id}>
-                              <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                  <CardTitle className="text-lg">Question {index + 1}</CardTitle>
-                                  {quizQuestions.length > 1 && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => removeQuizQuestion(question.id)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </CardHeader>
-                              <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label>Question</Label>
-                                  <Input
-                                    placeholder="Enter your question"
-                                    value={question.question}
-                                    onChange={(e) => updateQuizQuestion(question.id, 'question', e.target.value)}
-                                  />
-                                </div>
+                     {contentType === 'quiz' && (
+                       <div className="space-y-6">
+                         <div className="space-y-4">
+                           {quizQuestions.map((question, index) => (
+                             <Card key={question.id}>
+                               <CardHeader className="pb-3">
+                                 <div className="flex items-center justify-between">
+                                   <CardTitle className="text-lg">Question {index + 1}</CardTitle>
+                                   {quizQuestions.length > 1 && (
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => removeQuizQuestion(question.id)}
+                                     >
+                                       <X className="h-4 w-4" />
+                                     </Button>
+                                   )}
+                                 </div>
+                               </CardHeader>
+                               <CardContent className="space-y-4">
+                                 <div className="space-y-2">
+                                   <Label>Question</Label>
+                                   <Input
+                                     placeholder="Enter your question"
+                                     value={question.question}
+                                     onChange={(e) => updateQuizQuestion(question.id, 'question', e.target.value)}
+                                   />
+                                 </div>
 
-                                <div className="space-y-2">
-                                  <Label>Options</Label>
-                                  {question.options.map((option, optionIndex) => (
-                                    <div key={optionIndex} className="flex items-center gap-2">
-                                      <input
-                                        type="radio"
-                                        name={`correct-${question.id}`}
-                                        checked={question.correctAnswer === optionIndex}
-                                        onChange={() => updateQuizQuestion(question.id, 'correctAnswer', optionIndex)}
-                                      />
-                                      <Input
-                                        placeholder={`Option ${optionIndex + 1}`}
-                                        value={option}
-                                        onChange={(e) => {
-                                          const newOptions = [...question.options]
-                                          newOptions[optionIndex] = e.target.value
-                                          updateQuizQuestion(question.id, 'options', newOptions)
-                                        }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
+                                 <div className="space-y-2">
+                                   <Label>Options</Label>
+                                   {question.options.map((option, optionIndex) => (
+                                     <div key={optionIndex} className="flex items-center gap-2">
+                                       <input
+                                         type="radio"
+                                         name={`correct-${question.id}`}
+                                         checked={question.correctAnswer === optionIndex}
+                                         onChange={() => updateQuizQuestion(question.id, 'correctAnswer', optionIndex)}
+                                       />
+                                       <Input
+                                         placeholder={`Option ${optionIndex + 1}`}
+                                         value={option}
+                                         onChange={(e) => {
+                                           const newOptions = [...question.options]
+                                           newOptions[optionIndex] = e.target.value
+                                           updateQuizQuestion(question.id, 'options', newOptions)
+                                         }}
+                                       />
+                                     </div>
+                                   ))}
+                                 </div>
 
-                                <div className="space-y-2">
-                                  <Label>Explanation</Label>
-                                  <Textarea
-                                    placeholder="Explain why this answer is correct"
-                                    rows={2}
-                                    value={question.explanation}
-                                    onChange={(e) => updateQuizQuestion(question.id, 'explanation', e.target.value)}
-                                  />
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                                 <div className="space-y-2">
+                                   <Label>Explanation</Label>
+                                   <Textarea
+                                     placeholder="Explain why this answer is correct"
+                                     rows={2}
+                                     value={question.explanation}
+                                     onChange={(e) => updateQuizQuestion(question.id, 'explanation', e.target.value)}
+                                   />
+                                 </div>
+                               </CardContent>
+                             </Card>
+                           ))}
 
-                          <Button onClick={addQuizQuestion} variant="outline" className="w-full">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Question
-                          </Button>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                           <Button onClick={addQuizQuestion} variant="outline" className="w-full">
+                             <Plus className="h-4 w-4 mr-2" />
+                             Add Question
+                           </Button>
+                         </div>
+                       </div>
+                     )}
                   </CardContent>
                 </Card>
               </div>

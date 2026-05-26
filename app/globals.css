@@ -1,9 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
 @import "tailwindcss";
-
-@reference "tailwindcss/theme";
 
 @layer base {
   :root {
+    /* High contrast light theme - WCAG AA compliant */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -24,9 +24,21 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Educational color palette */
+    --educational-blue: 221.2 83.2% 53.3%;
+    --educational-green: 142.1 76.2% 36.3%;
+    --educational-purple: 262.1 83.3% 57.8%;
+    --educational-orange: 25.7 95% 53.1%;
+
+    /* Typography */
+    --font-primary: 'Inter', system-ui, sans-serif;
+    --font-heading: 'Space Grotesk', var(--font-primary);
+    --font-mono: 'JetBrains Mono', monospace;
   }
 
   .dark {
+    /* High contrast dark theme */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
@@ -53,7 +65,50 @@
   * {
     @apply border-gray-200 dark:border-gray-800;
   }
+
   body {
+    font-family: var(--font-primary);
+    font-feature-settings: "kern" 1, "liga" 1;
+    line-height: 1.65;
     @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  h1 { @apply text-4xl sm:text-5xl lg:text-6xl; }
+  h2 { @apply text-3xl sm:text-4xl; }
+  h3 { @apply text-2xl sm:text-3xl; }
+}
+
+/* Enhanced Cards & Components */
+@layer components {
+  .card {
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card:hover {
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+/* Typography Utilities */
+@layer utilities {
+  .text-display {
+    @apply text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight;
+  }
+
+  .text-heading-xl {
+    @apply text-3xl sm:text-4xl font-bold leading-tight tracking-tight;
+  }
+
+  .text-body-lg {
+    @apply text-lg leading-relaxed;
   }
 }

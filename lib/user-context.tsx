@@ -86,7 +86,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (attempts >= maxAttempts) {
             throw error
           }
-          // Wait before retrying
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
         }
       }
@@ -160,7 +159,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     initializeAuth()
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id)
@@ -203,7 +201,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 }
 
-// Backward compatibility alias
 export const useUser = useAuth
 
 export function useAuth() {

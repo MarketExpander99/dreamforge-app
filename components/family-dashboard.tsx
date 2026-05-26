@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { MessageCircle, Flame, TrendingUp, Send, Clock, BookOpen, GraduationCap, Route, Target } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { MessageCircle, Flame, TrendingUp, Send, Clock, BookOpen, GraduationCap, Route, Target, Loader2 } from 'lucide-react'
 import { useNotifications } from '@/lib/notification-context'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
@@ -20,6 +21,7 @@ interface Child {
   avatar_url?: string
   grade_level?: string
   created_at: string
+  diagnostic_grade?: string
 }
 
 interface ActivityItem {
@@ -83,6 +85,27 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
   const [nudgeMessage, setNudgeMessage] = useState('')
   const [sendingNudge, setSendingNudge] = useState(false)
+  const [childEmail, setChildEmail] = useState('')
+  const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState('')
+  const [linkSuccess, setLinkSuccess] = useState(false)
+  const [showLinkForm, setShowLinkForm] = useState(false)
+
+  const handleLinkChild = async () => {
+    if (!childEmail.trim()) return
+    setLinking(true)
+    setLinkError('')
+    setLinkSuccess(false)
+    try {
+      // Placeholder - implement Supabase link logic in future task
+      setLinkSuccess(true)
+      setChildEmail('')
+    } catch (err: any) {
+      setLinkError(err.message || 'Failed to link child')
+    } finally {
+      setLinking(false)
+    }
+  }
 
   const handleSendNudge = async () => {
     if (!selectedChild || !nudgeMessage.trim() || !user) return
@@ -142,6 +165,39 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
         </motion.p>
       </div>
 
+      {/* Link Child Account */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Link Child Account
+          </CardTitle>
+          <CardDescription>Enter your child's email to link their account to your family dashboard</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="child@example.com"
+              value={childEmail}
+              onChange={(e) => setChildEmail(e.target.value)}
+            />
+            <Button onClick={handleLinkChild} disabled={!childEmail.trim() || linking}>
+              {linking ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Link Account
+            </Button>
+          </div>
+          {linkError && (
+            <p className="text-sm text-red-600">{linkError}</p>
+          )}
+          {linkSuccess && (
+            <p className="text-sm text-green-600">Child account linked successfully!</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            The child will receive an email notification. They can confirm the link in their profile settings.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Children Cards */}
       {children.length === 0 ? (
         <motion.div
@@ -153,9 +209,17 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             No Children Linked Yet
           </h3>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
             Link student accounts to start tracking their progress and achievements.
           </p>
+          <Button
+            onClick={() => setShowLinkForm(true)}
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
+          >
+            <GraduationCap className="h-5 w-5 mr-2" />
+            Link Child Account
+          </Button>
         </motion.div>
       ) : (
         <motion.div
@@ -357,20 +421,20 @@ export function FamilyDashboard({ children, activityFeed }: FamilyDashboardProps
 
                     {/* Assessment Status */}
                     <div className="ml-11 space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Target className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium">Grade Assessment</p>
-                            <p className="text-xs text-muted-foreground">
-                              {child.grade_level ? `Completed - Recommended: ${child.grade_level}` : 'Not completed yet'}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant={child.grade_level ? "default" : "secondary"}>
-                          {child.grade_level ? 'Completed' : 'Pending'}
-                        </Badge>
-                      </div>
+  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+    <div className="flex items-center space-x-3">
+      <Target className="h-5 w-5 text-blue-600" />
+      <div>
+        <p className="text-sm font-medium">Grade Assessment</p>
+        <p className="text-xs text-muted-foreground">
+          {child.diagnostic_grade ? `Completed - Recommended: ${child.diagnostic_grade}` : 'Not completed yet'}
+        </p>
+      </div>
+    </div>
+    <Badge variant={child.diagnostic_grade ? "default" : "secondary"}>
+      {child.diagnostic_grade ? 'Completed' : 'Pending'}
+    </Badge>
+  </div>
 
                       {/* Learning Paths */}
                       <div className="space-y-2">

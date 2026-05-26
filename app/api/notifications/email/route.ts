@@ -126,7 +126,7 @@ function generateTeacherToStudentEmail(data: any) {
           </div>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://skillgain.app/learning" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Continue Learning</a>
+            <a href="https://skill-gain.com/learning" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Continue Learning</a>
           </div>
 
           <p style="color: #666; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
@@ -144,7 +144,7 @@ ${subject ? `Subject: ${subject}` : ''}
 
 ${message}
 
-Continue your learning journey at: https://skillgain.app/learning
+Continue your learning journey at: https://skill-gain.com/learning
 
 This message was sent by your teacher through Skill Gain.
     `.trim()
@@ -178,7 +178,7 @@ function generateTeacherToParentEmail(data: any) {
           </div>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://skillgain.app/family" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Family Dashboard</a>
+            <a href="https://skill-gain.com/family" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Family Dashboard</a>
           </div>
 
           <p style="color: #666; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
@@ -197,7 +197,7 @@ ${subject ? `Subject: ${subject}` : ''}
 
 ${message}
 
-View your family dashboard at: https://skillgain.app/family
+View your family dashboard at: https://skill-gain.com/family
 
 This message was sent by your child's teacher through Skill Gain.
     `.trim()
@@ -240,7 +240,7 @@ function generateWeeklyProgressEmail(data: any) {
           ` : ''}
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://skillgain.app/family" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Detailed Progress</a>
+            <a href="https://skill-gain.com/family" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Detailed Progress</a>
           </div>
 
           <p style="color: #666; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
@@ -260,7 +260,7 @@ ${weekSummary}
 
 ${achievements ? `Achievements This Week:\n${achievements}\n` : ''}${recommendations ? `Recommendations:\n${recommendations}\n` : ''}
 
-View detailed progress at: https://skillgain.app/family
+View detailed progress at: https://skill-gain.com/family
 
 This weekly progress report was generated automatically by Skill Gain.
     `.trim()

@@ -273,11 +273,9 @@ export default function EditContentPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin/content">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Content
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/content'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Content
                 </Button>
               </div>
               <h1 className="text-3xl font-bold mb-2">Edit Content</h1>

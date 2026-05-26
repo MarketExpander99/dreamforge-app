@@ -126,14 +126,12 @@ export default function ContentManagementPage() {
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/admin">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Link>
-                </Button>
-              </div>
+               <div className="flex items-center gap-4 mb-4">
+                 <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin'}>
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Dashboard
+                 </Button>
+               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Content Management</h1>
@@ -141,11 +139,9 @@ export default function ContentManagementPage() {
                     Manage all learning content, publications, and drafts
                   </p>
                 </div>
-                <Button asChild>
-                  <Link href="/admin/content/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Content
-                  </Link>
+                <Button onClick={() => window.location.href = '/admin/content/new'}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Content
                 </Button>
               </div>
             </div>
@@ -275,13 +271,13 @@ export default function ContentManagementPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/content/${item.id}`}>
+                                  <Link href={`/content/${item.id}`} className="flex items-center">
                                     <Eye className="h-4 w-4 mr-2" />
                                     View
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/admin/content/${item.id}/edit`}>
+                                  <Link href={`/admin/content/${item.id}/edit`} className="flex items-center">
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit
                                   </Link>

@@ -206,11 +206,9 @@ export default function JoinClassPage() {
           <main className="py-6 px-4 md:px-8 pb-20 md:pb-6">
             <div className="max-w-2xl mx-auto">
               <div className="mb-8">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Home
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
                 </Button>
               </div>
 
@@ -254,11 +252,9 @@ export default function JoinClassPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Home
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
                 </Button>
               </div>
               <div>
@@ -357,15 +353,11 @@ export default function JoinClassPage() {
                     </p>
                   </div>
                   <div className="mt-4 flex gap-4">
-                    <Button asChild className="flex-1">
-                      <Link href="/student">
-                        Go to Dashboard
-                      </Link>
+                    <Button onClick={() => window.location.href = '/student'} className="flex-1">
+                      Go to Dashboard
                     </Button>
-                    <Button variant="outline" asChild>
-                      <Link href={`/student/classes/${classData.id}`}>
-                        View Class
-                      </Link>
+                    <Button variant="outline" onClick={() => window.location.href = `/student/classes/${classData.id}`}>
+                      View Class
                     </Button>
                   </div>
                 </div>
@@ -388,10 +380,8 @@ export default function JoinClassPage() {
                       </>
                     )}
                   </Button>
-                  <Button variant="outline" asChild disabled={isJoining}>
-                    <Link href="/">
-                      Cancel
-                    </Link>
+                  <Button variant="outline" onClick={() => window.location.href = '/'} disabled={isJoining}>
+                    Cancel
                   </Button>
                 </>
               )}

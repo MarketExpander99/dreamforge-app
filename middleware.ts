@@ -45,6 +45,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Protect the /explore route so unauthenticated users are redirected to /auth/login
+  if (request.nextUrl.pathname === '/explore' && !user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
   // Check if accessing admin routes
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {

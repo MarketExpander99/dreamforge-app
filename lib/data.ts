@@ -1,6 +1,43 @@
 // Data access layer for Skill Gain - Client-side functions
 import { createBrowserSupabaseClient } from './supabase'
 
+// Simple in-memory cache with TTL
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+class SimpleCache {
+  private cache = new Map<string, CacheEntry<any>>()
+
+  set<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void { // 5 minutes default
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs
+    })
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key)
+    if (!entry) return null
+
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key)
+      return null
+    }
+
+    return entry.data
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+}
+
+const dataCache = new SimpleCache()
+
 // Types
 export interface Category {
   id: string
@@ -93,8 +130,8 @@ export async function getCategories(): Promise<Category[]> {
     .order('name')
 
   if (error) {
-    console.error('Error fetching categories:', error)
-    throw new Error(`Failed to fetch categories: ${error.message}`)
+    // Silent failure - return empty array for graceful degradation
+    return []
   }
 
   return data || []
@@ -110,6 +147,13 @@ export async function getContentItems(options?: {
   gradeLevel?: string
   search?: string
 }): Promise<ContentItem[]> {
+  // Create cache key based on options
+  const cacheKey = `content_items_${JSON.stringify(options || {})}`
+  const cached = dataCache.get<ContentItem[]>(cacheKey)
+  if (cached) {
+    return cached
+  }
+
   const supabase = createBrowserSupabaseClient()
 
   let query = supabase
@@ -145,11 +189,14 @@ export async function getContentItems(options?: {
   const { data, error } = await query
 
   if (error) {
-    console.error('Error fetching content items:', error)
-    throw new Error(`Failed to fetch content items: ${error.message}`)
+    // Silent failure - return empty array for graceful degradation
+    return []
   }
 
-  return data || []
+  const result = data || []
+  // Cache for 2 minutes since content doesn't change frequently
+  dataCache.set(cacheKey, result, 2 * 60 * 1000)
+  return result
 }
 
 export async function getContentItem(id: string): Promise<ContentItem | null> {
@@ -193,7 +240,7 @@ export async function searchContent(query: string): Promise<ContentItem[]> {
     .limit(20)
 
   if (error) {
-    console.error('Error searching content:', error)
+    // Silent failure - return empty array for graceful degradation
     return []
   }
 
@@ -263,13 +310,12 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     .single()
 
   if (error) {
-    console.error('Error fetching user profile:', error, 'for userId:', userId)
-    // If no profile exists, try to create one
+    // If no profile exists, try to create one silently
     if (error.code === 'PGRST116') {
-      console.log('No profile found for user, attempting to create one')
       return await createUserProfile(userId)
     }
-    throw new Error(`Failed to fetch user profile: ${error.message}`)
+    // Silent failure for other errors - return null for graceful degradation
+    return null
   }
 
   return data
@@ -322,7 +368,7 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     .single()
 
   if (error) {
-    console.error('Error updating user profile:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -343,108 +389,10 @@ export async function getUserProgress(userId: string): Promise<UserProgress[]> {
       .eq('user_id', userId)
       .order('last_accessed_at', { ascending: false })
 
-    if (error) {
-      console.warn('Database not available for user progress, using fallback data:', error.message)
-      // Return fallback progress data
-      return [
-        {
-          id: '1',
-          user_id: userId,
-          content_id: '1',
-          status: 'completed',
-          progress_percentage: 100,
-          time_spent: 25,
-          completed_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          last_accessed_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          content: {
-            id: '1',
-            title: 'How Photosynthesis Works',
-            content: 'Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to create oxygen and energy.',
-            type: 'text',
-            category_id: '1',
-            difficulty: 'beginner',
-            tags: ['science', 'biology'],
-            image_url: null,
-            video_url: null,
-            audio_url: null,
-            quiz: null,
-            read_time: 5,
-            likes: 24,
-            views: 156,
-            is_featured: true,
-            is_published: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            category: { id: '1', name: 'Science', description: 'Explore the wonders of science', icon: '🔬', color: 'blue', created_at: new Date().toISOString() }
-          }
-        },
-        {
-          id: '2',
-          user_id: userId,
-          content_id: '2',
-          status: 'in_progress',
-          progress_percentage: 75,
-          time_spent: 15,
-          completed_at: null,
-          last_accessed_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          created_at: new Date().toISOString(),
-          content: {
-            id: '2',
-            title: 'Ancient Rome Quiz',
-            content: 'Test your knowledge of ancient Roman history.',
-            type: 'quiz',
-            category_id: '2',
-            difficulty: 'intermediate',
-            tags: ['history', 'rome'],
-            image_url: null,
-            video_url: null,
-            audio_url: null,
-            quiz: null,
-            read_time: 10,
-            likes: 18,
-            views: 89,
-            is_featured: false,
-            is_published: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            category: { id: '2', name: 'History', description: 'Learn about historical events', icon: '🏛️', color: 'green', created_at: new Date().toISOString() }
-          }
-        },
-        {
-          id: '3',
-          user_id: userId,
-          content_id: '3',
-          status: 'in_progress',
-          progress_percentage: 30,
-          time_spent: 8,
-          completed_at: null,
-          last_accessed_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          created_at: new Date().toISOString(),
-          content: {
-            id: '3',
-            title: 'Geography: Understanding Maps',
-            content: 'Learn about different types of maps and how to read them.',
-            type: 'text',
-            category_id: '3',
-            difficulty: 'beginner',
-            tags: ['geography', 'maps'],
-            image_url: null,
-            video_url: null,
-            audio_url: null,
-            quiz: null,
-            read_time: 6,
-            likes: 15,
-            views: 67,
-            is_featured: false,
-            is_published: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            category: { id: '3', name: 'Geography', description: 'Discover the world around us', icon: '🌍', color: 'orange', created_at: new Date().toISOString() }
-          }
-        }
-      ]
-    }
+  if (error) {
+    // Silent failure - return empty for graceful empty state (no stale data)
+    return []
+  }
 
     return data || []
   } catch (err) {
@@ -490,7 +438,7 @@ export async function updateUserProgress(
     .single()
 
   if (error) {
-    console.error('Error updating user progress:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -646,7 +594,7 @@ export async function addUserBookmark(userId: string, contentId: string): Promis
     .single()
 
   if (error) {
-    console.error('Error adding user bookmark:', error)
+    // Silent failure - return null for graceful degradation
     return null
   }
 
@@ -663,7 +611,7 @@ export async function removeUserBookmark(userId: string, contentId: string): Pro
     .eq('content_id', contentId)
 
   if (error) {
-    console.error('Error removing user bookmark:', error)
+    // Silent failure - return false for graceful degradation
     return false
   }
 
@@ -681,7 +629,7 @@ export async function isContentBookmarked(userId: string, contentId: string): Pr
     .single()
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error checking bookmark status:', error)
+    // Silent failure - return false for graceful degradation
     return false
   }
 
@@ -912,6 +860,27 @@ export const clientData = {
 
     return data || []
   }
+}
+
+// Bulk Content Operations
+export async function bulkInsertContentItems(items: Omit<ContentItem, 'id' | 'created_at' | 'updated_at'>[]): Promise<ContentItem[]> {
+  const supabase = createBrowserSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('content_items')
+    .insert(items.map(item => ({
+      ...item,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })))
+    .select()
+
+  if (error) {
+    console.error('Error bulk inserting content items:', error)
+    return []
+  }
+
+  return data || []
 }
 
 // Analytics Functions
@@ -1320,117 +1289,7 @@ function generateActivityHeatmap(progressData: any[]): { date: string; count: nu
 
 
 
-// Get leaderboard data
-export async function getLeaderboard(limit: number = 10): Promise<Array<{
-  user_id: string
-  full_name: string | null
-  avatar_url: string | null
-  total_time: number
-  total_completed: number
-  current_streak: number
-}>> {
-  try {
-    const supabase = createBrowserSupabaseClient()
 
-    // Get all users with their stats
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .eq('role', 'student')
-
-    if (usersError) throw usersError
-
-    // Calculate stats for each user
-    const leaderboardData = await Promise.all(
-      (users || []).map(async (user) => {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('time_spent, status')
-          .eq('user_id', user.id)
-
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-
-        const { currentStreak } = await getCurrentStreak(user.id)
-
-        return {
-          user_id: user.id,
-          full_name: user.full_name,
-          avatar_url: user.avatar_url,
-          total_time: totalTime,
-          total_completed: totalCompleted,
-          current_streak: currentStreak
-        }
-      })
-    )
-
-    // Sort by total time spent (descending) and return top limit
-    return leaderboardData
-      .sort((a, b) => b.total_time - a.total_time)
-      .slice(0, limit)
-
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error)
-    return []
-  }
-}
-
-// Get family leaderboard for parents
-export async function getFamilyLeaderboard(parentId: string, limit: number = 10): Promise<Array<{
-  user_id: string
-  full_name: string | null
-  avatar_url: string | null
-  total_time: number
-  total_completed: number
-  current_streak: number
-  role: string
-}>> {
-  try {
-    const supabase = createBrowserSupabaseClient()
-
-    // Get parent and their children
-    const { data: familyMembers, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url, role')
-      .or(`id.eq.${parentId},parent_id.eq.${parentId}`)
-
-    if (error) throw error
-
-    // Calculate stats for each family member
-    const leaderboardData = await Promise.all(
-      (familyMembers || []).map(async (member) => {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('time_spent, status')
-          .eq('user_id', member.id)
-
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-
-        const { currentStreak } = member.role === 'student' ? await getCurrentStreak(member.id) : { currentStreak: 0 }
-
-        return {
-          user_id: member.id,
-          full_name: member.full_name,
-          avatar_url: member.avatar_url,
-          total_time: totalTime,
-          total_completed: totalCompleted,
-          current_streak: currentStreak,
-          role: member.role
-        }
-      })
-    )
-
-    // Sort by total time spent (descending) and return top limit
-    return leaderboardData
-      .sort((a, b) => b.total_time - a.total_time)
-      .slice(0, limit)
-
-  } catch (error) {
-    console.error('Error fetching family leaderboard:', error)
-    return []
-  }
-}
 
 // Check and unlock achievements for a user
 export async function checkAndUnlockAchievements(userId: string): Promise<string[]> {
@@ -1988,6 +1847,106 @@ function getLowerGrade(grade: string): string {
   return gradeNumbers[grade] || grade
 }
 
+// Get global leaderboard with privacy-first names
+export async function getLeaderboard(limit: number = 10): Promise<any[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get all users with their stats
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, anonymous_id, avatar_url, role')
+      .eq('role', 'student')
+
+    if (usersError) throw usersError
+
+    // Calculate stats for each user
+    const leaderboardData = await Promise.all(
+      (users || []).map(async (user) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', user.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        return {
+          user_id: user.id,
+          full_name: user.full_name,
+          public_name: user.display_name || user.anonymous_id || 'Anonymous User',
+          avatar_url: user.avatar_url,
+          total_time: Math.floor(totalTime / 60), // Convert to minutes
+          total_completed: totalCompleted,
+          current_streak: 0, // TODO: Implement streak calculation
+          role: user.role
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error)
+    return []
+  }
+}
+
+// Get family leaderboard for parents
+export async function getFamilyLeaderboard(parentId: string, limit: number = 10): Promise<any[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // First get family members
+    const { data: familyMembers, error: familyError } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, anonymous_id, avatar_url, role')
+      .eq('parent_id', parentId)
+
+    if (familyError) throw familyError
+
+    if (!familyMembers || familyMembers.length === 0) return []
+
+    // Calculate stats for each family member
+    const leaderboardData = await Promise.all(
+      (familyMembers || []).map(async (member) => {
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('time_spent, status')
+          .eq('user_id', member.id)
+
+        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+
+        return {
+          user_id: member.id,
+          full_name: member.full_name,
+          public_name: member.display_name || member.anonymous_id || 'Anonymous User',
+          avatar_url: member.avatar_url,
+          total_time: Math.floor(totalTime / 60), // Convert to minutes
+          total_completed: totalCompleted,
+          current_streak: 0, // TODO: Implement streak calculation
+          role: member.role
+        }
+      })
+    )
+
+    // Sort by total time spent (descending) and return top limit
+    return leaderboardData
+      .sort((a, b) => b.total_time - a.total_time)
+      .slice(0, limit)
+
+  } catch (error) {
+    console.error('Error fetching family leaderboard:', error)
+    return []
+  }
+}
+
+
+
 // Get personalized recommendations for a user
 export async function getPersonalizedRecommendations(userId: string, limit: number = 6): Promise<ContentItem[]> {
   try {
@@ -2024,14 +1983,21 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     const completedTags = completedContent.flatMap(p => p.content?.[0]?.tags || []).filter(Boolean) as string[]
     const completedDifficulties = completedContent.map(p => p.content?.[0]?.difficulty).filter(Boolean) as string[]
 
-    // Get all available content
-    const { data: allContent, error: contentError } = await supabase
+    // Get all available content, filtered by grade level if available
+    let contentQuery = supabase
       .from('content_items')
       .select(`
         *,
         category:categories(*)
       `)
       .eq('is_published', true)
+
+    // If user has a grade level, filter content to match their grade
+    if (profile.grade_level) {
+      contentQuery = contentQuery.contains('tags', [profile.grade_level])
+    }
+
+    const { data: allContent, error: contentError } = await contentQuery
 
     if (contentError) throw contentError
 
@@ -2116,6 +2082,87 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
       console.log('Fallback recommendations also unavailable')
       return []
     }
+  }
+}
+
+
+
+// Get next recommended content based on proficiency gaps (adaptive learning)
+export async function getNextRecommendedContent(userId: string, limit: number = 5): Promise<ContentItem[]> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    // Get user proficiency
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('proficiency, grade_level')
+      .eq('id', userId)
+      .single()
+
+    if (!profile?.proficiency) return []
+
+    const proficiency = profile.proficiency as { [topic: string]: number }
+    const gradeLevel = profile.grade_level
+
+    // Find topics with lowest proficiency
+    const topicScores = Object.entries(proficiency)
+      .filter(([key]) => gradeLevel ? key.startsWith(`${gradeLevel}_`) : true)
+      .sort(([, a], [, b]) => a - b) // Sort by lowest proficiency first
+
+    if (topicScores.length === 0) return []
+
+    // Get content for weak topics
+    const weakTopics = topicScores.slice(0, 3).map(([key]) => key.split('_').slice(1).join('_'))
+
+    const { data: content } = await supabase
+      .from('content_items')
+      .select(`
+        *,
+        category:categories(*)
+      `)
+      .eq('is_published', true)
+      .or(weakTopics.map(topic => `tags.cs.{${topic}}`).join(','))
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    return content || []
+
+  } catch (error) {
+    console.error('Error getting next recommended content:', error)
+    return []
+  }
+}
+
+// Check if user is ready for grade advancement based on proficiency
+export async function checkGradeAdvancementReadiness(userId: string): Promise<boolean> {
+  try {
+    const supabase = createBrowserSupabaseClient()
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('proficiency, grade_level')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.proficiency || !profile.grade_level) {
+      return false
+    }
+
+    const proficiency = profile.proficiency as { [topic: string]: number }
+    const gradeLevel = profile.grade_level
+
+    // Calculate average proficiency for current grade topics
+    const gradeTopics = Object.keys(proficiency).filter(key => key.startsWith(`${gradeLevel}_`))
+    if (gradeTopics.length === 0) return false
+
+    const averageProficiency = gradeTopics.reduce((sum, key) => sum + proficiency[key], 0) / gradeTopics.length
+
+    // Ready for advancement if average proficiency >= 85%
+    return averageProficiency >= 85
+
+  } catch (error) {
+    console.error('Error checking grade advancement readiness:', error)
+    return false
   }
 }
 

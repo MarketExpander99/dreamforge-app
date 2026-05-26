@@ -37,6 +37,30 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage using service role (bypasses RLS)
     const serviceClient = createServiceClient()
+
+    // First, ensure the avatars bucket exists
+    try {
+      const { data: buckets } = await serviceClient.storage.listBuckets()
+      const avatarsBucket = buckets?.find(bucket => bucket.id === 'avatars')
+
+      if (!avatarsBucket) {
+        // Create the avatars bucket if it doesn't exist
+        const { error: createBucketError } = await serviceClient.storage.createBucket('avatars', {
+          public: true,
+          allowedMimeTypes: ['image/*'],
+          fileSizeLimit: 5242880 // 5MB
+        })
+
+        if (createBucketError) {
+          console.error('Error creating avatars bucket:', createBucketError)
+          return NextResponse.json({ error: 'Failed to create storage bucket' }, { status: 500 })
+        }
+      }
+    } catch (bucketError) {
+      console.error('Error checking/creating bucket:', bucketError)
+      return NextResponse.json({ error: 'Failed to setup storage' }, { status: 500 })
+    }
+
     const { data: uploadData, error: uploadError } = await serviceClient.storage
       .from('avatars')
       .upload(fileName, buffer, {

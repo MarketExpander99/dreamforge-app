@@ -42,6 +42,10 @@ export default function ContentDetailPage() {
   const [quizAnswers, setQuizAnswers] = useState<number[]>([])
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [quizScore, setQuizScore] = useState(0)
+  const [startingContent, setStartingContent] = useState(false)
+  const [completingContent, setCompletingContent] = useState(false)
+  const [showGradeAdvancement, setShowGradeAdvancement] = useState(false)
+  const [newGrade, setNewGrade] = useState<string | null>(null)
 
   useEffect(() => {
     const loadContent = async () => {
@@ -106,30 +110,74 @@ export default function ContentDetailPage() {
   const handleStartContent = async () => {
     if (!user || !content) return
 
+    setStartingContent(true)
     try {
       await updateUserProgress(user.id, content.id, {
         status: 'in_progress',
         progress_percentage: 10
       })
       setProgress(10)
+      // Stay on the same page to continue learning
     } catch (err) {
       console.error('Error updating progress:', err)
+      // Could add toast notification here
+    } finally {
+      setStartingContent(false)
     }
   }
 
   const handleCompleteContent = async () => {
     if (!user || !content) return
 
+    setCompletingContent(true)
     try {
+      // First update progress in database
       await updateUserProgress(user.id, content.id, {
         status: 'completed',
         progress_percentage: 100,
         completed_at: new Date().toISOString()
       })
+
+      // Then evaluate performance with adaptive engine
+      const evaluationResponse = await fetch('/api/progress/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contentId: content.id,
+          score: quizCompleted ? quizScore : 100, // Use quiz score if available, otherwise 100
+          timeSpent: Math.max(1, Math.floor((Date.now() - Date.now()) / (1000 * 60))), // Estimate time spent (fallback to 1 min)
+          contentType: content.type,
+          difficulty: content.difficulty,
+          tags: content.tags,
+          category: content.category?.name || 'General'
+        })
+      })
+
+      if (evaluationResponse.ok) {
+        const evaluationData = await evaluationResponse.json()
+        console.log('Performance evaluation completed:', evaluationData.evaluation)
+
+        // Check for grade advancement and show celebration
+        if (evaluationData.evaluation.gradeReadiness) {
+          // Trigger grade advancement celebration
+          setShowGradeAdvancement(true)
+          // Extract new grade from evaluation or fetch from profile
+          // For now, we'll show a generic celebration
+          setNewGrade('Next Grade')
+        }
+      } else {
+        console.error('Failed to evaluate performance')
+      }
+
       setProgress(100)
       setIsCompleted(true)
     } catch (err) {
       console.error('Error completing content:', err)
+      // Could add toast notification here
+    } finally {
+      setCompletingContent(false)
     }
   }
 
@@ -268,15 +316,33 @@ export default function ContentDetailPage() {
 
               <div className="flex gap-2">
                 {!isCompleted && progress === 0 && (
-                  <Button onClick={handleStartContent}>
-                    <PlayCircle className="mr-2 h-4 w-4" />
-                    Start Learning
+                  <Button onClick={handleStartContent} disabled={startingContent}>
+                    {startingContent ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b border-current mr-2"></div>
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                        Start Learning
+                      </>
+                    )}
                   </Button>
                 )}
                 {!isCompleted && progress > 0 && progress < 100 && (
-                  <Button onClick={handleCompleteContent}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark Complete
+                  <Button onClick={handleCompleteContent} disabled={completingContent}>
+                    {completingContent ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b border-current mr-2"></div>
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Mark Complete
+                      </>
+                    )}
                   </Button>
                 )}
                 {isCompleted && (
@@ -439,6 +505,41 @@ export default function ContentDetailPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Grade Advancement Celebration Modal */}
+        {showGradeAdvancement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full text-center relative overflow-hidden">
+              {/* Confetti effect - simple CSS animation */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
+                <div className="absolute top-8 right-8 w-3 h-3 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="absolute bottom-8 left-6 w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="absolute top-6 right-4 w-3 h-3 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></div>
+                <div className="absolute bottom-4 right-6 w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              </div>
+
+              <div className="relative z-10">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Congratulations!
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  You've advanced to {newGrade}! Your hard work and dedication have paid off.
+                </p>
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg mb-6">
+                  <span className="font-semibold">Grade Unlocked: {newGrade}</span>
+                </div>
+                <Button
+                  onClick={() => setShowGradeAdvancement(false)}
+                  className="w-full"
+                >
+                  Continue Learning
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

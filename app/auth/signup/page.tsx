@@ -1,216 +1,203 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Users, PenTool, GraduationCap } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 export default function SignupPage() {
-  const [step, setStep] = useState<'role' | 'details'>('role')
-  const [role, setRole] = useState<'parent' | 'student' | 'content-creator' | 'teacher' | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    childName: '',
-    childAge: ''
+    learningGoal: '',
+    interests: ''
   })
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)        // Initial auth check
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const router = useRouter()
 
-  const handleRoleSelect = (selectedRole: 'parent' | 'student' | 'content-creator' | 'teacher') => {
-    setRole(selectedRole)
-    setStep('details')
+  const supabase = createBrowserSupabaseClient()
+
+  // Check if user is already signed in → redirect
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        console.log('User already signed in → redirecting')
+        router.replace('/discover')   // or '/dashboard' if you prefer
+        return
+      }
+      
+      setLoading(false)
+    }
+
+    checkSession()
+  }, [router, supabase])
+
+  const validateEmail = (email: string): boolean => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setError('')
+    setSuccess('')
+    setSubmitting(true)
+
+    if (!validateEmail(formData.email)) {
+      setError('Please enter a valid email address')
+      setSubmitting(false)
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setSubmitting(false)
+      return
+    }
+
+    if (!formData.fullName.trim()) {
+      setError('Please enter your full name')
+      setSubmitting(false)
+      return
+    }
+
+    if (!formData.learningGoal.trim()) {
+      setError('Please tell us what you would like to learn or study for')
+      setSubmitting(false)
+      return
+    }
 
     try {
-      const supabase = createBrowserSupabaseClient()
-      const { data, error } = await supabase.auth.signUp({
+      const { error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            full_name: role === 'parent' ? formData.childName : formData.fullName,
-            role: role,
-            ...(role === 'parent' && {
-              child_name: formData.childName,
-              child_age: formData.childAge
-            })
-          }
+            full_name: formData.fullName.trim(),
+            role: 'student',
+            onboarding_completed: false,
+            grade: '1',
+            learning_goal: formData.learningGoal.trim(),
+            interests: formData.interests.trim()
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       })
 
-      if (error) throw error
+      if (signupError) throw signupError
 
-      // Show success message for email confirmation
-      alert('Account created successfully! Please check your email and click the confirmation link to activate your account.')
+      // Branded confirmation attempt (non-blocking)
+      try {
+        const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
+        await fetch('/api/auth/send-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email, confirmationUrl }),
+        })
+      } catch (emailError) {
+        console.warn('Branded confirmation email failed (non-blocking):', emailError)
+      }
 
-      // Reset form
-      setFormData({
-        email: '',
-        password: '',
-        fullName: '',
-        childName: '',
-        childAge: ''
-      })
-      setStep('role')
+      setSuccess('Account created successfully! Please check your email for the confirmation link.')
+      
+      setFormData({ email: '', password: '', fullName: '', learningGoal: '', interests: '' })
+
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 2500)
+
     } catch (error: any) {
       console.error('Signup error:', error)
 
-      if (error.message?.includes('Supabase environment variables not configured')) {
-        alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
-      } else if (error.message?.includes('User already registered')) {
-        alert('An account with this email already exists. Please try logging in instead.')
+      let message = 'Signup failed. Please try again.'
+
+      if (error.message?.includes('invalid') || error.message?.includes('Unable to validate email')) {
+        message = 'Please use a valid, deliverable email address (Gmail, Outlook, etc.).'
+      } else if (error.message?.includes('User already registered') || error.message?.includes('already exists')) {
+        message = 'An account with this email already exists. Please login instead.'
       } else if (error.message?.includes('Password should be at least')) {
-        alert('Password must be at least 6 characters long.')
-      } else if (error.message?.includes('Unable to validate email address')) {
-        alert('Please enter a valid email address.')
-      } else if (error.message?.includes('signup is disabled')) {
-        alert('New user registration is currently disabled. Please contact support.')
-      } else {
-        alert('Signup failed. Please try again later.')
+        message = 'Password must be at least 6 characters long.'
       }
+
+      setError(message)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  if (step === 'role') {
+  // Show loading while checking auth status
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Join Skill Gain</CardTitle>
-            <CardDescription>
-              Choose your role to get started
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button
-              onClick={() => handleRoleSelect('parent')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <Users className="h-8 w-8" />
-              <span>Parent registering a child</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('student')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <User className="h-8 w-8" />
-              <span>Student (13+ years old)</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('teacher')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <GraduationCap className="h-8 w-8" />
-              <span>Teacher</span>
-            </Button>
-            <Button
-              onClick={() => handleRoleSelect('content-creator')}
-              className="w-full h-20 flex flex-col items-center gap-2"
-              variant="outline"
-            >
-              <PenTool className="h-8 w-8" />
-              <span>Content Creator</span>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
-            {role === 'parent' ? 'Parent Registration' :
-             role === 'content-creator' ? 'Content Creator Registration' :
-             'Student Registration'}
-          </CardTitle>
-          <CardDescription>
-            {role === 'parent'
-              ? 'Create an account for your child'
-              : role === 'content-creator'
-              ? 'Create your content creator account'
-              : 'Create your student account'
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
-            </div>
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* HERO IMAGE */}
+      <div className="lg:w-1/2 relative h-80 lg:h-auto flex items-end">
+        <img
+          src="/images/auth/register-hero.jpg"
+          alt="Skill Gain Register"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/30 to-transparent" />
+        
+        <div className="absolute bottom-12 left-12 text-white z-10 max-w-xs">
+          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight">Join Skill Gain</h2>
+          <p className="mt-4 text-lg lg:text-xl text-white/90">Start your learning journey today</p>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
-            </div>
+      {/* FORM SECTION */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-zinc-950">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Student Registration</CardTitle>
+            <CardDescription>
+              Create your student account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                  disabled={submitting}
+                />
+              </div>
 
-            {role === 'parent' ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Your Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="Enter your full name"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="childName">Child's Full Name</Label>
-                  <Input
-                    id="childName"
-                    placeholder="Enter your child's full name"
-                    value={formData.childName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, childName: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="childAge">Child's Age</Label>
-                  <Input
-                    id="childAge"
-                    type="number"
-                    placeholder="Enter your child's age"
-                    value={formData.childAge}
-                    onChange={(e) => setFormData(prev => ({ ...prev, childAge: e.target.value }))}
-                    required
-                  />
-                </div>
-              </>
-            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                  disabled={submitting}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
@@ -219,26 +206,73 @@ export default function SignupPage() {
                   value={formData.fullName}
                   onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
                   required
+                  disabled={submitting}
                 />
               </div>
-            )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </Button>
-          </form>
+              <div className="space-y-2">
+                <Label htmlFor="learningGoal">What would you like to learn or study for?</Label>
+                <Input
+                  id="learningGoal"
+                  placeholder="e.g. Mathematics, Physical Science, Exam preparation"
+                  value={formData.learningGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, learningGoal: e.target.value }))}
+                  required
+                  disabled={submitting}
+                />
+              </div>
 
-          <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              onClick={() => setStep('role')}
-              className="text-sm"
-            >
-              ← Back to role selection
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="interests">What are your interests? (Optional)</Label>
+                <textarea
+                  id="interests"
+                  placeholder="e.g. Coding, Soccer, Music, Space exploration, History..."
+                  value={formData.interests}
+                  onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                  disabled={submitting}
+                  className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-y"
+                />
+              </div>
+
+              {/* Privacy Notice */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Privacy & Data Protection</h4>
+                <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                  <p><strong>Your privacy matters to us.</strong> We comply with POPI Act and GDPR regulations.</p>
+                  <p>• Your real name is never displayed publicly</p>
+                  <p>• You'll be assigned an anonymous ID (like "User_12345") for public display</p>
+                  <p>• You can optionally choose a display name in your profile settings</p>
+                  <p>• Students under 18 require parent/guardian consent for display names</p>
+                  <p className="text-xs mt-2">By creating an account, you agree to our privacy policy and data protection practices.</p>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
+                  {success}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

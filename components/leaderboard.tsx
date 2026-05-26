@@ -14,6 +14,7 @@ import { getLeaderboard, getFamilyLeaderboard } from '@/lib/data'
 interface LeaderboardEntry {
   user_id: string
   full_name: string | null
+  public_name: string // Privacy-first public name
   avatar_url: string | null
   total_time: number
   total_completed: number
@@ -167,7 +168,7 @@ export function Leaderboard() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-gray-900 dark:text-white">
-                                {entry.full_name || 'Anonymous Learner'}
+                                {entry.public_name}
                               </h3>
                               {isCurrentUser && (
                                 <Badge variant="secondary" className="text-xs">You</Badge>
@@ -246,9 +247,9 @@ export function Leaderboard() {
 
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900 dark:text-white">
-                                  {entry.full_name || 'Anonymous'}
-                                </h3>
+                              <h3 className="font-semibold text-gray-900 dark:text-white">
+                                {entry.public_name}
+                              </h3>
                                 <Badge variant="outline" className="text-xs capitalize">
                                   {entry.role}
                                 </Badge>

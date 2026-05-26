@@ -1,3 +1,5 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -94,11 +96,9 @@ export default function AdminUsersPage() {
                     Manage user accounts, roles, and permissions
                   </p>
                 </div>
-                <Button variant="outline" asChild>
-                  <Link href="/admin">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Back to Admin
-                  </Link>
+                <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Back to Admin
                 </Button>
               </div>
             </div>

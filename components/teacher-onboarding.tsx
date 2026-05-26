@@ -252,11 +252,9 @@ export function TeacherOnboarding({ onComplete }: TeacherOnboardingProps) {
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             {currentStepData.link ? (
-              <Button asChild className="flex-1">
-                <Link href={currentStepData.link} onClick={handleNext}>
-                  {currentStepData.action}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
+              <Button className="flex-1" onClick={() => { handleNext(); window.location.href = currentStepData.link; }}>
+                {currentStepData.action}
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
               <Button onClick={handleNext} className="flex-1">

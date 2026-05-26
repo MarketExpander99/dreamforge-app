@@ -47,12 +47,14 @@ export default function TeacherClassCreation() {
     }
   })
 
-  // Generate unique class code
+  // Generate unique 6-character class code
   const generateClassCode = () => {
-    const subjectCode = formData.subject ? formData.subject.substring(0, 3).toUpperCase() : 'CLS'
-    const gradeCode = formData.gradeLevel ? formData.gradeLevel.replace('grade-', '') : 'X'
-    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase()
-    return `${subjectCode}${gradeCode}-${randomPart}`
+    let code = '';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   const handleInputChange = (field: string, value: any) => {
@@ -94,7 +96,7 @@ export default function TeacherClassCreation() {
         throw new Error('You must be logged in to create a class')
       }
 
-      // Generate final class code
+      // Generate final class code if not set
       const finalClassCode = classCode || generateClassCode()
 
       // Prepare learning goals array
@@ -163,11 +165,9 @@ export default function TeacherClassCreation() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-4">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/teacher">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Dashboard
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/teacher'}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
                 </Button>
               </div>
               <div>
@@ -460,10 +460,8 @@ export default function TeacherClassCreation() {
                     </>
                   )}
                 </Button>
-                <Button type="button" variant="outline" asChild disabled={isLoading}>
-                  <Link href="/teacher">
-                    Cancel
-                  </Link>
+                <Button type="button" variant="outline" onClick={() => window.location.href = '/teacher'} disabled={isLoading}>
+                  Cancel
                 </Button>
               </div>
             </form>

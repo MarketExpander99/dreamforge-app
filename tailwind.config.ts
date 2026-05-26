@@ -18,6 +18,11 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        primary: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Space Grotesk", "Inter", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -51,6 +56,31 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Skill-Gain brand colors
+        brand: {
+          navy: {
+            900: '#0f172a',
+            800: '#1e293b',
+            700: '#334155',
+            600: '#475569',
+            500: '#64748b',
+            400: '#94a3b8',
+            300: '#cbd5e1',
+            200: '#e2e8f0',
+            100: '#f1f5f9',
+          },
+          slate: {
+            900: '#0f172a',
+            800: '#1e293b',
+            700: '#334155',
+            600: '#475569',
+            500: '#64748b',
+            400: '#94a3b8',
+            300: '#cbd5e1',
+            200: '#e2e8f0',
+            100: '#f1f5f9',
+          },
         },
       },
       borderRadius: {

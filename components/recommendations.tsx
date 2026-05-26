@@ -31,6 +31,8 @@ export function Recommendations({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [itemsPerView, setItemsPerView] = useState(3)
 
+  const hasGradeLevel = profile?.grade_level !== null
+
   // Update items per view based on screen size
   useEffect(() => {
     const updateItemsPerView = () => {
@@ -50,7 +52,7 @@ export function Recommendations({
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!user) {
+      if (!user || !hasGradeLevel) {
         setLoading(false)
         return
       }
@@ -68,7 +70,7 @@ export function Recommendations({
     }
 
     fetchRecommendations()
-  }, [user, limit])
+  }, [user, limit, hasGradeLevel])
 
   const nextSlide = () => {
     setCurrentIndex((prev) =>

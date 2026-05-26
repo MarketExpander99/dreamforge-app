@@ -27,9 +27,9 @@ export function ShareSkillGain({
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const shareUrl = 'https://skillgain.app'
+  const shareUrl = 'https://skill-gain.com'
   const shareText = 'Transform your learning with Skill Gain! Join me on this amazing educational platform featuring adaptive CAPS curriculum, gamification, and social learning. 🚀📚 #SkillGain #Education #SouthAfrica'
-  const shareImage = 'https://skillgain.app/share-image.jpg'
+  const shareImage = 'https://skill-gain.com/share-image.jpg'
 
   const shareOptions = [
     {
@@ -133,7 +133,7 @@ export function ShareSkillGain({
     ctx.fillText('Join thousands of South African students!', 600, 420)
 
     ctx.font = '20px Arial'
-    ctx.fillText('skillgain.app', 600, 480)
+    ctx.fillText('skill-gain.com', 600, 480)
 
     // Add some icons (simplified)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'

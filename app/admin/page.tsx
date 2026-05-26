@@ -1,8 +1,13 @@
+"use client"
+
 import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   BookOpen,
   Users,
@@ -15,11 +20,26 @@ import {
   HelpCircle,
   BarChart3,
   Settings,
-  Shield
+  Shield,
+  Sparkles,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 
 export default function AdminDashboard() {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationResult, setGenerationResult] = useState<{
+    success: boolean
+    message: string
+    count?: number
+  } | null>(null)
+  const [formData, setFormData] = useState({
+    gradeLevel: '',
+    subject: '',
+    count: '5'
+  })
+
   // Mock data - in real app, this would come from database
   const stats = {
     totalUsers: 156,
@@ -45,6 +65,61 @@ export default function AdminDashboard() {
     video: Video,
     audio: Headphones,
     quiz: HelpCircle
+  }
+
+  const handleGenerateContent = async () => {
+    if (!formData.gradeLevel || !formData.subject) {
+      setGenerationResult({
+        success: false,
+        message: 'Please fill in all required fields'
+      })
+      return
+    }
+
+    setIsGenerating(true)
+    setGenerationResult(null)
+
+    try {
+      const response = await fetch('/api/content/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          gradeLevel: formData.gradeLevel,
+          subject: formData.subject,
+          count: parseInt(formData.count)
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setGenerationResult({
+          success: true,
+          message: data.message,
+          count: data.count
+        })
+        // Clear form on success
+        setFormData({
+          gradeLevel: '',
+          subject: '',
+          count: '5'
+        })
+      } else {
+        setGenerationResult({
+          success: false,
+          message: data.error || 'Failed to generate content'
+        })
+      }
+    } catch (error) {
+      setGenerationResult({
+        success: false,
+        message: 'Network error occurred'
+      })
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -159,16 +234,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* Main Dashboard Tabs */}
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              </TabsList>
+            <ProminentTabs defaultValue="overview" className="space-y-6">
+              <ProminentTabsList className="grid w-full grid-cols-4">
+                <ProminentTabsTrigger value="overview">Overview</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="content">Content</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="users">Users</ProminentTabsTrigger>
+                <ProminentTabsTrigger value="analytics">Analytics</ProminentTabsTrigger>
+              </ProminentTabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
+              <ProminentTabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Quick Actions */}
                   <Card>
@@ -177,30 +252,22 @@ export default function AdminDashboard() {
                       <CardDescription>Common administrative tasks</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/content/new">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create New Content
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/categories">
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          Manage Categories
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/content">
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          View All Content
-                        </Link>
-                      </Button>
-                      <Button className="w-full justify-start" variant="outline" asChild>
-                        <Link href="/admin/users">
-                          <Users className="h-4 w-4 mr-2" />
-                          User Management
-                        </Link>
-                      </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content/new'}>
+                         <Plus className="h-4 w-4 mr-2" />
+                         Create New Content
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/categories'}>
+                         <BarChart3 className="h-4 w-4 mr-2" />
+                         Manage Categories
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/content'}>
+                         <BookOpen className="h-4 w-4 mr-2" />
+                         View All Content
+                       </Button>
+                       <Button className="w-full justify-start" variant="outline" onClick={() => window.location.href = '/admin/users'}>
+                         <Users className="h-4 w-4 mr-2" />
+                         User Management
+                       </Button>
                     </CardContent>
                   </Card>
 
@@ -252,10 +319,130 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Content Tab */}
-              <TabsContent value="content" className="space-y-6">
+              <ProminentTabsContent value="content" className="space-y-6">
+                {/* AI Content Generation */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      AI Content Generator
+                    </CardTitle>
+                    <CardDescription>
+                      Generate personalized learning content using Grok AI
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gradeLevel">Grade Level</Label>
+                        <Select
+                          value={formData.gradeLevel}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, gradeLevel: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1st">1st Grade</SelectItem>
+                            <SelectItem value="2nd">2nd Grade</SelectItem>
+                            <SelectItem value="3rd">3rd Grade</SelectItem>
+                            <SelectItem value="4th">4th Grade</SelectItem>
+                            <SelectItem value="5th">5th Grade</SelectItem>
+                            <SelectItem value="6th">6th Grade</SelectItem>
+                            <SelectItem value="7th">7th Grade</SelectItem>
+                            <SelectItem value="8th">8th Grade</SelectItem>
+                            <SelectItem value="9th">9th Grade</SelectItem>
+                            <SelectItem value="10th">10th Grade</SelectItem>
+                            <SelectItem value="11th">11th Grade</SelectItem>
+                            <SelectItem value="12th">12th Grade</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="subject">Subject</Label>
+                        <Select
+                          value={formData.subject}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, subject: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select subject" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mathematics">Mathematics</SelectItem>
+                            <SelectItem value="Science">Science</SelectItem>
+                            <SelectItem value="History">History</SelectItem>
+                            <SelectItem value="English">English</SelectItem>
+                            <SelectItem value="Geography">Geography</SelectItem>
+                            <SelectItem value="Art">Art</SelectItem>
+                            <SelectItem value="Music">Music</SelectItem>
+                            <SelectItem value="Physical Education">Physical Education</SelectItem>
+                            <SelectItem value="Computer Science">Computer Science</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="count">Number of Items</Label>
+                        <Select
+                          value={formData.count}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, count: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select count" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3 items</SelectItem>
+                            <SelectItem value="5">5 items</SelectItem>
+                            <SelectItem value="7">7 items</SelectItem>
+                            <SelectItem value="10">10 items</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleGenerateContent}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating Content...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate Content
+                        </>
+                      )}
+                    </Button>
+
+                    {generationResult && (
+                      <div className={`p-4 rounded-lg ${
+                        generationResult.success
+                          ? 'bg-green-50 border border-green-200 text-green-800'
+                          : 'bg-red-50 border border-red-200 text-red-800'
+                      }`}>
+                        <p className="font-medium">
+                          {generationResult.success ? '✅ Success!' : '❌ Error'}
+                        </p>
+                        <p className="text-sm mt-1">{generationResult.message}</p>
+                        {generationResult.count && (
+                          <p className="text-sm mt-1 font-medium">
+                            Generated {generationResult.count} content items
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Content Management */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Content Management</CardTitle>
@@ -268,18 +455,16 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         View, edit, and organize all learning content from this centralized interface.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/content">
-                          Go to Content Manager
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/content'}>
+                        Go to Content Manager
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Users Tab */}
-              <TabsContent value="users" className="space-y-6">
+              <ProminentTabsContent value="users" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>User Management</CardTitle>
@@ -292,18 +477,16 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         View user accounts, manage roles, and monitor platform activity.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/users">
-                          Go to User Manager
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/users'}>
+                        Go to User Manager
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </ProminentTabsContent>
 
               {/* Analytics Tab */}
-              <TabsContent value="analytics" className="space-y-6">
+              <ProminentTabsContent value="analytics" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Platform Analytics</CardTitle>
@@ -316,16 +499,14 @@ export default function AdminDashboard() {
                       <p className="text-muted-foreground mb-4">
                         Monitor user engagement, content performance, and platform growth.
                       </p>
-                      <Button asChild>
-                        <Link href="/admin/analytics">
-                          View Analytics
-                        </Link>
+                      <Button onClick={() => window.location.href = '/admin/analytics'}>
+                        View Analytics
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </Tabs>
+              </ProminentTabsContent>
+            </ProminentTabs>
           </div>
         </main>
       </div>

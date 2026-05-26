@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
+import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProminentTabs, ProminentTabsContent, ProminentTabsList, ProminentTabsTrigger } from '@/components/ui/prominent-tabs'
 import { Progress } from '@/components/ui/progress'
 import {
   Select,
@@ -18,6 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Recommendations } from '@/components/recommendations'
+import { cn } from '@/lib/utils'
+import { useSidebar } from '@/components/navigation'
 import { BookOpen, Target, Clock, Star, ChevronRight, Play, ChevronDown, CheckCircle, Lock, MapPin, Route } from 'lucide-react'
 import { getNextBestLesson, LearningPath, NextBestLesson } from '@/lib/data'
 import { useCurriculumCache } from '@/lib/curriculum-cache'
@@ -68,7 +71,7 @@ export default function CurriculumPage() {
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([])
   const [learningPaths, setLearningPaths] = useState<LearningPath[]>([])
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('CAPS')
-  const [selectedGrade, setSelectedGrade] = useState<string>('Grade 3')
+  const [selectedGrade, setSelectedGrade] = useState<string>(profile?.grade_level || 'Grade 3')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [children, setChildren] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,6 +82,8 @@ export default function CurriculumPage() {
   const [isOffline, setIsOffline] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
+
+  const { sidebarCollapsed } = useSidebar()
 
   useEffect(() => {
     if (profile?.role === 'parent') {
@@ -389,14 +394,16 @@ export default function CurriculumPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">CAPS Curriculum Browser</h1>
-        <p className="text-gray-600">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
+    <>
+      <Navigation />
+      <div className={cn("mobile-container py-6 sm:py-8 transition-all duration-300", sidebarCollapsed ? "md:ml-20" : "md:ml-64")}>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-mobile-heading mb-2">CAPS Curriculum Browser</h1>
+        <p className="text-mobile-body text-muted-secondary">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
         {isParent && children.length > 0 && (
           <div className="mt-4">
             <Select value={selectedUserId || ''} onValueChange={(value) => setSelectedUserId(value)}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
                 <SelectValue placeholder="Select child" />
               </SelectTrigger>
               <SelectContent>
@@ -412,15 +419,15 @@ export default function CurriculumPage() {
         )}
       </div>
 
-      <Tabs defaultValue="curriculum" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="curriculum">Curriculum Browser</TabsTrigger>
-          <TabsTrigger value="path">My Path</TabsTrigger>
-          <TabsTrigger value="lessons">Lesson Plans</TabsTrigger>
-          <TabsTrigger value="progress">My Progress</TabsTrigger>
-        </TabsList>
+      <ProminentTabs defaultValue="curriculum" className="space-y-4 sm:space-y-6">
+      <ProminentTabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
+        <ProminentTabsTrigger value="curriculum">Curriculum Browser</ProminentTabsTrigger>
+        <ProminentTabsTrigger value="path">My Path</ProminentTabsTrigger>
+        <ProminentTabsTrigger value="lessons">Lesson Plans</ProminentTabsTrigger>
+        <ProminentTabsTrigger value="progress">My Progress</ProminentTabsTrigger>
+      </ProminentTabsList>
 
-        <TabsContent value="curriculum" className="space-y-6">
+        <ProminentTabsContent value="curriculum" className="space-y-6">
           {/* Curriculum Selection */}
           <Card>
             <CardHeader>
@@ -613,9 +620,9 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="path" className="space-y-6">
+        <ProminentTabsContent value="path" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -679,12 +686,12 @@ export default function CurriculumPage() {
                       <p className="text-gray-600 mb-4">
                         Complete your grade assessment or start some lessons to get personalized recommendations.
                       </p>
-                      <Button
-                        onClick={() => router.push('/assessment')}
-                        className="mr-2"
-                      >
-                        Take Assessment
-                      </Button>
+                       <Button
+                         onClick={() => router.push('/learning/curriculum/assessment')}
+                         className="mr-2"
+                       >
+                         Take Assessment
+                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => router.push('/learning/curriculum')}
@@ -743,9 +750,9 @@ export default function CurriculumPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="lessons" className="space-y-6">
+        <ProminentTabsContent value="lessons" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Lesson Plans for {selectedGrade}</CardTitle>
@@ -800,9 +807,9 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </ProminentTabsContent>
 
-        <TabsContent value="progress" className="space-y-6">
+        <ProminentTabsContent value="progress" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>My Learning Progress</CardTitle>
@@ -846,8 +853,9 @@ export default function CurriculumPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </ProminentTabsContent>
+      </ProminentTabs>
     </div>
-  )
+  </>
+)
 }

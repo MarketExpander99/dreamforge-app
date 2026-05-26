@@ -104,15 +104,23 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching category progress:', categoryError)
     }
 
+    // Use display_name if set, otherwise fall back to anonymous_id for privacy
+    const publicName = profile.display_name || profile.anonymous_id || 'Anonymous User';
+
     const response = {
       id: profile.id,
-      fullName: profile.full_name || user.email?.split('@')[0] || 'User',
+      fullName: profile.full_name || user.email?.split('@')[0] || 'User', // Keep for backward compatibility in private views
+      publicName, // New privacy-first public name
+      displayName: profile.display_name, // User's chosen display name
+      anonymousId: profile.anonymous_id, // Anonymous identifier
       email: user.email,
       avatar: profile.avatar_url,
       bio: profile.bio,
       gradeLevel: profile.grade_level || 'Not specified',
       interests: profile.interests || [],
       learningGoals: profile.learning_goals,
+      role: profile.role,
+      parentConsentGiven: profile.parent_consent_given,
       joinDate: profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently',
       totalLearningTime,
       completedModules,

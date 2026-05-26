@@ -630,13 +630,13 @@ test.describe('Complete User Journey Test - Skill Gain Application', () => {
       // Step 7: Test navigation links
       console.log('🧭 Testing student navigation links');
 
-      // Main navigation
+      // Main navigation - using button selectors since navigation uses Button components
       const studentNavLinks = [
-        { selector: 'a:has-text("Home"), [href="/"]', name: 'Home' },
-        { selector: 'a:has-text("Explore"), [href*="explore"]', name: 'Explore' },
-        { selector: 'a:has-text("My Learning"), [href*="learning"]', name: 'My Learning' },
-        { selector: 'a:has-text("Curriculum"), [href*="curriculum"]', name: 'Curriculum' },
-        { selector: 'a:has-text("Profile"), [href*="profile"]', name: 'Profile' },
+        { selector: 'button:has-text("Home")', name: 'Home' },
+        { selector: 'button:has-text("Explore")', name: 'Explore' },
+        { selector: 'button:has-text("My Learning")', name: 'My Learning' },
+        { selector: 'button:has-text("Curriculum")', name: 'Curriculum' },
+        { selector: 'button:has-text("Profile")', name: 'Profile' },
       ];
 
       for (const link of studentNavLinks) {
