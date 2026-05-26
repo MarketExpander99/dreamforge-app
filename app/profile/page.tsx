@@ -1,6 +1,7 @@
 "use client"
 
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History } from 'lucide-react'
+import { Navigation } from '@/components/navigation'
+import { User, Settings, Trophy, Edit, Save, Camera, Key, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -60,7 +61,6 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Form states
   const [formData, setFormData] = useState({
     fullName: '',
     bio: '',
@@ -74,30 +74,6 @@ export default function ProfilePage() {
     newPassword: '',
     confirmPassword: ''
   })
-
-  // Mock credits data (safe - no schema change)
-  const [creditsData] = useState({
-    freeCreditsRemaining: 5,
-    paidCredits: 42,
-    dailyFreeReset: 'tomorrow'
-  })
-
-  const [purchaseHistory] = useState([
-    {
-      id: '1',
-      date: '2025-05-20',
-      type: 'Paid Credits',
-      amount: 100,
-      price: '$9.99'
-    },
-    {
-      id: '2',
-      date: '2025-05-10',
-      type: 'Free Daily',
-      amount: 10,
-      price: 'Free'
-    }
-  ])
 
   const handleSaveProfile = async () => {
     if (!userProfile) return
@@ -243,10 +219,12 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
-        {/* Content page standard (aligned with discover design language): max-w-5xl for better use of space after sidebar */}
-        <div className="max-w-5xl mx-auto">
-            {/* Header - exact Discover typography */}
+      <Navigation />
+
+      <div className="md:pl-64">
+        <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
             <div className="mb-10">
               <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
                 <CardContent className="p-8">
@@ -301,14 +279,13 @@ export default function ProfilePage() {
             </div>
 
             <Tabs defaultValue="overview" className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                 <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm font-medium">Overview</TabsTrigger>
-                <TabsTrigger value="learning-path" className="rounded-xl data-[state=active]:shadow-sm font-medium">Learning Path</TabsTrigger>
-                <TabsTrigger value="credits" className="rounded-xl data-[state=active]:shadow-sm font-medium">Credits</TabsTrigger>
-                <TabsTrigger value="account" className="rounded-xl data-[state=active]:shadow-sm font-medium">Account</TabsTrigger>
+                <TabsTrigger value="achievements" className="rounded-xl data-[state=active]:shadow-sm font-medium">Achievements</TabsTrigger>
+                <TabsTrigger value="settings" className="rounded-xl data-[state=active]:shadow-sm font-medium">Settings</TabsTrigger>
               </TabsList>
 
-              {/* Overview Tab */}
+              {/* Overview Tab - fully connected */}
               <TabsContent value="overview" className="space-y-6">
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
@@ -320,80 +297,65 @@ export default function ProfilePage() {
                     </p>
                   </CardContent>
                 </Card>
-              </TabsContent>
 
-              {/* Learning Path Tab */}
-              <TabsContent value="learning-path" className="space-y-6">
+                {/* Recent Activity */}
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle className="text-xl font-semibold tracking-tight">Your Personalized Learning Path</CardTitle>
-                    <CardDescription className="text-zinc-500 dark:text-zinc-400">Built from your saved queries and goals</CardDescription>
+                    <CardTitle className="text-xl font-semibold tracking-tight">Recent Activity</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        Your learning path is dynamically generated based on saved queries, interests, and goals.
-                      </p>
-                      <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-3xl">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">📍 Next recommended module: Advanced React Patterns</p>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Based on your recent activity</p>
+                    {userProfile.recentActivity.length > 0 ? (
+                      <div className="space-y-4">
+                        {userProfile.recentActivity.map((activity) => (
+                          <div key={activity.id} className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{activity.action} • {activity.title}</p>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400">{activity.timestamp}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <Progress value={65} className="h-2.5 bg-zinc-200 dark:bg-zinc-700" />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">65% complete • 8 modules remaining</p>
-                    </div>
+                    ) : (
+                      <p className="text-zinc-500 dark:text-zinc-400">No recent activity yet.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Category Progress */}
+                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold tracking-tight">Subject Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {userProfile.categoryProgress.map((cat) => (
+                      <div key={cat.category} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{cat.category}</span>
+                          <span className="text-zinc-500">{cat.completed}/{cat.total}</span>
+                        </div>
+                        <Progress value={cat.progress} className="h-2" />
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* Credits Tab */}
-              <TabsContent value="credits" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                        <CreditCard className="h-5 w-5" />
-                        Free Credits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-5xl font-semibold tracking-tighter text-emerald-600">{creditsData.freeCreditsRemaining}</div>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">remaining today • resets {creditsData.dailyFreeReset}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                        <CreditCard className="h-5 w-5" />
-                        Paid Credits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-5xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100">{creditsData.paidCredits}</div>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">available • no expiry</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
+              {/* Achievements Tab - fully connected */}
+              <TabsContent value="achievements" className="space-y-6">
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                      <History className="h-5 w-5" />
-                      Purchase History
+                    <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Your Achievements ({userProfile.achievementsCount})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-5">
-                      {purchaseHistory.map((purchase) => (
-                        <div key={purchase.id} className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                          <div>
-                            <p className="font-medium text-zinc-900 dark:text-zinc-100">{purchase.type}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.date}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-emerald-600">+{purchase.amount}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.price}</p>
-                          </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {userProfile.achievements.map((ach) => (
+                        <div key={ach.id} className="text-center">
+                          <div className="text-4xl mb-2">{ach.icon}</div>
+                          <p className="font-semibold text-sm">{ach.title}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{ach.earnedAt}</p>
                         </div>
                       ))}
                     </div>
@@ -401,49 +363,38 @@ export default function ProfilePage() {
                 </Card>
               </TabsContent>
 
-              {/* Account Tab */}
-              <TabsContent value="account" className="space-y-6">
+              {/* Settings Tab */}
+              <TabsContent value="settings" className="space-y-6">
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
                     <CardTitle className="text-xl font-semibold tracking-tight">Account Management</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-8">
+                    {/* Profile editing fields */}
                     <div className="space-y-3">
-                      <Label className="text-zinc-600 dark:text-zinc-400 font-medium">Display Name</Label>
+                      <Label>Display Name</Label>
                       <Input 
                         value={formData.fullName} 
                         onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} 
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
                       />
                     </div>
-
+                    <div className="space-y-3">
+                      <Label>Bio</Label>
+                      <Textarea 
+                        value={formData.bio} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))} 
+                      />
+                    </div>
+                    {/* Password change */}
                     <div className="space-y-4">
-                      <Label className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 font-medium">
+                      <Label className="flex items-center gap-2">
                         <Key className="h-4 w-4" />
                         Change Password
                       </Label>
-                      <Input
-                        type="password"
-                        placeholder="Current password"
-                        value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="New password"
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="Confirm new password"
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto font-medium">
+                      <Input type="password" placeholder="Current password" value={passwordData.currentPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} />
+                      <Input type="password" placeholder="New password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} />
+                      <Input type="password" placeholder="Confirm new password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} />
+                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto">
                         {changingPassword ? 'Updating...' : 'Update Password'}
                       </Button>
                     </div>
@@ -460,8 +411,9 @@ export default function ProfilePage() {
                 </Button>
               </div>
             )}
-           </div>
-         </main>
-       </div>
-   )
- }
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
