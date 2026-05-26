@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Search, User } from 'lucide-react';
+import { Search, User, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Full context for maximum compatibility with existing code in the repo
@@ -46,6 +46,12 @@ const NavigationComponent = () => {
       href: '/discover',
       icon: Search,
       isActive: pathname === '/discover',
+    },
+    {
+      label: 'Learning',
+      href: '/learning',
+      icon: BookOpen,
+      isActive: pathname === '/learning' || pathname?.startsWith('/learning/'),
     },
     {
       label: 'Profile',
