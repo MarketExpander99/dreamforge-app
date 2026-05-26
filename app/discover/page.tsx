@@ -27,27 +27,66 @@ interface ChatMessage {
 export default function DiscoverPage() {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
+
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState<number>(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Protect the Discover page - redirect to login if not authenticated
+  // Session handling states
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isSessionReady, setIsSessionReady] = useState(false);
+
+  // Improved auth check for "Remember me" cookie restore
   useEffect(() => {
-    const checkAuth = async () => {
+    let mounted = true;
+
+    const initializeSession = async () => {
+      // First try: get current session
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/auth/login');
-      } else {
+
+      if (session && mounted) {
+        setIsSessionReady(true);
         setIsCheckingAuth(false);
+        return;
       }
+
+      // Fallback: listen for auth state change (covers middleware cookie restore)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if ((event === 'SIGNED_IN' || session) && mounted) {
+          setIsSessionReady(true);
+          setIsCheckingAuth(false);
+          subscription.unsubscribe();
+        }
+      });
+
+      // If still no session after a short delay, redirect to login
+      setTimeout(() => {
+        if (!isSessionReady && mounted) {
+          const checkAgain = async () => {
+            const { data: { session: latestSession } } = await supabase.auth.getSession();
+            if (!latestSession) {
+              router.push('/auth/login');
+            } else {
+              setIsSessionReady(true);
+              setIsCheckingAuth(false);
+            }
+          };
+          checkAgain();
+        }
+      }, 800);
+
+      return () => subscription.unsubscribe();
     };
 
-    checkAuth();
-  }, [router, supabase]);
+    initializeSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, router]);
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
@@ -148,7 +187,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     }
   };
 
-  if (isCheckingAuth) {
+  // Show loading while checking auth / waiting for session restore
+  if (isCheckingAuth || !isSessionReady) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
         <Navigation />
