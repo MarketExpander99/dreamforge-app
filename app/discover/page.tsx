@@ -237,13 +237,13 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         </div>
 
         {/* Search Bar */}
-        <div className="flex gap-3 mb-10">
+        <div className="flex flex-col md:flex-row gap-3 mb-10">
           <Input
             placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
-            className="py-7 text-lg"
+            className="py-7 text-lg w-full md:w-auto"
           />
           <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
             {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
