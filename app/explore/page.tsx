@@ -1,3 +1,5 @@
+'use client'
+
 import { Navigation } from '@/components/navigation'
 import { FeedCard } from '@/components/feed/feed-card'
 import { ExploreGraph } from '@/components/explore-graph'
@@ -9,27 +11,24 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-interface ExploreClientProps {
-  categoryParam?: string
-  searchQuery?: string
-}
+export default function ExplorePage() {
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([])
+  const [allContent, setAllContent] = useState<ContentItem[]>([])
+  const [allContentForCounts, setAllContentForCounts] = useState<ContentItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
-  // All client-side interactivity stays here
-  'use client'
+  const searchParams = useSearchParams()
+  const categoryParam = searchParams.get('category') || undefined
+  const searchQuery = searchParams.get('q') || undefined
 
-  const [viewMode, setViewMode] = React.useState<'list' | 'graph'>('list')
-  const [categories, setCategories] = React.useState<Category[]>([])
-  const [featuredContent, setFeaturedContent] = React.useState<ContentItem[]>([])
-  const [allContent, setAllContent] = React.useState<ContentItem[]>([])
-  const [allContentForCounts, setAllContentForCounts] = React.useState<ContentItem[]>([])
-  const [loading, setLoading] = React.useState(true)
-
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
@@ -174,7 +173,6 @@ function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
               </div>
             </div>
 
-            {/* Views */}
             {viewMode === 'graph' ? (
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-4">
@@ -185,7 +183,6 @@ function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
               </div>
             ) : (
               <>
-                {/* Featured */}
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <Star className="h-5 w-5 text-yellow-500" />
@@ -236,7 +233,6 @@ function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
                   )}
                 </div>
 
-                {/* Recommendations */}
                 <div className="mb-8">
                   <Recommendations
                     title="Recommended for You"
@@ -245,7 +241,6 @@ function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
                   />
                 </div>
 
-                {/* All Content */}
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -290,31 +285,5 @@ function ExploreClient({ categoryParam, searchQuery }: ExploreClientProps) {
         </main>
       </div>
     </div>
-  )
-}
-
-export default async function ExplorePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string; q?: string }>
-}) {
-  const params = await searchParams
-  const categoryParam = params.category || undefined
-  const searchQuery = params.q || undefined
-
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white dark:bg-gray-900">
-        <Navigation />
-        <div className="md:pl-64 flex items-center justify-center min-h-[calc(100vh-200px)]">
-          <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading discovery content...</p>
-          </div>
-        </div>
-      </div>
-    }>
-      <ExploreClient categoryParam={categoryParam} searchQuery={searchQuery} />
-    </Suspense>
   )
 }
