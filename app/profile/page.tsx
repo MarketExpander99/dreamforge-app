@@ -1,6 +1,5 @@
 "use client"
 
-import { Navigation } from '@/components/navigation'
 import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -244,11 +243,9 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <Navigation />
-
-      <div className="md:pl-64">
-        <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
-          <div className="max-w-4xl mx-auto">
+      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+        {/* Content page standard (aligned with discover design language): max-w-5xl for better use of space after sidebar */}
+        <div className="max-w-5xl mx-auto">
             {/* Header - exact Discover typography */}
             <div className="mb-10">
               <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
@@ -463,9 +460,8 @@ export default function ProfilePage() {
                 </Button>
               </div>
             )}
-          </div>
-        </main>
-      </div>
-    </div>
-  )
-}
+           </div>
+         </main>
+       </div>
+   )
+ }

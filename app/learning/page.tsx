@@ -1,6 +1,5 @@
 "use client"
 
-import { Navigation } from '@/components/navigation'
 import { GraduationCap, Plus, Sparkles, ArrowRight, BookOpen, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -78,11 +77,9 @@ export default function LearningPathPage() {
   const hasData = savedQueries.length > 0 || learningPath
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
-      <Navigation />
-
-      <div className="md:pl-64">
-        <main className="py-8 px-6 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      {/* Content page standard (aligned with discover design language): max-w-5xl for better use of space after sidebar */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-4xl font-bold flex items-center gap-3">
@@ -153,7 +150,6 @@ export default function LearningPathPage() {
               </Card>
             </div>
           )}
-        </main>
       </div>
     </div>
   )
