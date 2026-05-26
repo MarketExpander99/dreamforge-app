@@ -10,23 +10,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
-      .from('user_saved_queries')
-      .select('id, short_search, full_question, grade_level, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    const formatted = data.map((q: any) => ({
-      id: q.id,
-      shortSearch: q.short_search || '',
-      fullQuestion: q.full_question || q.short_search || '',
-      gradeLevel: q.grade_level,
-      createdAt: q.created_at,
-    }))
-
-    return NextResponse.json(formatted)
+    // user_saved_queries table does not exist in schema (confirmed via exhaustive search of all *.sql files).
+    // Feature is a partial stub with no write path. Returning [] is the smallest safe change
+    // that eliminates the 500 while preserving auth guard and response shape.
+    return NextResponse.json([])
   } catch (error) {
     console.error('Error fetching saved queries:', error)
     return NextResponse.json({ error: 'Failed to fetch saved queries' }, { status: 500 })

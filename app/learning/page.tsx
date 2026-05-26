@@ -41,6 +41,8 @@ export default function LearningPage() {
       }
     } catch (error) {
       console.error('Error fetching saved queries:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
