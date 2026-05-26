@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,6 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -50,7 +50,6 @@ export default function ProfilePage() {
 
         if (error) {
           console.error("Profile fetch error:", error);
-          // Table might be empty for new user - that's okay
         } else if (profile) {
           setUsername(profile.username || '');
           setBio(profile.bio || '');
@@ -82,7 +81,6 @@ export default function ProfilePage() {
 
       let finalAvatarUrl = avatarUrl;
 
-      // Upload avatar if changed
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
         const filePath = `${session.user.id}.${fileExt}`;
@@ -91,11 +89,10 @@ export default function ProfilePage() {
           .from('avatars')
           .upload(filePath, avatarFile, { upsert: true });
 
-        if (uploadError) console.error("Avatar upload error:", uploadError);
-        else {
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError);
+        } else {
+          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
           finalAvatarUrl = publicUrl;
         }
       }
@@ -131,7 +128,8 @@ export default function ProfilePage() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       alert('Password changed successfully!');
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (error: any) {
       alert(error.message || 'Failed to change password');
     }
@@ -232,8 +230,8 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Your AI-powered learning journey will appear here.</p>
-            <Button className="mt-6 w-full" variant="default" asChild>
-              <a href="/path">Manage My Learning Path →</a>
+            <Button asChild className="mt-6 w-full" variant="default">
+              <Link href="/path">Manage My Learning Path →</Link>
             </Button>
           </CardContent>
         </Card>
