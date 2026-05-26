@@ -35,16 +35,14 @@ export default function DiscoverPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
 
-  // Session handling states
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSessionReady, setIsSessionReady] = useState(false);
 
-  // Improved auth check for "Remember me" cookie restore
+  // Session initialization
   useEffect(() => {
     let mounted = true;
 
     const initializeSession = async () => {
-      // First try: get current session
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session && mounted) {
@@ -53,7 +51,6 @@ export default function DiscoverPage() {
         return;
       }
 
-      // Fallback: listen for auth state change (covers middleware cookie restore)
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if ((event === 'SIGNED_IN' || session) && mounted) {
           setIsSessionReady(true);
@@ -62,19 +59,15 @@ export default function DiscoverPage() {
         }
       });
 
-      // If still no session after a short delay, redirect to login
-      setTimeout(() => {
+      setTimeout(async () => {
         if (!isSessionReady && mounted) {
-          const checkAgain = async () => {
-            const { data: { session: latestSession } } = await supabase.auth.getSession();
-            if (!latestSession) {
-              router.push('/auth/login');
-            } else {
-              setIsSessionReady(true);
-              setIsCheckingAuth(false);
-            }
-          };
-          checkAgain();
+          const { data: { session: latestSession } } = await supabase.auth.getSession();
+          if (!latestSession) {
+            router.push('/auth/login');
+          } else {
+            setIsSessionReady(true);
+            setIsCheckingAuth(false);
+          }
         }
       }, 800);
 
@@ -83,10 +76,29 @@ export default function DiscoverPage() {
 
     initializeSession();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [supabase, router]);
+
+  // Auto-save exploration to database
+  const saveExploration = async (node: Node) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await supabase.from('user_explorations').insert({
+        user_id: session.user.id,
+        label: node.label,
+        short_description: node.short_description,
+        main_function: node.main_function,
+        components: node.components,
+        self_similar: node.self_similar,
+        deep_details: node.deep_details || null,
+      });
+    } catch (err) {
+      console.error('Failed to save exploration:', err);
+      // Don't show alert - silent fail is fine for now
+    }
+  };
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
     if (credits <= 0) {
@@ -131,7 +143,11 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
-      setChatMessages([]); // Clear chat on new search
+      setChatMessages([]);
+
+      // Auto-save to database
+      await saveExploration(newNode);
+
     } catch (error) {
       console.error(error);
       alert("Failed to explore topic.");
@@ -187,7 +203,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     }
   };
 
-  // Show loading while checking auth / waiting for session restore
   if (isCheckingAuth || !isSessionReady) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
@@ -262,7 +277,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </div>
               )}
 
-              {/* Self-Similar */}
               {centerNode.self_similar?.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
@@ -276,7 +290,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </div>
               )}
 
-              {/* Components & Connected Parts */}
               <div>
                 <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
                 <div className="flex flex-wrap gap-2">
@@ -288,13 +301,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-6 border-t">
-                <Button 
-                  variant="outline" 
-                  className="gap-2 flex-1"
-                  onClick={viewOnGrokipedia}
-                >
+                <Button variant="outline" className="gap-2 flex-1" onClick={viewOnGrokipedia}>
                   <BookOpen className="h-4 w-4" />
                   View on Grokipedia
                 </Button>
@@ -304,7 +312,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </Button>
               </div>
 
-              {/* Chat Section */}
               <div className="pt-8 border-t">
                 <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">

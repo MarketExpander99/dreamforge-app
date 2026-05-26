@@ -24,6 +24,12 @@ interface LearningPath {
   generated_at: string;
 }
 
+interface Exploration {
+  label: string;
+  short_description: string;
+  main_function: string;
+}
+
 export default function LearningPathPage() {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
@@ -33,6 +39,7 @@ export default function LearningPathPage() {
   const [saving, setSaving] = useState(false);
 
   const [profile, setProfile] = useState<any>(null);
+  const [explorations, setExplorations] = useState<Exploration[]>([]);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [generatedPath, setGeneratedPath] = useState<LearningPath | null>(null);
 
@@ -44,7 +51,7 @@ export default function LearningPathPage() {
         return;
       }
 
-      // Get profile (for interests)
+      // Get profile (interests)
       const { data: prof } = await supabase
         .from('profiles')
         .select('username, interests')
@@ -53,7 +60,17 @@ export default function LearningPathPage() {
 
       setProfile(prof);
 
-      // Load existing saved learning path
+      // Get recent explorations
+      const { data: expl } = await supabase
+        .from('user_explorations')
+        .select('label, short_description, main_function')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+      if (expl) setExplorations(expl);
+
+      // Get latest saved learning path
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
@@ -71,21 +88,25 @@ export default function LearningPathPage() {
   }, [supabase, router]);
 
   const generatePath = async () => {
-    if (!profile?.interests || profile.interests.length === 0) {
-      alert("Please add some interests in your profile first!");
-      return;
-    }
-
     setGenerating(true);
     setGeneratedPath(null);
 
     try {
-      const interestsText = profile.interests.join(', ');
+      const interestsText = profile?.interests?.join(', ') || 'general learning';
+      const explorationText = explorations.length > 0 
+        ? explorations.map(e => `${e.label}: ${e.short_description}`).join('\n')
+        : 'no previous explorations yet';
 
       const prompt = `You are an expert learning path designer.
-Create a complete, engaging, and realistic learning path for a student whose interests are: ${interestsText}.
 
-Return ONLY valid JSON with this exact structure (no extra text):
+Student interests: ${interestsText}
+
+Recent topics they have explored:
+${explorationText}
+
+Create a complete, engaging, and realistic personalized learning path.
+
+Return ONLY valid JSON with this exact structure:
 
 {
   "title": "Short catchy title for the entire path",
@@ -100,7 +121,7 @@ Return ONLY valid JSON with this exact structure (no extra text):
   ]
 }
 
-Aim for 4-6 modules with 3-6 lessons each. Make it practical and exciting.`;
+Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and connected to what they've already explored.`;
 
       const response = await fetch('/api/grok', {
         method: 'POST',
@@ -146,8 +167,8 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical and exciting.`;
 
       if (error) throw error;
 
-      alert("Learning path saved successfully!");
-      setCurrentPath({ ...generatedPath, id: 'just-saved' }); // optimistic update
+      alert("✅ Learning path saved successfully!");
+      setCurrentPath({ ...generatedPath, id: 'just-saved' });
       setGeneratedPath(null);
     } catch (error) {
       console.error(error);
@@ -177,7 +198,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical and exciting.`;
               <Sparkles className="h-8 w-8 text-amber-500" />
               My Learning Path
             </h1>
-            <p className="text-muted-foreground">AI-generated • Personalized • Trackable</p>
+            <p className="text-muted-foreground">AI-generated • Personalized • Based on your discoveries</p>
           </div>
         </div>
 
@@ -221,7 +242,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical and exciting.`;
         {/* Generate New Path */}
         <Card>
           <CardHeader>
-            <CardTitle>Generate a New Learning Path</CardTitle>
+            <CardTitle>Generate New Learning Path</CardTitle>
           </CardHeader>
           <CardContent>
             {generatedPath ? (
@@ -264,7 +285,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical and exciting.`;
                 <Sparkles className="h-12 w-12 mx-auto text-amber-400 mb-4" />
                 <p className="text-lg font-medium">Ready to create your personalized learning journey?</p>
                 <p className="text-muted-foreground mt-2 mb-8">
-                  Based on your interests: <strong>{profile?.interests?.join(', ') || 'None added yet'}</strong>
+                  Based on your interests + {explorations.length} recent discoveries
                 </p>
                 <Button onClick={generatePath} disabled={generating} size="lg">
                   {generating ? (
