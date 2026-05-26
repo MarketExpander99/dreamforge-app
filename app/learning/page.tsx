@@ -1,37 +1,43 @@
 "use client"
 
-import { GraduationCap, Plus, Sparkles, ArrowRight, BookOpen, Target } from 'lucide-react'
+import { BookOpen, Search, Lightbulb, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
 
 interface SavedQuery {
   id: string
-  query_text: string
-  created_at: string
+  shortSearch: string
+  fullQuestion: string
+  gradeLevel?: string
+  createdAt: string
 }
 
-export default function LearningPathPage() {
+interface LearningPathItem {
+  title: string
+  description: string
+  estimatedTime: string
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
+}
+
+export default function LearningPage() {
   const { user, authLoading } = useAuth()
   const router = useRouter()
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([])
+  const [learningPath, setLearningPath] = useState<LearningPathItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [learningPath, setLearningPath] = useState<any>(null)
+  const [generatingPath, setGeneratingPath] = useState(false)
 
   const fetchSavedQueries = async () => {
-    if (!user?.id) return
     try {
-      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
-      const supabase = createBrowserSupabaseClient()
-      const { data } = await supabase
-        .from('user_saved_queries')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-      setSavedQueries(data || [])
+      const response = await fetch('/api/learning/saved-queries')
+      if (response.ok) {
+        const data = await response.json()
+        setSavedQueries(data)
+      }
     } catch (error) {
       console.error('Error fetching saved queries:', error)
     } finally {
@@ -40,117 +46,131 @@ export default function LearningPathPage() {
   }
 
   const generateLearningPath = async () => {
-    if (!user?.id) return
-    setGenerating(true)
+    if (savedQueries.length === 0) return
+    setGeneratingPath(true)
     try {
       const response = await fetch('/api/learning/generate-path', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ queries: savedQueries }),
       })
-      const data = await response.json()
-      setLearningPath(data.path)
+      if (response.ok) {
+        const data = await response.json()
+        setLearningPath(data.path)
+      }
     } catch (error) {
-      console.error('Error generating path:', error)
-      alert('Failed to generate learning path. Please try again.')
+      console.error('Error generating learning path:', error)
     } finally {
-      setGenerating(false)
+      setGeneratingPath(false)
     }
   }
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
       fetchSavedQueries()
-    } else if (!authLoading && !user) {
-      router.push('/auth/login')
     }
   }, [user, authLoading])
 
-  if (loading) {
+  // Auto-generate path once we have queries
+  useEffect(() => {
+    if (savedQueries.length > 0 && learningPath.length === 0) {
+      generateLearningPath()
+    }
+  }, [savedQueries])
+
+  if (loading && savedQueries.length === 0) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
       </div>
     )
   }
 
-  const hasData = savedQueries.length > 0 || learningPath
-
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
-      {/* Content page standard (aligned with discover design language): max-w-5xl for better use of space after sidebar */}
-      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-4xl font-bold flex items-center gap-3">
-                <GraduationCap className="h-9 w-9" />
-                Your Learning Path
-              </h1>
-              <p className="text-muted-foreground mt-2">AI-powered career-aligned learning roadmap</p>
-            </div>
-            {hasData && (
-              <Button onClick={generateLearningPath} disabled={generating}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                {generating ? 'Generating...' : 'Refresh with Grok'}
-              </Button>
-            )}
-          </div>
+      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">Your Learning Path</h1>
+          <p className="text-muted-foreground mb-10">Built from your searches and questions</p>
 
-          {!hasData ? (
-            <Card className="max-w-2xl mx-auto text-center py-16">
+            {/* Saved History */}
+            <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900 mb-10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+                  <Search className="h-5 w-5" />
+                  Search &amp; Question History
+                </CardTitle>
+                <CardDescription>These drive your personalized path</CardDescription>
+              </CardHeader>
               <CardContent>
-                <Target className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
-                <CardTitle className="text-2xl mb-3">No learning path yet</CardTitle>
-                <CardDescription className="text-base mb-8 max-w-sm mx-auto">
-                  Your personalized learning path is built from the content you explore and save. 
-                  Start discovering topics to unlock a full AI-generated career roadmap.
-                </CardDescription>
-                <Button size="lg" onClick={() => router.push('/discover')}>
-                  Start Exploring
-                  <ArrowRight className="ml-3 h-5 w-5" />
-                </Button>
+                {savedQueries.length > 0 ? (
+                  <div className="space-y-6">
+                    {savedQueries.map((query) => (
+                      <div key={query.id} className="border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6">
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Badge variant="secondary">{query.shortSearch}</Badge>
+                          {query.gradeLevel && <Badge variant="outline">{query.gradeLevel}</Badge>}
+                        </div>
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100 mb-1">{query.fullQuestion}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{new Date(query.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-zinc-500 dark:text-zinc-400 py-12 text-center">No saved searches yet. Start exploring to build your path!</p>
+                )}
               </CardContent>
             </Card>
-          ) : (
-            <div className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    Your Career-Aligned Path
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {learningPath ? (
-                    <div className="space-y-6">
-                      <p className="text-sm">Path generated by Grok based on your saved interests and queries.</p>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Your saved queries are ready. Click "Refresh with Grok" to generate your full learning path.</p>
-                  )}
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Saved Queries &amp; Interests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {savedQueries.map((query) => (
-                      <li key={query.id} className="flex items-center gap-3 p-4 bg-muted rounded-2xl">
-                        <span className="text-sm flex-1">{query.query_text}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(query.created_at).toLocaleDateString()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-      </div>
+            {/* Dynamic Learning Path */}
+            <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-xl font-semibold tracking-tight">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5" />
+                    Personalized Learning Path
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateLearningPath}
+                    disabled={generatingPath || savedQueries.length === 0}
+                  >
+                    {generatingPath ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Regenerate
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {learningPath.length > 0 ? (
+                  learningPath.map((item, index) => (
+                    <div key={index} className="flex gap-6">
+                      <div className="w-8 h-8 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{item.title}</h3>
+                        <p className="text-zinc-600 dark:text-zinc-400 text-sm mt-1 leading-relaxed">{item.description}</p>
+                        <div className="flex gap-4 mt-4 text-xs">
+                          <Badge variant="outline">{item.estimatedTime}</Badge>
+                          <Badge variant="outline">{item.difficulty}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-zinc-500 dark:text-zinc-400">
+                    Your learning path will appear here once you have saved searches and questions.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </main>
     </div>
   )
 }
