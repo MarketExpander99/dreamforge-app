@@ -34,6 +34,7 @@ export default function DiscoverPage() {
   const [credits, setCredits] = useState<number>(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSessionReady, setIsSessionReady] = useState(false);
@@ -184,6 +185,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     const currentQuestion = chatInput;
     setChatInput('');
 
+    setIsChatLoading(true);
     setCredits(prev => prev - 0.5);
 
     try {
@@ -200,6 +202,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch (e) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -237,13 +241,13 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         </div>
 
         {/* Search Bar */}
-        <div className="flex flex-col md:flex-row gap-3 mb-10">
+        <div className="flex gap-3 mb-10">
           <Input
             placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
-            className="py-7 text-lg w-full md:w-auto"
+            className="py-7 text-lg"
           />
           <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
             {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
@@ -323,15 +327,26 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                       </div>
                     </div>
                   ))}
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white dark:bg-zinc-800 border flex items-center gap-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Thinking...</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Ask anything about this topic..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                    onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()}
+                    disabled={isChatLoading}
                   />
-                  <Button onClick={sendChatMessage}>Send</Button>
+                  <Button onClick={sendChatMessage} disabled={isChatLoading}>
+                    Send
+                  </Button>
                 </div>
               </div>
             </CardContent>
