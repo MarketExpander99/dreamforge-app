@@ -210,7 +210,7 @@ Return ONLY valid JSON array of objects with this structure:
           </Button>
         </div>
       </div>
-      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards with stock imagery. Complete them to earn XP and unlock achievements. (AI generation costs 2 credits)</p>
+      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards with stock imagery. Complete them to earn XP and unlock achievements.</p>
 
       <div className="space-y-8">
         {feedItems.map((item) => (
