@@ -178,6 +178,13 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  // Functional Add to Learning Path handler
+  const handleAddToLearningPath = async () => {
+    if (!centerNode) return;
+    await saveExploration(centerNode);
+    alert("✅ Successfully added to your Learning Path! You can now view it at /path");
+  };
+
   const sendChatMessage = async () => {
     if (!chatInput.trim() || !centerNode) return;
 
@@ -319,7 +326,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                   <BookOpen className="h-4 w-4" />
                   Dive Deeper
                 </Button>
-                <Button variant="outline" className="gap-2 flex-1" onClick={() => alert("Add to Learning Path - Coming soon!")}>
+                <Button variant="outline" className="gap-2 flex-1" onClick={handleAddToLearningPath}>
                   <Plus className="h-4 w-4" />
                   Add to Learning Path
                 </Button>
