@@ -69,7 +69,7 @@ const NavigationComponent = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             Skill Gain
           </h1>
-          <p className="text-xs text-zinc-500 mt-1">Discover the lattice</p>
+          <p className="text-xs text-zinc-500 mt-1">Discover</p>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -93,7 +93,7 @@ const NavigationComponent = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500 text-center">Powered by Grok • E8 Lattice</p>
+          <p className="text-xs text-zinc-500 text-center">Powered by Grok</p>
         </div>
       </div>
 
