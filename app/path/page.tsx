@@ -171,7 +171,6 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
         title: generatedPath.title,
         description: generatedPath.description || "",   // fallback
         modules: generatedPath.modules,
-        // generated_at: let DB default handle it (use trigger or default now())
       });
 
     if (error) throw error;
