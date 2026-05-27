@@ -49,9 +49,9 @@ const NavigationComponent = () => {
     },
     {
       label: 'Learning',
-      href: '/learning',
+      href: '/path',
       icon: BookOpen,
-      isActive: pathname === '/learning' || pathname?.startsWith('/learning/'),
+      isActive: pathname === '/path' || pathname?.startsWith('/path/'),
     },
     {
       label: 'Profile',

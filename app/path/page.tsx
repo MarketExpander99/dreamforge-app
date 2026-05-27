@@ -42,6 +42,7 @@ export default function LearningPathPage() {
   const [explorations, setExplorations] = useState<Exploration[]>([]);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [generatedPath, setGeneratedPath] = useState<LearningPath | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -50,6 +51,8 @@ export default function LearningPathPage() {
         router.push('/auth/login');
         return;
       }
+
+      setUserId(session.user.id);
 
       // Get profile (interests)
       const { data: prof } = await supabase
@@ -70,7 +73,7 @@ export default function LearningPathPage() {
 
       if (expl) setExplorations(expl);
 
-      // Get latest saved learning path
+      // Get latest saved learning path + normalize modules/lessons
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
@@ -79,7 +82,12 @@ export default function LearningPathPage() {
         .limit(1)
         .single();
 
-      if (path) setCurrentPath(path);
+      if (path) {
+        setCurrentPath({
+          ...path,
+          modules: path.modules || [],
+        });
+      }
 
       setLoading(false);
     };
@@ -141,7 +149,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
 
       setGeneratedPath(newPath);
     } catch (error) {
-      console.error(error);
+      console.error('Generate path error:', error);
       alert("Failed to generate learning path. Please try again.");
     } finally {
       setGenerating(false);
@@ -149,34 +157,50 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
   };
 
   const savePath = async () => {
-    if (!generatedPath) return;
+  if (!generatedPath || !userId) {
+    alert("Cannot save: missing data or not logged in");
+    return;
+  }
 
-    setSaving(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+  setSaving(true);
+  try {
+    const { error } = await supabase
+      .from('learning_paths')
+      .insert({
+        user_id: userId,
+        title: generatedPath.title,
+        description: generatedPath.description || "",   // fallback
+        modules: generatedPath.modules,
+      });
 
-      const { error } = await supabase
-        .from('learning_paths')
-        .insert({
-          user_id: session?.user.id,
-          title: generatedPath.title,
-          description: generatedPath.description,
-          modules: generatedPath.modules,
-          generated_at: generatedPath.generated_at,
-        });
+    if (error) throw error;
 
-      if (error) throw error;
+    alert("✅ Learning path saved successfully!");
 
-      alert("✅ Learning path saved successfully!");
-      setCurrentPath({ ...generatedPath, id: 'just-saved' });
-      setGeneratedPath(null);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to save path");
-    } finally {
-      setSaving(false);
+    // Refresh current path
+    const { data: freshPath } = await supabase
+      .from('learning_paths')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (freshPath) {
+      setCurrentPath({
+        ...freshPath,
+        modules: freshPath.modules || [],
+      });
     }
-  };
+
+    setGeneratedPath(null);
+  } catch (error: any) {
+    console.error('Save path error:', error);
+    alert(`Failed to save: ${error.message || 'Unknown error'}`);
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (
@@ -214,7 +238,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
             <CardContent>
               <p className="text-muted-foreground mb-6">{currentPath.description}</p>
               <div className="space-y-6">
-                {currentPath.modules.map((module: LearningModule, i: number) => (
+                {(currentPath.modules ?? []).map((module: LearningModule, i: number) => (
                   <div key={i} className="border rounded-2xl p-5">
                     <div className="flex justify-between items-start">
                       <h3 className="font-semibold text-lg">{module.title}</h3>
@@ -225,7 +249,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
                     </div>
                     {module.description && <p className="text-sm text-muted-foreground mt-1">{module.description}</p>}
                     <ul className="mt-4 space-y-2">
-                      {module.lessons.map((lesson, idx) => (
+                      {(module.lessons ?? []).map((lesson, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm">
                           <span className="text-primary font-mono">0{idx + 1}</span>
                           {lesson}
@@ -253,7 +277,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
                 </div>
 
                 <div className="space-y-6">
-                  {generatedPath.modules.map((module: LearningModule, i: number) => (
+                  {(generatedPath.modules ?? []).map((module: LearningModule, i: number) => (
                     <div key={i} className="border rounded-2xl p-5">
                       <div className="flex justify-between">
                         <h3 className="font-semibold">{module.title}</h3>
@@ -261,7 +285,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
                       </div>
                       {module.description && <p className="text-sm mt-2">{module.description}</p>}
                       <ul className="mt-4 list-disc pl-5 space-y-1">
-                        {module.lessons.map((lesson, idx) => (
+                        {(module.lessons ?? []).map((lesson, idx) => (
                           <li key={idx}>{lesson}</li>
                         ))}
                       </ul>

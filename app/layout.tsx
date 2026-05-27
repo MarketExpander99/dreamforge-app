@@ -7,8 +7,8 @@ import { Providers } from '@/components/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Skill Gain — Discover the Lattice',
-  description: 'Powered by Grok • E8 Knowledge Lattice',
+  title: 'Skill Gain — Discover',
+  description: 'Powered by Grok',
 };
 
 export default function RootLayout({

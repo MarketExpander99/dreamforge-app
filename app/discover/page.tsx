@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Navigation } from '@/components/navigation';
@@ -27,6 +27,7 @@ interface ChatMessage {
 export default function DiscoverPage() {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,9 +35,17 @@ export default function DiscoverPage() {
   const [credits, setCredits] = useState<number>(8);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSessionReady, setIsSessionReady] = useState(false);
+
+  // Auto-focus search input on load
+  useEffect(() => {
+    if (isSessionReady) {
+      searchInputRef.current?.focus();
+    }
+  }, [isSessionReady]);
 
   // Session initialization
   useEffect(() => {
@@ -96,7 +105,6 @@ export default function DiscoverPage() {
       });
     } catch (err) {
       console.error('Failed to save exploration:', err);
-      // Don't show alert - silent fail is fine for now
     }
   };
 
@@ -145,7 +153,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       setCredits(prev => prev - 1);
       setChatMessages([]);
 
-      // Auto-save to database
       await saveExploration(newNode);
 
     } catch (error) {
@@ -164,11 +171,18 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     callGrok(comp, false);
   };
 
-  const viewOnGrokipedia = () => {
+  const viewDiveDeeper = () => {
     if (!centerNode) return;
     const query = encodeURIComponent(centerNode.label);
     const url = `https://grokipedia.com/search?q=${query}`;
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Functional Add to Learning Path handler
+  const handleAddToLearningPath = async () => {
+    if (!centerNode) return;
+    await saveExploration(centerNode);
+    alert("✅ Successfully added to your Learning Path! You can now view it at /path");
   };
 
   const sendChatMessage = async () => {
@@ -184,6 +198,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     const currentQuestion = chatInput;
     setChatInput('');
 
+    setIsChatLoading(true);
     setCredits(prev => prev - 0.5);
 
     try {
@@ -200,6 +215,8 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
       setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch (e) {
       setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -216,7 +233,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Navigation />
 
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Discover</h1>
@@ -236,44 +253,47 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="flex gap-3 mb-10">
+        {/* Search Bar - Full width with buttons below */}
+        <div className="max-w-2xl mx-auto space-y-4 mb-10">
           <Input
+            ref={searchInputRef}
             placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && exploreNormal()}
-            className="py-7 text-lg"
+            onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()}
+            className="py-7 text-lg w-full"
           />
-          <Button onClick={exploreNormal} disabled={isLoading} className="px-8">
-            {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
-          </Button>
-          <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="px-8">
-            Deep Query
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={exploreNormal} disabled={isLoading} className="flex-1">
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
+            </Button>
+            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1">
+              Deep Dive
+            </Button>
+          </div>
         </div>
 
         {/* Result Card */}
         {centerNode ? (
-          <Card>
+          <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-8 p-8">
               <div>
                 <h4 className="font-semibold mb-2">What it is</h4>
-                <p className="text-lg leading-relaxed">{centerNode.short_description}</p>
+                <p className="text-lg leading-relaxed break-words">{centerNode.short_description}</p>
               </div>
 
               <div>
                 <h4 className="font-semibold mb-2">Main Function</h4>
-                <p className="text-lg">{centerNode.main_function}</p>
+                <p className="text-lg break-words">{centerNode.main_function}</p>
               </div>
 
               {centerNode.deep_details && (
                 <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-2xl">
-                  <h4 className="font-semibold mb-3 text-blue-700">Deep Query Details</h4>
-                  <p className="text-blue-800 dark:text-blue-300">{centerNode.deep_details}</p>
+                  <h4 className="font-semibold mb-3 text-blue-700">Deep Dive Details</h4>
+                  <p className="text-blue-800 dark:text-blue-300 break-words">{centerNode.deep_details}</p>
                 </div>
               )}
 
@@ -302,11 +322,11 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
               </div>
 
               <div className="flex gap-3 pt-6 border-t">
-                <Button variant="outline" className="gap-2 flex-1" onClick={viewOnGrokipedia}>
+                <Button variant="outline" className="gap-2 flex-1" onClick={viewDiveDeeper}>
                   <BookOpen className="h-4 w-4" />
-                  View on Grokipedia
+                  Dive Deeper
                 </Button>
-                <Button variant="outline" className="gap-2 flex-1" onClick={() => alert("Add to Learning Path - Coming soon!")}>
+                <Button variant="outline" className="gap-2 flex-1" onClick={handleAddToLearningPath}>
                   <Plus className="h-4 w-4" />
                   Add to Learning Path
                 </Button>
@@ -314,7 +334,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
               <div className="pt-8 border-t">
                 <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
-                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">
+                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3 w-full">
                   {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>}
                   {chatMessages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -323,21 +343,32 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                       </div>
                     </div>
                   ))}
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white dark:bg-zinc-800 border flex items-center gap-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Thinking...</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Ask anything about this topic..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                    onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()}
+                    disabled={isChatLoading}
                   />
-                  <Button onClick={sendChatMessage}>Send</Button>
+                  <Button onClick={sendChatMessage} disabled={isChatLoading}>
+                    Send
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ) : (
-          <Card className="p-20 text-center">
+          <Card className="p-20 text-center w-full">
             <p className="text-xl text-muted-foreground">Search something above to begin exploring</p>
           </Card>
         )}
