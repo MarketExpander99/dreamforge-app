@@ -157,41 +157,51 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
   };
 
   const savePath = async () => {
-    if (!generatedPath || !userId) {
-      alert("Cannot save: missing data or not logged in");
-      return;
-    }
+  if (!generatedPath || !userId) {
+    alert("Cannot save: missing data or not logged in");
+    return;
+  }
 
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('learning_paths')
-        .insert({
-          user_id: userId,
-          title: generatedPath.title,
-          description: generatedPath.description,
-          modules: generatedPath.modules,
-          generated_at: generatedPath.generated_at,
-        });
-
-      if (error) throw error;
-
-      alert("✅ Learning path saved successfully!");
-      setCurrentPath({ 
-        ...generatedPath, 
-        id: 'just-saved',
-        modules: generatedPath.modules || [] 
+  setSaving(true);
+  try {
+    const { error } = await supabase
+      .from('learning_paths')
+      .insert({
+        user_id: userId,
+        title: generatedPath.title,
+        description: generatedPath.description || "",   // fallback
+        modules: generatedPath.modules,
+        // generated_at: let DB default handle it (use trigger or default now())
       });
-      setGeneratedPath(null);
-    } catch (error: any) {
-      console.error('Save path error details:', error);
-      console.error('Error message:', error?.message);
-      console.error('Error code:', error?.code);
-      alert("Failed to save path – check console for details");
-    } finally {
-      setSaving(false);
+
+    if (error) throw error;
+
+    alert("✅ Learning path saved successfully!");
+
+    // Refresh current path
+    const { data: freshPath } = await supabase
+      .from('learning_paths')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (freshPath) {
+      setCurrentPath({
+        ...freshPath,
+        modules: freshPath.modules || [],
+      });
     }
-  };
+
+    setGeneratedPath(null);
+  } catch (error: any) {
+    console.error('Save path error:', error);
+    alert(`Failed to save: ${error.message || 'Unknown error'}`);
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (
