@@ -7,7 +7,8 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw, RefreshCw, Plus } from 'lucide-react';
 
 interface LearningModule {
   title: string;
@@ -38,9 +39,11 @@ export default function LearningPathPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const [profile, setProfile] = useState<any>(null);
   const [explorations, setExplorations] = useState<Exploration[]>([]);
+  const [selectedExplorations, setSelectedExplorations] = useState<Exploration[]>([]);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [generatedPath, setGeneratedPath] = useState<LearningPath | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -72,7 +75,10 @@ export default function LearningPathPage() {
         .order('created_at', { ascending: false })
         .limit(8);
 
-      if (expl) setExplorations(expl);
+      if (expl) {
+        setExplorations(expl);
+        setSelectedExplorations(expl); // default all checked
+      }
 
       // Get latest saved learning path
       const { data: path } = await supabase
@@ -100,14 +106,14 @@ export default function LearningPathPage() {
     init();
   }, [supabase, router]);
 
-  const generatePath = async () => {
+  const generatePath = async (customExplorations?: Exploration[]) => {
     setGenerating(true);
     setGeneratedPath(null);
 
     try {
       const interestsText = profile?.interests?.join(', ') || 'general learning';
-      const explorationText = explorations.length > 0 
-        ? explorations.map(e => `${e.label}: ${e.short_description}`).join('\n')
+      const explorationText = (customExplorations || explorations).length > 0 
+        ? (customExplorations || explorations).map(e => `${e.label}: ${e.short_description}`).join('\n')
         : 'no previous explorations yet';
 
       const prompt = `You are an expert learning path designer.
@@ -145,15 +151,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
       if (!response.ok) throw new Error('Failed to generate path');
 
       const raw = await response.json();
-      let parsed;
-
-      if (typeof raw === 'string') {
-        parsed = JSON.parse(raw);
-      } else if (raw && typeof raw === 'object') {
-        parsed = raw;
-      } else {
-        throw new Error('Invalid response format');
-      }
+      let parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
       const newPath: LearningPath = {
         title: parsed.title || "My Personalized Learning Path",
@@ -169,6 +167,28 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
     } finally {
       setGenerating(false);
     }
+  };
+
+  const updatePathWithRecent = async () => {
+    if (selectedExplorations.length === 0) {
+      alert("Please select at least one recent discovery to update your path.");
+      return;
+    }
+
+    setUpdating(true);
+    await generatePath(selectedExplorations);
+    setUpdating(false);
+  };
+
+  const toggleExploration = (exploration: Exploration) => {
+    setSelectedExplorations(prev => {
+      const isSelected = prev.some(e => e.label === exploration.label);
+      if (isSelected) {
+        return prev.filter(e => e.label !== exploration.label);
+      } else {
+        return [...prev, exploration];
+      }
+    });
   };
 
   const savePath = async () => {
@@ -192,7 +212,6 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
 
       alert("✅ Learning path saved successfully!");
 
-      // Refresh current path
       const { data: freshPath } = await supabase
         .from('learning_paths')
         .select('*')
@@ -283,7 +302,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
         )}
 
         {/* Generate New Path */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Generate New Learning Path</CardTitle>
           </CardHeader>
@@ -330,7 +349,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
                 <p className="text-muted-foreground mt-2 mb-8">
                   Based on your interests + {explorations.length} recent discoveries
                 </p>
-                <Button onClick={generatePath} disabled={generating} size="lg">
+                <Button onClick={() => generatePath()} disabled={generating} size="lg">
                   {generating ? (
                     <>
                       <Loader2 className="animate-spin mr-2" />
@@ -345,6 +364,69 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Update Path with Recent Searches */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Update Path with Recent Searches
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-6">
+              Select which recent discoveries you want to include in your next learning path.
+            </p>
+
+            <div className="space-y-4 mb-8 max-h-96 overflow-y-auto">
+              {explorations.length > 0 ? (
+                explorations.map((exploration, index) => {
+                  const isChecked = selectedExplorations.some(e => e.label === exploration.label);
+                  return (
+                    <div key={index} className="flex items-start gap-3 p-4 border rounded-xl hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id={`exp-${index}`}
+                        checked={isChecked}
+                        onCheckedChange={() => toggleExploration(exploration)}
+                      />
+                      <div className="flex-1">
+                        <label htmlFor={`exp-${index}`} className="font-medium cursor-pointer">
+                          {exploration.label}
+                        </label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {exploration.short_description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  No recent discoveries yet. Go explore on the Discover page!
+                </p>
+              )}
+            </div>
+
+            <Button 
+              onClick={updatePathWithRecent} 
+              disabled={updating || selectedExplorations.length === 0}
+              className="w-full"
+              size="lg"
+            >
+              {updating ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" />
+                  Updating your learning path...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Update & Regenerate Learning Path
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>
