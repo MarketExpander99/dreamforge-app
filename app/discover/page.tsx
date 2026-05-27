@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, BookOpen, Plus, CreditCard, Crown, Loader2 } from 'lucide-react';
-import Feed from '@/components/feed';  // ← Added for My Feed section
+import Feed from '@/components/feed';  // ← Preserved for My Feed section
 
 interface Node {
   id: string;
@@ -40,6 +40,7 @@ export default function DiscoverPage() {
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSessionReady, setIsSessionReady] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ grade_level?: string; interests?: string[] } | null>(null);
 
   // Auto-focus search input on load
   useEffect(() => {
@@ -89,6 +90,28 @@ export default function DiscoverPage() {
     return () => { mounted = false; };
   }, [supabase, router]);
 
+  // Fetch user profile for personalization (grade_level + interests)
+  useEffect(() => {
+    if (!isSessionReady) return;
+
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('grade_level, interests')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile) {
+        setUserProfile(profile);
+      }
+    };
+
+    fetchProfile();
+  }, [isSessionReady, supabase]);
+
   // Auto-save exploration to database
   const saveExploration = async (node: Node) => {
     try {
@@ -119,16 +142,24 @@ export default function DiscoverPage() {
     setCenterNode(null);
 
     try {
-      const prompt = `You are a helpful exploration assistant.
-For the topic "${topic}", return ONLY valid JSON with this structure:
+      const grade = userProfile?.grade_level || 'intermediate';
+      const interests = userProfile?.interests?.join(', ') || 'general learning';
+
+      const prompt = `You are an expert educational assistant for Skill Gain, a gamified learning platform for students.
+
+User profile: ${grade} level student with interests in ${interests}.
+
+For the topic "${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic (example: for "bees" → a lesson on "cleaning the hive" or another relevant practical skill).
+
+Return ONLY valid JSON with this exact structure:
 
 {
   "label": "${topic}",
-  "short_description": "Clear 1-2 sentence description",
-  "main_function": "What this thing does or its purpose",
-  "components": ["component1", "component2", ...],
-  "self_similar": ["similar item 1", "similar item 2", ...],
-  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
+  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style.",
+  "main_function": "Clear learning objective - what the student will understand or be able to do after this lesson",
+  "components": ["key concept 1", "key concept 2", ...],
+  "self_similar": ["related lesson ideas", ...],
+  ${isDeep ? `"deep_details": "FULL DETAILED LESSON CONTENT (600+ words). Write engaging, educational material at the student's exact level. Include step-by-step instructions where appropriate, clear explanations, examples, reference data, facts, and sources at the end. Stimulate their current understanding and gently challenge them to grow."` : `"deep_details": "Detailed lesson content (400+ words) adapted to the student's level with explanations, examples, and references."`}
 }`;
 
       const response = await fetch('/api/grok', {
@@ -144,7 +175,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         id: Date.now().toString(),
         label: parsed.label || topic,
         short_description: parsed.short_description || "No description available.",
-        main_function: parsed.main_function || "No function information available.",
+        main_function: parsed.main_function || "No objective available.",
         components: Array.isArray(parsed.components) ? parsed.components : [],
         self_similar: Array.isArray(parsed.self_similar) ? parsed.self_similar : [],
         deep_details: parsed.deep_details,
@@ -158,7 +189,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
 
     } catch (error) {
       console.error(error);
-      alert("Failed to explore topic.");
+      alert("Failed to generate lesson.");
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +210,6 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Functional Add to Learning Path handler
   const handleAddToLearningPath = async () => {
     if (!centerNode) return;
     await saveExploration(centerNode);
@@ -207,7 +237,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `The current topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
+          prompt: `The current lesson topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
         }),
       });
 
@@ -238,7 +268,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Discover</h1>
-            <p className="text-muted-foreground">Explore anything • Break it down • Drill deeper</p>
+            <p className="text-muted-foreground">Personalized lessons • Adapted to your level • Earn XP as you learn</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -258,7 +288,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
         <div className="max-w-2xl mx-auto space-y-4 mb-10">
           <Input
             ref={searchInputRef}
-            placeholder="Search anything... (cheese burger, car, laptop...)"
+            placeholder="Search anything... (bees, photosynthesis, fractions...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()}
@@ -266,15 +296,15 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
           />
           <div className="flex gap-3">
             <Button onClick={exploreNormal} disabled={isLoading} className="flex-1">
-              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Get Lesson'}
             </Button>
             <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1">
-              Deep Dive
+              Deep Lesson
             </Button>
           </div>
         </div>
 
-        {/* Result Card */}
+        {/* Result Card - Lesson focused */}
         {centerNode ? (
           <Card className="w-full">
             <CardHeader>
@@ -282,25 +312,27 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
             </CardHeader>
             <CardContent className="space-y-8 p-8">
               <div>
-                <h4 className="font-semibold mb-2">What it is</h4>
+                <h4 className="font-semibold mb-2">Lesson Introduction</h4>
                 <p className="text-lg leading-relaxed break-words">{centerNode.short_description}</p>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Main Function</h4>
+                <h4 className="font-semibold mb-2">Learning Objective</h4>
                 <p className="text-lg break-words">{centerNode.main_function}</p>
               </div>
 
               {centerNode.deep_details && (
-                <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-2xl">
-                  <h4 className="font-semibold mb-3 text-blue-700">Deep Dive Details</h4>
-                  <p className="text-blue-800 dark:text-blue-300 break-words">{centerNode.deep_details}</p>
+                <div className="bg-emerald-50 dark:bg-emerald-950 p-6 rounded-2xl">
+                  <h4 className="font-semibold mb-3 text-emerald-700 dark:text-emerald-300">Full Lesson Content</h4>
+                  <div className="text-emerald-800 dark:text-emerald-200 whitespace-pre-wrap prose dark:prose-invert max-w-none">
+                    {centerNode.deep_details}
+                  </div>
                 </div>
               )}
 
               {centerNode.self_similar?.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
+                  <h4 className="font-semibold mb-3">Related Lessons</h4>
                   <div className="flex flex-wrap gap-2">
                     {centerNode.self_similar.map((item, i) => (
                       <Button key={i} variant="outline" size="sm" onClick={() => { setSearchQuery(item); callGrok(item, false); }}>
@@ -312,7 +344,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
               )}
 
               <div>
-                <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
+                <h4 className="font-semibold mb-3">Key Concepts &amp; Steps</h4>
                 <div className="flex flex-wrap gap-2">
                   {centerNode.components.map((comp, i) => (
                     <Button key={i} variant="outline" size="sm" onClick={() => handleComponentClick(comp)}>
@@ -334,9 +366,9 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
               </div>
 
               <div className="pt-8 border-t">
-                <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
+                <h4 className="font-semibold mb-3">Ask a question about this lesson</h4>
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3 w-full">
-                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>}
+                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this lesson...</p>}
                   {chatMessages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white dark:bg-zinc-800 border'}`}>
@@ -355,7 +387,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Ask anything about this topic..."
+                    placeholder="Ask anything about this lesson..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()}
@@ -370,7 +402,7 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
           </Card>
         ) : (
           <Card className="p-20 text-center w-full">
-            <p className="text-xl text-muted-foreground">Search something above to begin exploring</p>
+            <p className="text-xl text-muted-foreground">Search a topic above to get your personalized lesson</p>
           </Card>
         )}
 
