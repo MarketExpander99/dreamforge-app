@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, BookOpen, Plus, CreditCard, Crown, Loader2 } from 'lucide-react';
+import Feed from '@/components/feed';  // ← Added for My Feed section
 
 interface Node {
   id: string;
@@ -372,6 +373,9 @@ For the topic "${topic}", return ONLY valid JSON with this structure:
             <p className="text-xl text-muted-foreground">Search something above to begin exploring</p>
           </Card>
         )}
+
+        {/* My Feed Section - AI-generated personalized feed based on active learning paths */}
+        <Feed />
       </div>
     </div>
   );
