@@ -5,15 +5,15 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, TestTube, MessageSquare, Lock, Sparkles } from 'lucide-react';
+import { Loader2, BookOpen, TestTube, MessageSquare, Lock, Sparkles, RefreshCw } from 'lucide-react';
 
 interface FeedItem {
   id: string;
   type: 'info' | 'test';
   title: string;
   description: string;
-  mediaType?: 'text' | 'image' | 'video';
-  mediaUrl?: string;
+  mediaUrl: string;
+  mediaType: 'image';
   testQuestion?: string;
   testOptions?: string[];
   learningPathId: string;
@@ -26,8 +26,9 @@ export default function Feed() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePaths, setActivePaths] = useState<any[]>([]);
+  const [userCredits, setUserCredits] = useState(12); // Simulated for now — will centralize with real DB credits later
 
-  // Fetch active learning paths (using existing user_explorations as source of active paths)
+  // Fetch active learning paths
   const fetchActivePaths = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return [];
@@ -46,9 +47,18 @@ export default function Feed() {
     return data || [];
   };
 
-  // AI-generated feed using real Grok call based on active paths
+  // AI-generated feed with real Grok call
   const generateAIFeed = async (paths: any[]) => {
     if (paths.length === 0) return [];
+
+    // Simulate credit cost for AI generation (2 credits per refresh)
+    if (userCredits < 2) {
+      alert("Not enough credits to refresh AI Feed. Purchase more or wait for daily free credits.");
+      return [];
+    }
+
+    console.log(`[FEED] Deducting 2 credits for AI generation (covers Grok API cost)`);
+    setUserCredits(prev => prev - 2);
 
     const pathSummaries = paths.map(p => p.label || p.title).join(', ');
     const prompt = `You are an expert educator for Skill Gain. Based ONLY on these active learning paths: ${pathSummaries}.
@@ -59,7 +69,6 @@ Return ONLY valid JSON array of objects with this structure:
     "type": "info" or "test",
     "title": "short engaging title",
     "description": "clear helpful description",
-    "mediaType": "text",
     "testQuestion": "optional question for test cards",
     "testOptions": ["option1", "option2", "option3", "option4"] for tests only
   }
@@ -78,54 +87,50 @@ Return ONLY valid JSON array of objects with this structure:
       return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
       console.error('AI feed generation failed:', err);
-      return []; // fallback handled below
+      return [];
     }
   };
 
+  const initializeFeed = async () => {
+    setIsLoading(true);
+    const paths = await fetchActivePaths();
+    setActivePaths(paths);
+
+    let aiItems: any[] = await generateAIFeed(paths);
+
+    // Fallback mock with images if AI fails
+    if (aiItems.length === 0 && paths.length > 0) {
+      aiItems = [
+        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights.', testQuestion: undefined, testOptions: undefined },
+        { type: 'test', title: 'Knowledge Check', description: 'Quick test to solidify learning', testQuestion: `Apply concepts from ${paths[0].label || 'this path'}?`, testOptions: ['Option A', 'Option B', 'Option C', 'Option D'] },
+        { type: 'info', title: 'Expert Tip', description: 'Advanced application for your path.', testQuestion: undefined, testOptions: undefined },
+        { type: 'test', title: 'Mastery Test', description: 'Challenge yourself', testQuestion: 'What is the best practice?', testOptions: ['Best A', 'Best B', 'Best C', 'Best D'] },
+      ];
+    }
+
+    // Stock images (educational + quiz themed)
+    const learningImage = 'https://picsum.photos/id/1015/800/400'; // books & learning path
+    const quizImage = 'https://picsum.photos/id/201/800/400';     // quiz / test style
+
+    const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
+      id: `feed-${Date.now()}-${index}`,
+      type: item.type || 'info',
+      title: item.title || 'Personalized Card',
+      description: item.description || 'AI-generated content to advance your expertise',
+      mediaUrl: item.type === 'info' ? learningImage : quizImage,
+      mediaType: 'image',
+      testQuestion: item.testQuestion,
+      testOptions: item.testOptions,
+      learningPathId: paths[0]?.id || 'path-default',
+      learningPathTitle: paths[0]?.label || 'Your Active Path',
+      completed: false,
+    }));
+
+    setFeedItems(mappedItems);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    const initializeFeed = async () => {
-      setIsLoading(true);
-      const paths = await fetchActivePaths();
-      setActivePaths(paths);
-
-      let aiItems: any[] = await generateAIFeed(paths);
-
-      // Fallback mock if AI call fails (still tied to paths)
-      if (aiItems.length === 0 && paths.length > 0) {
-        aiItems = [
-          {
-            type: 'info',
-            title: `Deep Dive: ${paths[0].label || 'Core Concept'}`,
-            description: 'Building expertise in your chosen path with key insights and real-world application.',
-            mediaType: 'text',
-          },
-          {
-            type: 'test',
-            title: 'Knowledge Check',
-            description: 'Quick test to solidify your learning',
-            testQuestion: `How would you apply concepts from ${paths[0].label || 'this path'}?`,
-            testOptions: ['Option A', 'Option B', 'Option C', 'Option D'],
-          },
-        ];
-      }
-
-      const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
-        id: `feed-${Date.now()}-${index}`,
-        type: item.type || 'info',
-        title: item.title || 'Personalized Card',
-        description: item.description || 'AI-generated content to advance your expertise',
-        mediaType: item.mediaType || 'text',
-        testQuestion: item.testQuestion,
-        testOptions: item.testOptions,
-        learningPathId: paths[0]?.id || 'path-default',
-        learningPathTitle: paths[0]?.label || 'Your Active Path',
-        completed: false,
-      }));
-
-      setFeedItems(mappedItems);
-      setIsLoading(false);
-    };
-
     initializeFeed();
   }, []);
 
@@ -134,10 +139,9 @@ Return ONLY valid JSON array of objects with this structure:
     if (!session) return;
 
     try {
-      // Record to existing user_progress table (no schema change)
       await supabase.from('user_progress').insert({
         user_id: session.user.id,
-        learning_path_id: item.learningPathId, // or related field if exact column differs
+        learning_path_id: item.learningPathId,
         item_type: item.type,
         interaction_type: interactionType,
         result: result || null,
@@ -145,7 +149,6 @@ Return ONLY valid JSON array of objects with this structure:
         completed_at: new Date().toISOString(),
       });
 
-      // If test completed → create achievement
       if (interactionType === 'test_complete') {
         await supabase.from('user_achievements').insert({
           user_id: session.user.id,
@@ -161,21 +164,24 @@ Return ONLY valid JSON array of objects with this structure:
 
   const handleAskAI = async (item: FeedItem) => {
     const question = prompt('Ask AI anything about this card:') || 'General question';
-    console.log(`[FEED] Ask AI for item ${item.id} on path ${item.learningPathTitle}: ${question}`);
+    console.log(`[FEED] Ask AI for item ${item.id}: ${question}`);
     await recordInteraction(item, 'ask_ai');
-    alert(`✅ AI interaction recorded (+10 XP to ${item.learningPathTitle}). In future iterations this will show a rich response.`);
+    alert(`✅ Ask AI interaction recorded (+10 XP). This will open rich AI chat in future iterations.`);
   };
 
   const handleTestSubmit = async (item: FeedItem, answer: string) => {
-    console.log(`[FEED] Test submitted for ${item.id} with answer: ${answer}`);
+    console.log(`[FEED] Test submitted for ${item.id}: ${answer}`);
     await recordInteraction(item, 'test_complete', answer);
 
-    // Lock the item
     setFeedItems(prev =>
       prev.map(i => (i.id === item.id ? { ...i, completed: true } : i))
     );
 
-    alert(`🎉 Test completed! +25 XP awarded to ${item.learningPathTitle}. Item locked. Achievement added to your profile!`);
+    alert(`🎉 Test completed! +25 XP to ${item.learningPathTitle}. Item locked. Achievement added to profile!`);
+  };
+
+  const handleRefreshFeed = () => {
+    initializeFeed();
   };
 
   if (isLoading) {
@@ -193,12 +199,18 @@ Return ONLY valid JSON array of objects with this structure:
           <Sparkles className="h-8 w-8 text-amber-500" />
           My Feed
         </h2>
-        <Badge variant="secondary" className="gap-2">
-          <BookOpen className="h-4 w-4" />
-          AI-powered • {activePaths.length} active path{activePaths.length !== 1 ? 's' : ''}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            AI-powered • {activePaths.length} path{activePaths.length !== 1 ? 's' : ''}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={handleRefreshFeed} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
-      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards generated from your active learning paths. Complete them to earn XP and unlock achievements.</p>
+      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards with stock imagery. Complete them to earn XP and unlock achievements. (AI generation costs 2 credits)</p>
 
       <div className="space-y-8">
         {feedItems.map((item) => (
@@ -212,14 +224,16 @@ Return ONLY valid JSON array of objects with this structure:
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-lg leading-relaxed">{item.description}</p>
+              {/* Stock Image */}
+              <div className="relative rounded-3xl overflow-hidden aspect-video">
+                <img
+                  src={item.mediaUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
-              {/* Media placeholder */}
-              {item.mediaType && (
-                <div className="bg-muted rounded-2xl h-48 flex items-center justify-center text-muted-foreground text-sm">
-                  [{item.mediaType.toUpperCase()} — AI media embed coming soon]
-                </div>
-              )}
+              <p className="text-lg leading-relaxed">{item.description}</p>
 
               {item.type === 'info' && !item.completed && (
                 <Button
