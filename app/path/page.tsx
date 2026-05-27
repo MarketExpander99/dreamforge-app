@@ -11,9 +11,9 @@ import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw } from 'lucide-reac
 
 interface LearningModule {
   title: string;
+  description?: string;
   lessons: string[];
   estimated_time: string;
-  description?: string;
 }
 
 interface LearningPath {
@@ -21,7 +21,8 @@ interface LearningPath {
   title: string;
   description: string;
   modules: LearningModule[];
-  generated_at: string;
+  generated_at?: string;
+  created_at?: string;
 }
 
 interface Exploration {
@@ -73,7 +74,7 @@ export default function LearningPathPage() {
 
       if (expl) setExplorations(expl);
 
-      // Get latest saved learning path + normalize modules/lessons
+      // Get latest saved learning path
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
@@ -84,8 +85,12 @@ export default function LearningPathPage() {
 
       if (path) {
         setCurrentPath({
-          ...path,
-          modules: path.modules || [],
+          id: path.id,
+          title: path.title,
+          description: path.description || '',
+          modules: Array.isArray(path.modules) ? path.modules : [],
+          generated_at: path.generated_at,
+          created_at: path.created_at,
         });
       }
 
@@ -114,7 +119,7 @@ ${explorationText}
 
 Create a complete, engaging, and realistic personalized learning path.
 
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON with this exact structure. Do not include any explanations, markdown, or code blocks:
 
 {
   "title": "Short catchy title for the entire path",
@@ -137,13 +142,23 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
         body: JSON.stringify({ prompt }),
       });
 
+      if (!response.ok) throw new Error('Failed to generate path');
+
       const raw = await response.json();
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      let parsed;
+
+      if (typeof raw === 'string') {
+        parsed = JSON.parse(raw);
+      } else if (raw && typeof raw === 'object') {
+        parsed = raw;
+      } else {
+        throw new Error('Invalid response format');
+      }
 
       const newPath: LearningPath = {
         title: parsed.title || "My Personalized Learning Path",
         description: parsed.description || "",
-        modules: parsed.modules || [],
+        modules: Array.isArray(parsed.modules) ? parsed.modules : [],
         generated_at: new Date().toISOString(),
       };
 
@@ -157,50 +172,54 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
   };
 
   const savePath = async () => {
-  if (!generatedPath || !userId) {
-    alert("Cannot save: missing data or not logged in");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    const { error } = await supabase
-      .from('learning_paths')
-      .insert({
-        user_id: userId,
-        title: generatedPath.title,
-        description: generatedPath.description || "",   // fallback
-        modules: generatedPath.modules,
-      });
-
-    if (error) throw error;
-
-    alert("✅ Learning path saved successfully!");
-
-    // Refresh current path
-    const { data: freshPath } = await supabase
-      .from('learning_paths')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (freshPath) {
-      setCurrentPath({
-        ...freshPath,
-        modules: freshPath.modules || [],
-      });
+    if (!generatedPath || !userId) {
+      alert("Cannot save: missing data or not logged in");
+      return;
     }
 
-    setGeneratedPath(null);
-  } catch (error: any) {
-    console.error('Save path error:', error);
-    alert(`Failed to save: ${error.message || 'Unknown error'}`);
-  } finally {
-    setSaving(false);
-  }
-};
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('learning_paths')
+        .insert({
+          user_id: userId,
+          title: generatedPath.title,
+          description: generatedPath.description || "",
+          modules: generatedPath.modules,
+        });
+
+      if (error) throw error;
+
+      alert("✅ Learning path saved successfully!");
+
+      // Refresh current path
+      const { data: freshPath } = await supabase
+        .from('learning_paths')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (freshPath) {
+        setCurrentPath({
+          id: freshPath.id,
+          title: freshPath.title,
+          description: freshPath.description || '',
+          modules: Array.isArray(freshPath.modules) ? freshPath.modules : [],
+          generated_at: freshPath.generated_at,
+          created_at: freshPath.created_at,
+        });
+      }
+
+      setGeneratedPath(null);
+    } catch (error: any) {
+      console.error('Save path error:', error);
+      alert(`Failed to save: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
