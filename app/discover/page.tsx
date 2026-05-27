@@ -145,11 +145,20 @@ export default function DiscoverPage() {
       const grade = userProfile?.grade_level || 'intermediate';
       const interests = userProfile?.interests?.join(', ') || 'general learning';
 
-      const prompt = `You are an expert educational assistant for Skill Gain, a gamified learning platform for students.
+      const prompt = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
+
+CRITICAL SAFETY RULES - NEVER BREAK THESE:
+- Under NO circumstances generate content that is harmful to kids, illegal, explicit, violent, hateful, discriminatory, or promotes any illegal/dangerous activity.
+- All content must be 100% safe, family-friendly, educational, and appropriate for children and teenagers.
+- Stay positive, encouraging, and fully educational at all times.
 
 User profile: ${grade} level student with interests in ${interests}.
 
-For the topic "${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic (example: for "bees" → a lesson on "cleaning the hive" or another relevant practical skill).
+For the topic "${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic.
+
+IMPORTANT:
+- Start teaching real content immediately. Do NOT use teaser language like "Explore the advanced materials...", "Discover...", "Learn about..." or any advert-style hooks.
+- Deliver actual educational value right away with clear explanations, facts, and examples.
 
 Return ONLY valid JSON with this exact structure:
 
@@ -237,7 +246,10 @@ Return ONLY valid JSON with this exact structure:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `The current lesson topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
+          prompt: `You are a safe, helpful educational assistant on Skill-Gain.com.
+Current lesson topic is "${centerNode.label}".
+Keep all answers family-friendly, educational, and appropriate for students.
+Answer this question helpfully and clearly: ${currentQuestion}`
         }),
       });
 
