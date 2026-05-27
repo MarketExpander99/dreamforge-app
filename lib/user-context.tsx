@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { User, Session } from '@supabase/supabase-js'
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const supabase = createBrowserSupabaseClient()
 
-  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -55,52 +55,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('Error fetching profile:', profileError)
         return null
       }
-
       return profileData
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
+    } catch (err) {
+      console.error('Error fetching user profile:', err)
       return null
     }
-  }
+  }, [supabase])
 
-  const initializeAuth = async () => {
+  const initializeAuth = useCallback(async () => {
     if (isInitialized) return
 
     try {
       setLoading(true)
       setError(null)
 
-      // Get initial session with retry logic
-      let sessionData = null
-      let attempts = 0
-      const maxAttempts = 3
+      const { data: { session: initialSession }, error } = await supabase.auth.getSession()
+      if (error) throw error
 
-      while (attempts < maxAttempts && !sessionData) {
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession()
-          if (error) throw error
-          sessionData = session
-          break
-        } catch (error) {
-          attempts++
-          if (attempts >= maxAttempts) {
-            throw error
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
-        }
-      }
+      setSession(initialSession)
+      setUser(initialSession?.user ?? null)
 
-      setSession(sessionData)
-      setUser(sessionData?.user ?? null)
-
-      if (sessionData?.user) {
-        const userProfile = await fetchUserProfile(sessionData.user.id)
+      if (initialSession?.user) {
+        const userProfile = await fetchUserProfile(initialSession.user.id)
         setProfile(userProfile)
+      } else {
+        setProfile(null)
       }
-
-    } catch (error) {
-      console.error('Error initializing auth:', error)
-      setError(error instanceof Error ? error.message : 'Authentication failed')
+    } catch (err) {
+      console.error('Error initializing auth:', err)
+      setError(err instanceof Error ? err.message : 'Authentication failed')
       setUser(null)
       setSession(null)
       setProfile(null)
@@ -108,37 +91,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(false)
       setIsInitialized(true)
     }
-  }
+  }, [supabase, fetchUserProfile, isInitialized])
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data: { session }, error } = await supabase.auth.getSession()
+      const { data: { session: refreshedSession }, error } = await supabase.auth.getSession()
       if (error) throw error
 
-      setSession(session)
-      setUser(session?.user ?? null)
+      setSession(refreshedSession)
+      setUser(refreshedSession?.user ?? null)
 
-      if (session?.user) {
-        const userProfile = await fetchUserProfile(session.user.id)
+      if (refreshedSession?.user) {
+        const userProfile = await fetchUserProfile(refreshedSession.user.id)
         setProfile(userProfile)
       } else {
         setProfile(null)
       }
-    } catch (error) {
-      console.error('Error refreshing auth:', error)
-      setError(error instanceof Error ? error.message : 'Failed to refresh authentication')
+    } catch (err) {
+      console.error('Error refreshing auth:', err)
+      setError(err instanceof Error ? err.message : 'Failed to refresh authentication')
       setUser(null)
       setSession(null)
       setProfile(null)
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, fetchUserProfile])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       setLoading(true)
       const { error } = await supabase.auth.signOut()
@@ -148,26 +131,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSession(null)
       setProfile(null)
       setError(null)
-    } catch (error) {
-      console.error('Error signing out:', error)
-      setError(error instanceof Error ? error.message : 'Failed to sign out')
+    } catch (err) {
+      console.error('Error signing out:', err)
+      setError(err instanceof Error ? err.message : 'Failed to sign out')
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
+  // Initialize once + listen for auth changes (clean, no double-subscription issues)
   useEffect(() => {
     initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id)
+      async (event, newSession) => {
+        console.log('Auth state changed:', event)
+        setSession(newSession)
+        setUser(newSession?.user ?? null)
 
-        setSession(session)
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          const userProfile = await fetchUserProfile(session.user.id)
+        if (newSession?.user) {
+          const userProfile = await fetchUserProfile(newSession.user.id)
           setProfile(userProfile)
         } else {
           setProfile(null)
@@ -181,7 +164,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [initializeAuth, supabase, fetchUserProfile])
 
   const value: AuthContextType = {
     user,
@@ -191,7 +174,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     authLoading: loading,
     error,
     signOut,
-    refreshAuth
+    refreshAuth,
   }
 
   return (
@@ -201,7 +184,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 }
 
-export const useUser = useAuth
+export const useUser = () => useAuth()
 
 export function useAuth() {
   const context = useContext(AuthContext)
