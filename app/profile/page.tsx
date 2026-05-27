@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History, Sparkles, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
+import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 
 interface UserProfile {
   id: string
@@ -40,6 +41,7 @@ interface UserProfile {
     description: string
     icon: string
     earnedAt: string
+    fromFeed?: boolean
   }>
   categoryProgress: Array<{
     category: string
@@ -52,6 +54,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter()
   const { user, authLoading } = useAuth()
+  const supabase = createBrowserSupabaseClient()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -103,9 +106,6 @@ export default function ProfilePage() {
     if (!userProfile) return
     setSaving(true)
     try {
-      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
-      const supabase = createBrowserSupabaseClient()
-
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -139,18 +139,59 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
+      // Base profile from existing API
       const response = await fetch('/api/profile')
+      let baseData: any = {}
       if (response.ok) {
-        const data = await response.json()
-        setUserProfile(data)
-        setFormData({
-          fullName: data.fullName,
-          bio: data.bio || '',
-          gradeLevel: data.gradeLevel,
-          interests: data.interests.join(', '),
-          learningGoals: data.learningGoals || ''
-        })
+        baseData = await response.json()
       }
+
+      // Fetch real achievements (including feed_mastery from My Feed)
+      const { data: achievementsData } = await supabase
+        .from('user_achievements')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+
+      // Fetch progress for XP and feed visualization
+      const { data: progressData } = await supabase
+        .from('user_progress')
+        .select('learning_path_id, xp_earned, item_type, completed_at')
+        .eq('user_id', user?.id)
+
+      const mappedAchievements = (achievementsData || []).map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        icon: a.achievement_type === 'feed_mastery' ? 'sparkles' : 'trophy',
+        earnedAt: a.created_at,
+        fromFeed: a.achievement_type === 'feed_mastery'
+      }))
+
+      const totalXP = (progressData || []).reduce((sum: number, p: any) => sum + (p.xp_earned || 0), 0)
+
+      const fullProfile: UserProfile = {
+        ...baseData,
+        achievements: mappedAchievements,
+        achievementsCount: mappedAchievements.length,
+        categoryProgress: [
+          {
+            category: 'Feed Mastery',
+            progress: Math.min(100, totalXP / 3),
+            completed: progressData?.filter((p: any) => p.item_type === 'test').length || 0,
+            total: 10
+          }
+        ]
+      }
+
+      setUserProfile(fullProfile)
+      setFormData({
+        fullName: fullProfile.fullName || '',
+        bio: fullProfile.bio || '',
+        gradeLevel: fullProfile.gradeLevel || '',
+        interests: (fullProfile.interests || []).join(', '),
+        learningGoals: fullProfile.learningGoals || ''
+      })
     } catch (error) {
       console.error('Error fetching profile:', error)
     } finally {
@@ -245,222 +286,271 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
         <div className="max-w-4xl mx-auto">
-            {/* Header - exact Discover typography */}
-            <div className="mb-10">
-              <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
-                <CardContent className="p-8">
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                    <div className="relative flex-shrink-0">
-                      <Avatar className="h-28 w-28 ring-2 ring-zinc-100 dark:ring-zinc-800">
-                        <AvatarImage src={userProfile.avatar} />
-                        <AvatarFallback className="text-3xl font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                          {userProfile.fullName.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="absolute -bottom-2 -right-2 h-9 w-9 rounded-full p-0 shadow-sm hover:shadow"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingAvatar}
-                      >
-                        {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                      </Button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
-                      <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-base">{userProfile.email}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="font-medium px-3 py-1 text-sm">{userProfile.gradeLevel}</Badge>
-                        {userProfile.interests.map((interest) => (
-                          <Badge key={interest} variant="outline" className="font-medium px-3 py-1 text-sm">{interest}</Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsEditing(!isEditing)}
-                      className="shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
+          {/* Header - exact Discover typography */}
+          <div className="mb-10">
+            <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
+              <CardContent className="p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="h-28 w-28 ring-2 ring-zinc-100 dark:ring-zinc-800">
+                      <AvatarImage src={userProfile.avatar} />
+                      <AvatarFallback className="text-3xl font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                        {userProfile.fullName.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="absolute -bottom-2 -right-2 h-9 w-9 rounded-full p-0 shadow-sm hover:shadow"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
                     >
-                      <Edit className="h-4 w-4 mr-2" />
-                      {isEditing ? 'Cancel' : 'Edit Profile'}
+                      {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                     </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
+                    <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-base">{userProfile.email}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary" className="font-medium px-3 py-1 text-sm">{userProfile.gradeLevel}</Badge>
+                      {userProfile.interests.map((interest) => (
+                        <Badge key={interest} variant="outline" className="font-medium px-3 py-1 text-sm">{interest}</Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {isEditing ? 'Cancel' : 'Edit Profile'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs defaultValue="overview" className="space-y-8">
+            <TabsList className="grid w-full grid-cols-5 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm font-medium">Overview</TabsTrigger>
+              <TabsTrigger value="learning-path" className="rounded-xl data-[state=active]:shadow-sm font-medium">Learning Path</TabsTrigger>
+              <TabsTrigger value="achievements" className="rounded-xl data-[state=active]:shadow-sm font-medium">Achievements</TabsTrigger>
+              <TabsTrigger value="credits" className="rounded-xl data-[state=active]:shadow-sm font-medium">Credits</TabsTrigger>
+              <TabsTrigger value="account" className="rounded-xl data-[state=active]:shadow-sm font-medium">Account</TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold tracking-tight">About Me</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                    {userProfile.bio || 'No bio yet. Tell the community a bit about yourself!'}
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Learning Path Tab - enhanced with feed progress */}
+            <TabsContent value="learning-path" className="space-y-6">
+              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Your Personalized Learning Path
+                  </CardTitle>
+                  <CardDescription className="text-zinc-500 dark:text-zinc-400">Progress powered by Discover + My Feed interactions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-3xl">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100">📍 Continue building expertise through My Feed</p>
+                    </div>
+                    {userProfile.categoryProgress.map((cat, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{cat.category}</span>
+                          <span className="text-emerald-600">{Math.round(cat.progress)}%</span>
+                        </div>
+                        <Progress value={cat.progress} className="h-3" />
+                        <p className="text-xs text-zinc-500">{cat.completed} / {cat.total} items completed via Feed</p>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </TabsContent>
 
-            <Tabs defaultValue="overview" className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm font-medium">Overview</TabsTrigger>
-                <TabsTrigger value="learning-path" className="rounded-xl data-[state=active]:shadow-sm font-medium">Learning Path</TabsTrigger>
-                <TabsTrigger value="credits" className="rounded-xl data-[state=active]:shadow-sm font-medium">Credits</TabsTrigger>
-                <TabsTrigger value="account" className="rounded-xl data-[state=active]:shadow-sm font-medium">Account</TabsTrigger>
-              </TabsList>
+            {/* Achievements Tab - shows feed achievements */}
+            <TabsContent value="achievements" className="space-y-6">
+              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Achievements
+                  </CardTitle>
+                  <CardDescription>{userProfile.achievementsCount} unlocked • Feed mastery included</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {userProfile.achievements.map((achievement) => (
+                      <Card key={achievement.id} className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            {achievement.fromFeed ? (
+                              <Sparkles className="h-8 w-8 text-amber-500" />
+                            ) : (
+                              <Trophy className="h-8 w-8 text-emerald-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{achievement.title}</h4>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">{achievement.description}</p>
+                            <p className="text-xs text-zinc-400 mt-2">
+                              Earned {new Date(achievement.earnedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {achievement.fromFeed && <Lock className="h-5 w-5 text-emerald-600" />}
+                        </div>
+                      </Card>
+                    ))}
+                    {userProfile.achievements.length === 0 && (
+                      <p className="text-zinc-500 italic col-span-2 text-center py-8">Complete more Feed cards to unlock achievements!</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
+            {/* Credits Tab */}
+            <TabsContent value="credits" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
-                    <CardTitle className="text-xl font-semibold tracking-tight">About Me</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
-                      {userProfile.bio || 'No bio yet. Tell the community a bit about yourself!'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Learning Path Tab */}
-              <TabsContent value="learning-path" className="space-y-6">
-                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-semibold tracking-tight">Your Personalized Learning Path</CardTitle>
-                    <CardDescription className="text-zinc-500 dark:text-zinc-400">Built from your saved queries and goals</CardDescription>
+                    <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
+                      <CreditCard className="h-5 w-5" />
+                      Free Credits
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        Your learning path is dynamically generated based on saved queries, interests, and goals.
-                      </p>
-                      <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-3xl">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">📍 Next recommended module: Advanced React Patterns</p>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Based on your recent activity</p>
-                      </div>
-                      <Progress value={65} className="h-2.5 bg-zinc-200 dark:bg-zinc-700" />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">65% complete • 8 modules remaining</p>
-                    </div>
+                    <div className="text-5xl font-semibold tracking-tighter text-emerald-600">{creditsData.freeCreditsRemaining}</div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">remaining today • resets {creditsData.dailyFreeReset}</p>
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              {/* Credits Tab */}
-              <TabsContent value="credits" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                        <CreditCard className="h-5 w-5" />
-                        Free Credits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-5xl font-semibold tracking-tighter text-emerald-600">{creditsData.freeCreditsRemaining}</div>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">remaining today • resets {creditsData.dailyFreeReset}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                        <CreditCard className="h-5 w-5" />
-                        Paid Credits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-5xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100">{creditsData.paidCredits}</div>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">available • no expiry</p>
-                    </CardContent>
-                  </Card>
-                </div>
 
                 <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                      <History className="h-5 w-5" />
-                      Purchase History
+                      <CreditCard className="h-5 w-5" />
+                      Paid Credits
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-5">
-                      {purchaseHistory.map((purchase) => (
-                        <div key={purchase.id} className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                          <div>
-                            <p className="font-medium text-zinc-900 dark:text-zinc-100">{purchase.type}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.date}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-emerald-600">+{purchase.amount}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.price}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <div className="text-5xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100">{creditsData.paidCredits}</div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">available • no expiry</p>
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              {/* Account Tab */}
-              <TabsContent value="account" className="space-y-6">
-                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-semibold tracking-tight">Account Management</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-8">
-                    <div className="space-y-3">
-                      <Label className="text-zinc-600 dark:text-zinc-400 font-medium">Display Name</Label>
-                      <Input 
-                        value={formData.fullName} 
-                        onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} 
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 font-medium">
-                        <Key className="h-4 w-4" />
-                        Change Password
-                      </Label>
-                      <Input
-                        type="password"
-                        placeholder="Current password"
-                        value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="New password"
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="Confirm new password"
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                        className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                      />
-                      <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto font-medium">
-                        {changingPassword ? 'Updating...' : 'Update Password'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-
-            {isEditing && (
-              <div className="fixed bottom-8 right-8 z-50">
-                <Button onClick={handleSaveProfile} disabled={saving} size="lg" className="shadow-lg hover:shadow-xl transition-shadow font-medium">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save All Changes
-                </Button>
               </div>
-            )}
-           </div>
-         </main>
-       </div>
-   )
- }
+
+              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
+                    <History className="h-5 w-5" />
+                    Purchase History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-5">
+                    {purchaseHistory.map((purchase) => (
+                      <div key={purchase.id} className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                        <div>
+                          <p className="font-medium text-zinc-900 dark:text-zinc-100">{purchase.type}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.date}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-emerald-600">+{purchase.amount}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.price}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Account Tab */}
+            <TabsContent value="account" className="space-y-6">
+              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold tracking-tight">Account Management</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <div className="space-y-3">
+                    <Label className="text-zinc-600 dark:text-zinc-400 font-medium">Display Name</Label>
+                    <Input 
+                      value={formData.fullName} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} 
+                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 font-medium">
+                      <Key className="h-4 w-4" />
+                      Change Password
+                    </Label>
+                    <Input
+                      type="password"
+                      placeholder="Current password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="New password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                    />
+                    <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto font-medium">
+                      {changingPassword ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {isEditing && (
+            <div className="fixed bottom-8 right-8 z-50">
+              <Button onClick={handleSaveProfile} disabled={saving} size="lg" className="shadow-lg hover:shadow-xl transition-shadow font-medium">
+                <Save className="h-4 w-4 mr-2" />
+                Save All Changes
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
