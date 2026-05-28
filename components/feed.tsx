@@ -351,13 +351,68 @@ User question: ${messageText}`;
     markAsComplete(item);
   };
 
+  // ==================== NEW LOADING STATE ====================
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-6"
+        >
+          {/* Grok + Sparkles animation */}
+          <div className="relative">
+            <motion.div
+              animate={{ rotate: [0, 15, -10, 15, 0] }}
+              transition={{ 
+                duration: 2.5, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+            >
+              <Sparkles className="h-14 w-14 text-amber-500" />
+            </motion.div>
+            
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute -bottom-1 -right-1"
+            >
+              <Bot className="h-6 w-6 text-purple-500" />
+            </motion.div>
+          </div>
+
+          <div className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-foreground">
+            Grok is building your feed
+            <div className="flex space-x-1.5">
+              <div 
+                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
+                style={{ animationDelay: '0ms' }}
+              />
+              <div 
+                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
+                style={{ animationDelay: '150ms' }}
+              />
+              <div 
+                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
+                style={{ animationDelay: '300ms' }}
+              />
+            </div>
+          </div>
+
+          <p className="text-muted-foreground text-center max-w-xs">
+            Personalized AI cards • Powered by your active paths
+          </p>
+        </motion.div>
       </div>
     );
   }
+  // ========================================================
 
   return (
     <div className="mt-12">
@@ -430,7 +485,7 @@ User question: ${messageText}`;
                     </div>
                   )}
 
-                  {/* AI Chat Panel - now fully consistent with Discover section */}
+                  {/* AI Chat Panel */}
                   <AnimatePresence>
                     {openChatId === item.id && (
                       <motion.div
@@ -462,7 +517,6 @@ User question: ${messageText}`;
                             ))
                           )}
 
-                          {/* Thinking indicator - exact same style as Discover section */}
                           {thinkingCardId === item.id && (
                             <div className="flex justify-start">
                               <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted flex items-center gap-2">
@@ -495,7 +549,6 @@ User question: ${messageText}`;
                     )}
                   </AnimatePresence>
 
-                  {/* Mark as Complete button — always last, below the chat */}
                   {item.type === 'info' && !item.completed && (
                     <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
                       <CheckCircle className="h-4 w-4" />

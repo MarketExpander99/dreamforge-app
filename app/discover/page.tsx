@@ -7,7 +7,7 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
 import Feed from '@/components/feed';  // ← Preserved for My Feed section
 
 // TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
@@ -178,6 +178,7 @@ export default function DiscoverPage() {
         .replace('${interests}', interests)
         .replace('${topic}', topic);
 
+      // Handle the isDeep conditional
       finalPrompt = finalPrompt.replace('${isDeep}', isDeep.toString());
 
       const response = await fetch('/api/grok', {
@@ -305,7 +306,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar - Full width with buttons below */}
         <div className="max-w-2xl mx-auto space-y-4 mb-10">
           <Input
             ref={searchInputRef}
@@ -325,7 +326,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </div>
         </div>
 
-        {/* Grok Loading State with animated dots */}
+        {/* Grok Loading State - Flashy & Themed */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="relative mb-8">
@@ -337,17 +338,16 @@ Answer this question helpfully and clearly: ${currentQuestion}`
             <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
               Grok is building your feed 🙂
             </h2>
-            <p className="text-muted-foreground max-w-xs mb-8">Crafting personalized lessons just for you...</p>
+            <p className="text-muted-foreground max-w-xs">Crafting personalized lessons just for you...</p>
             
-            {/* Animated typing dots */}
-            <div className="flex items-center justify-center gap-1 text-3xl font-light text-amber-500">
-              <span className="animate-[typingDots_1.4s_infinite]">.</span>
-              <span className="animate-[typingDots_1.4s_infinite_150ms]">.</span>
-              <span className="animate-[typingDots_1.4s_infinite_300ms]">.</span>
+            {/* Flashy animated dots */}
+            <div className="flex gap-2 mt-10">
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce"></div>
             </div>
           </div>
         ) : centerNode ? (
-          // ... (rest of the card remains exactly the same)
           <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
@@ -448,7 +448,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </Card>
         )}
 
-        {/* My Feed Section */}
+        {/* My Feed Section - AI-generated personalized feed based on active learning paths */}
         <Feed />
       </div>
     </div>
