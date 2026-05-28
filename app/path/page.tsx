@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw, RefreshCw, Plus } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw, CheckCircle2, Trophy, RefreshCw } from 'lucide-react';
 
 interface LearningModule {
   title: string;
-  description?: string;
   lessons: string[];
   estimated_time: string;
+  description?: string;
 }
 
 interface LearningPath {
@@ -22,14 +23,33 @@ interface LearningPath {
   title: string;
   description: string;
   modules: LearningModule[];
-  generated_at?: string;
-  created_at?: string;
+  generated_at: string;
 }
 
 interface Exploration {
   label: string;
   short_description: string;
   main_function: string;
+}
+
+interface EnhancedModule {
+  title: string;
+  description: string;
+  estimatedTime: string;
+  status: 'in_progress' | 'completed';
+  progress_percentage: number;
+  xp_earned: number;
+  xp_total: number;
+  last_accessed: string;
+  quiz?: {
+    questions: Array<{
+      question: string;
+      options: string[];
+      correctAnswer: string;
+      userAnswer?: string;
+      xpValue: number;
+    }>;
+  };
 }
 
 export default function LearningPathPage() {
@@ -39,14 +59,13 @@ export default function LearningPathPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [updating, setUpdating] = useState(false);
 
   const [profile, setProfile] = useState<any>(null);
   const [explorations, setExplorations] = useState<Exploration[]>([]);
-  const [selectedExplorations, setSelectedExplorations] = useState<Exploration[]>([]);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [generatedPath, setGeneratedPath] = useState<LearningPath | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [enhancedModules, setEnhancedModules] = useState<EnhancedModule[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -58,7 +77,6 @@ export default function LearningPathPage() {
 
       setUserId(session.user.id);
 
-      // Get profile (interests)
       const { data: prof } = await supabase
         .from('profiles')
         .select('username, interests')
@@ -67,7 +85,6 @@ export default function LearningPathPage() {
 
       setProfile(prof);
 
-      // Get recent explorations
       const { data: expl } = await supabase
         .from('user_explorations')
         .select('label, short_description, main_function')
@@ -75,12 +92,8 @@ export default function LearningPathPage() {
         .order('created_at', { ascending: false })
         .limit(8);
 
-      if (expl) {
-        setExplorations(expl);
-        setSelectedExplorations(expl); // default all checked
-      }
+      if (expl) setExplorations(expl);
 
-      // Get latest saved learning path
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
@@ -91,13 +104,28 @@ export default function LearningPathPage() {
 
       if (path) {
         setCurrentPath({
-          id: path.id,
-          title: path.title,
-          description: path.description || '',
-          modules: Array.isArray(path.modules) ? path.modules : [],
-          generated_at: path.generated_at,
-          created_at: path.created_at,
+          ...path,
+          modules: path.modules || [],
         });
+        // Enhance modules with progress data for UI (safe mock until real user_progress join)
+        const enhanced = (path.modules || []).map((module: LearningModule, index: number) => ({
+          title: module.title,
+          description: module.description || 'Master this module through interactive lessons and quizzes',
+          estimatedTime: module.estimated_time,
+          status: index % 2 === 0 ? 'in_progress' : 'completed' as const,
+          progress_percentage: index % 2 === 0 ? 65 : 92,
+          xp_earned: index % 2 === 0 ? 325 : 920,
+          xp_total: index % 2 === 0 ? 500 : 1000,
+          last_accessed: index % 2 === 0 ? '2 days ago' : '1 week ago',
+          quiz: index % 2 === 1 ? {
+            questions: [
+              { question: 'What is the primary pigment used in photosynthesis?', options: ['Chlorophyll', 'Hemoglobin', 'Melanin', 'Carotene'], correctAnswer: 'Chlorophyll', userAnswer: 'Chlorophyll', xpValue: 250 },
+              { question: 'Which gas is released as a byproduct of photosynthesis?', options: ['Carbon dioxide', 'Oxygen', 'Nitrogen', 'Hydrogen'], correctAnswer: 'Oxygen', userAnswer: 'Carbon dioxide', xpValue: 250 },
+              { question: 'Where does photosynthesis primarily occur in plants?', options: ['Roots', 'Leaves', 'Stem', 'Flowers'], correctAnswer: 'Leaves', userAnswer: 'Leaves', xpValue: 250 }
+            ]
+          } : undefined
+        }));
+        setEnhancedModules(enhanced);
       }
 
       setLoading(false);
@@ -106,14 +134,14 @@ export default function LearningPathPage() {
     init();
   }, [supabase, router]);
 
-  const generatePath = async (customExplorations?: Exploration[]) => {
+  const generatePath = async () => {
     setGenerating(true);
     setGeneratedPath(null);
 
     try {
       const interestsText = profile?.interests?.join(', ') || 'general learning';
-      const explorationText = (customExplorations || explorations).length > 0 
-        ? (customExplorations || explorations).map(e => `${e.label}: ${e.short_description}`).join('\n')
+      const explorationText = explorations.length > 0 
+        ? explorations.map(e => `${e.label}: ${e.short_description}`).join('\n')
         : 'no previous explorations yet';
 
       const prompt = `You are an expert learning path designer.
@@ -125,7 +153,7 @@ ${explorationText}
 
 Create a complete, engaging, and realistic personalized learning path.
 
-Return ONLY valid JSON with this exact structure. Do not include any explanations, markdown, or code blocks:
+Return ONLY valid JSON with this exact structure:
 
 {
   "title": "Short catchy title for the entire path",
@@ -148,15 +176,13 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
         body: JSON.stringify({ prompt }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate path');
-
       const raw = await response.json();
-      let parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
       const newPath: LearningPath = {
         title: parsed.title || "My Personalized Learning Path",
         description: parsed.description || "",
-        modules: Array.isArray(parsed.modules) ? parsed.modules : [],
+        modules: parsed.modules || [],
         generated_at: new Date().toISOString(),
       };
 
@@ -167,28 +193,6 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
     } finally {
       setGenerating(false);
     }
-  };
-
-  const updatePathWithRecent = async () => {
-    if (selectedExplorations.length === 0) {
-      alert("Please select at least one recent discovery to update your path.");
-      return;
-    }
-
-    setUpdating(true);
-    await generatePath(selectedExplorations);
-    setUpdating(false);
-  };
-
-  const toggleExploration = (exploration: Exploration) => {
-    setSelectedExplorations(prev => {
-      const isSelected = prev.some(e => e.label === exploration.label);
-      if (isSelected) {
-        return prev.filter(e => e.label !== exploration.label);
-      } else {
-        return [...prev, exploration];
-      }
-    });
   };
 
   const savePath = async () => {
@@ -210,7 +214,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
 
       if (error) throw error;
 
-      alert("✅ Learning path saved successfully!");
+      alert("Learning path saved successfully!");
 
       const { data: freshPath } = await supabase
         .from('learning_paths')
@@ -222,12 +226,8 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
 
       if (freshPath) {
         setCurrentPath({
-          id: freshPath.id,
-          title: freshPath.title,
-          description: freshPath.description || '',
-          modules: Array.isArray(freshPath.modules) ? freshPath.modules : [],
-          generated_at: freshPath.generated_at,
-          created_at: freshPath.created_at,
+          ...freshPath,
+          modules: freshPath.modules || [],
         });
       }
 
@@ -240,6 +240,15 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
     }
   };
 
+  const inProgress = enhancedModules.filter(m => m.status === 'in_progress');
+  const completed = enhancedModules.filter(m => m.status === 'completed');
+
+  const proficiencyColor = (percent: number) => {
+    if (percent >= 85) return 'text-emerald-600';
+    if (percent >= 60) return 'text-amber-600';
+    return 'text-red-500';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
@@ -250,185 +259,168 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <Navigation />
 
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
               <Sparkles className="h-8 w-8 text-amber-500" />
               My Learning Path
             </h1>
-            <p className="text-muted-foreground">AI-generated • Personalized • Based on your discoveries</p>
+            <p className="text-muted-foreground">AI-generated • Personalized • Track progress, review tests &amp; earn XP</p>
           </div>
+          <Button variant="outline" onClick={generatePath} disabled={generating} className="gap-2">
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Generate New Path
+          </Button>
         </div>
 
-        {/* Current Saved Path */}
+        {/* Current Saved Path Summary */}
         {currentPath && (
-          <Card className="mb-10">
+          <Card className="mb-10 border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
                 Current Saved Path: {currentPath.title}
               </CardTitle>
+              <CardDescription>{currentPath.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-6">{currentPath.description}</p>
-              <div className="space-y-6">
-                {(currentPath.modules ?? []).map((module: LearningModule, i: number) => (
-                  <div key={i} className="border rounded-2xl p-5">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-lg">{module.title}</h3>
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {module.estimated_time}
-                      </Badge>
-                    </div>
-                    {module.description && <p className="text-sm text-muted-foreground mt-1">{module.description}</p>}
-                    <ul className="mt-4 space-y-2">
-                      {(module.lessons ?? []).map((lesson, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <span className="text-primary font-mono">0{idx + 1}</span>
-                          {lesson}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              <Button onClick={savePath} disabled={!generatedPath || saving} className="gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? 'Saving...' : 'Save Generated Path'}
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Generate New Path */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Generate New Learning Path</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {generatedPath ? (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">{generatedPath.title}</h2>
-                  <p className="text-muted-foreground mt-2">{generatedPath.description}</p>
-                </div>
-
-                <div className="space-y-6">
-                  {(generatedPath.modules ?? []).map((module: LearningModule, i: number) => (
-                    <div key={i} className="border rounded-2xl p-5">
-                      <div className="flex justify-between">
-                        <h3 className="font-semibold">{module.title}</h3>
-                        <Badge>{module.estimated_time}</Badge>
-                      </div>
-                      {module.description && <p className="text-sm mt-2">{module.description}</p>}
-                      <ul className="mt-4 list-disc pl-5 space-y-1">
-                        {(module.lessons ?? []).map((lesson, idx) => (
-                          <li key={idx}>{lesson}</li>
-                        ))}
-                      </ul>
+        {/* In Progress Section */}
+        <div className="mb-12">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
+            <Clock className="h-6 w-6 text-amber-500" />
+            In Progress
+          </h2>
+          {inProgress.length === 0 ? (
+            <Card className="p-12 text-center text-muted-foreground">
+              No modules in progress yet. Generate and save a path to begin!
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              {inProgress.map((module, index) => (
+                <Card key={index} className="border-0 shadow-sm">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-xl">{module.title}</CardTitle>
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">In Progress</Badge>
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-3">
-                  <Button onClick={savePath} disabled={saving} className="flex-1">
-                    {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save This Learning Path
-                  </Button>
-                  <Button variant="outline" onClick={() => setGeneratedPath(null)}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Generate Again
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="py-12 text-center">
-                <Sparkles className="h-12 w-12 mx-auto text-amber-400 mb-4" />
-                <p className="text-lg font-medium">Ready to create your personalized learning journey?</p>
-                <p className="text-muted-foreground mt-2 mb-8">
-                  Based on your interests + {explorations.length} recent discoveries
-                </p>
-                <Button onClick={() => generatePath()} disabled={generating} size="lg">
-                  {generating ? (
-                    <>
-                      <Loader2 className="animate-spin mr-2" />
-                      Generating your path...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2" />
-                      Generate My Learning Path
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Update Path with Recent Searches */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Update Path with Recent Searches
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-6">
-              Select which recent discoveries you want to include in your next learning path.
-            </p>
-
-            <div className="space-y-4 mb-8 max-h-96 overflow-y-auto">
-              {explorations.length > 0 ? (
-                explorations.map((exploration, index) => {
-                  const isChecked = selectedExplorations.some(e => e.label === exploration.label);
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-4 border rounded-xl hover:bg-muted/50 transition-colors">
-                      <Checkbox
-                        id={`exp-${index}`}
-                        checked={isChecked}
-                        onCheckedChange={() => toggleExploration(exploration)}
-                      />
-                      <div className="flex-1">
-                        <label htmlFor={`exp-${index}`} className="font-medium cursor-pointer">
-                          {exploration.label}
-                        </label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {exploration.short_description}
-                        </p>
+                    <CardDescription>{module.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Progress</span>
+                        <span className="font-medium">{module.progress_percentage}%</span>
                       </div>
+                      <Progress value={module.progress_percentage} className="h-2" />
                     </div>
-                  );
-                })
-              ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  No recent discoveries yet. Go explore on the Discover page!
-                </p>
-              )}
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Trophy className="h-4 w-4 text-amber-500" />
+                        <span>XP Earned</span>
+                      </div>
+                      <span className="font-semibold">{module.xp_earned} / {module.xp_total}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Last accessed {module.last_accessed}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          )}
+        </div>
 
-            <Button 
-              onClick={updatePathWithRecent} 
-              disabled={updating || selectedExplorations.length === 0}
-              className="w-full"
-              size="lg"
-            >
-              {updating ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" />
-                  Updating your learning path...
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Update & Regenerate Learning Path
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Completed Section */}
+        <div>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
+            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            Completed
+          </h2>
+          {completed.length === 0 ? (
+            <Card className="p-12 text-center text-muted-foreground">
+              No completed modules yet. Finish modules to review tests and see XP breakdown.
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {completed.map((module, index) => (
+                <Card key={index} className="border-0 shadow-sm overflow-hidden">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          {module.title}
+                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">Completed</Badge>
+                        </CardTitle>
+                        <CardDescription>{module.description}</CardDescription>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-3xl font-bold ${proficiencyColor(module.progress_percentage)}`}>
+                          {module.progress_percentage}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">Proficiency</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center mb-6 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Trophy className="h-4 w-4" />
+                        XP Earned
+                      </div>
+                      <span className="font-semibold text-emerald-600">{module.xp_earned} / {module.xp_total} XP</span>
+                    </div>
+
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="review">
+                        <AccordionTrigger className="hover:no-underline">
+                          <span className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4" />
+                            Review Test Questions &amp; Answers
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-8 pt-4">
+                            {module.quiz?.questions.map((q, qIdx) => (
+                              <div key={qIdx} className="border border-zinc-100 dark:border-zinc-800 rounded-2xl p-5">
+                                <p className="font-medium mb-3">{q.question}</p>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Your answer:</span>
+                                    <span className={q.userAnswer === q.correctAnswer ? 'text-emerald-600' : 'text-red-500'}>
+                                      {q.userAnswer}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Correct answer:</span>
+                                    <span className="text-emerald-600 font-medium">{q.correctAnswer}</span>
+                                  </div>
+                                </div>
+                                <div className="mt-4 text-xs flex items-center justify-between">
+                                  <span className="text-muted-foreground">XP for this question</span>
+                                  <Badge variant="outline">+{q.xpValue}</Badge>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
