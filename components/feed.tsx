@@ -44,6 +44,7 @@ export default function Feed() {
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatMessagesMap, setChatMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
 
   const fetchActivePaths = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -57,6 +58,32 @@ export default function Feed() {
     return data || [];
   };
 
+  const fetchMasteryContext = async (userId: string) => {
+    const { data: completed } = await supabase
+      .from('user_progress')
+      .select('item_type, learning_path_id, result, completed_at')
+      .eq('user_id', userId)
+      .eq('interaction_type', 'test_complete')
+      .order('completed_at', { ascending: false })
+      .limit(8);
+
+    const { data: chats } = await supabase
+      .from('chat_messages')
+      .select('card_id, topic, content, message_role')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    return {
+      completedSummary: completed?.length 
+        ? `User has successfully completed ${completed.length} recent items across paths: ${[...new Set(completed.map(c => c.learning_path_id))].join(', ')}.` 
+        : 'User is relatively new and has few completions.',
+      chatSummary: chats?.length 
+        ? `User has engaged in deep AI chats on topics: ${[...new Set(chats.map(c => c.topic).filter(Boolean))].join(', ')}. Recent conversations show strong interest in mastery.` 
+        : 'No prior chat history.'
+    };
+  };
+
   const generateAIFeed = async (paths: any[]) => {
     if (paths.length === 0) return [];
     if (userCredits < 2) {
@@ -65,9 +92,13 @@ export default function Feed() {
     }
     setUserCredits(prev => prev - 2);
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
+
+    const mastery = await fetchMasteryContext(session.user.id);
     const pathSummaries = paths.map(p => p.label || p.title || 'learning topic').join(', ');
 
-    const prompt = `${MASTER_LESSON_PROMPT}\n\nBased ONLY on these active learning paths: ${pathSummaries}.\nGenerate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty.`;
+    const prompt = `${MASTER_LESSON_PROMPT}\n\nBased ONLY on these active learning paths: ${pathSummaries}.\n${mastery.completedSummary}\n${mastery.chatSummary}\nGenerate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty that perfectly match the user's current mastery level and chat depth.`;
 
     try {
       const response = await fetch('/api/grok', {
@@ -219,10 +250,12 @@ export default function Feed() {
     if (!messageText || sendingMessage) return;
 
     setSendingMessage(true);
+    setThinkingCardId(item.id);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setSendingMessage(false);
+      setThinkingCardId(null);
       return;
     }
 
@@ -305,6 +338,7 @@ User question: ${messageText}`;
       console.error('AI chat response failed:', err);
     } finally {
       setSendingMessage(false);
+      setThinkingCardId(null);
     }
   };
 
@@ -396,7 +430,7 @@ User question: ${messageText}`;
                     </div>
                   )}
 
-                  {/* AI Chat Panel */}
+                  {/* AI Chat Panel - now fully consistent with Discover section */}
                   <AnimatePresence>
                     {openChatId === item.id && (
                       <motion.div
@@ -427,6 +461,21 @@ User question: ${messageText}`;
                               </div>
                             ))
                           )}
+
+                          {/* Thinking indicator - exact same style as Discover section */}
+                          {thinkingCardId === item.id && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted flex items-center gap-2">
+                                <Bot className="h-4 w-4 text-purple-500" />
+                                <div className="flex space-x-1">
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                                <span className="text-xs text-muted-foreground">AI is thinking...</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex gap-2">
@@ -446,7 +495,7 @@ User question: ${messageText}`;
                     )}
                   </AnimatePresence>
 
-                  {/* Mark as Complete button — now always last, below the chat */}
+                  {/* Mark as Complete button — always last, below the chat */}
                   {item.type === 'info' && !item.completed && (
                     <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
                       <CheckCircle className="h-4 w-4" />
