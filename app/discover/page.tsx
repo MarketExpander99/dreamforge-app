@@ -7,7 +7,7 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles, Send } from 'lucide-react';
 import Feed from '@/components/feed';  // ← Preserved for My Feed section
 
 // TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
@@ -448,8 +448,9 @@ Answer this question helpfully and clearly: ${currentQuestion}`
                     onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()}
                     disabled={isChatLoading}
                   />
-                  <Button onClick={sendChatMessage} disabled={isChatLoading}>
+                  <Button onClick={sendChatMessage} disabled={isChatLoading} className="gap-2">
                     Send
+                    <Send className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
