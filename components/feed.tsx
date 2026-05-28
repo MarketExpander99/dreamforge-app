@@ -5,7 +5,8 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, TestTube, MessageSquare, Lock, Sparkles, RefreshCw, CheckCircle } from 'lucide-react';
+import { Loader2, BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface FeedItem {
   id: string;
@@ -20,6 +21,7 @@ interface FeedItem {
   learningPathTitle: string;
   completed: boolean;
   topic?: string;
+  difficulty: number;           // ← New: for progression
 }
 
 export default function Feed() {
@@ -51,16 +53,20 @@ export default function Feed() {
 
     const pathSummaries = paths.map(p => p.label || p.title || 'learning topic').join(', ');
 
-    const prompt = `You are an expert educator for Skill Gain. Based ONLY on these active learning paths: ${pathSummaries}.
-Generate exactly 4 personalized feed cards (2 info cards and 2 test cards).
-Return ONLY valid JSON array of objects with this structure:
+    const prompt = `You are an expert educator and master lesson architect for Skill Gain.
+Based ONLY on these active learning paths: ${pathSummaries}.
+
+Generate exactly 4 personalized feed cards (2 info cards + 2 test cards) with increasing difficulty.
+Return ONLY valid JSON array.
+
+Use this structure:
 [
   {
     "type": "info" or "test",
     "title": "short engaging title",
-    "description": "clear helpful description (actual lesson-style content)",
-    "testQuestion": "optional question for test cards",
-    "testOptions": ["option1", "option2", "option3", "option4"] for tests only
+    "description": "rich lesson-style content",
+    "testQuestion": "optional for tests",
+    "testOptions": ["A", "B", "C", "D"]
   }
 ]`;
 
@@ -93,8 +99,8 @@ Return ONLY valid JSON array of objects with this structure:
 
     if (aiItems.length === 0 && paths.length > 0) {
       aiItems = [
-        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights and real explanations.' },
-        { type: 'test', title: 'Knowledge Check', description: 'Quick test to solidify learning', testQuestion: `Apply concepts from ${paths[0].label || 'this path'}?`, testOptions: ['Option A', 'Option B', 'Option C', 'Option D'] },
+        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights.', difficulty: 1 },
+        { type: 'test', title: 'Knowledge Check', description: 'Quick test', testQuestion: `Apply concepts from ${paths[0].label}?`, testOptions: ['A', 'B', 'C', 'D'], difficulty: 2 },
       ];
     }
 
@@ -111,6 +117,7 @@ Return ONLY valid JSON array of objects with this structure:
       learningPathTitle: paths[0]?.label || 'Your Active Path',
       completed: false,
       topic: paths[0]?.label || 'general',
+      difficulty: item.difficulty || 3,
     }));
 
     setFeedItems(mappedItems);
@@ -121,17 +128,35 @@ Return ONLY valid JSON array of objects with this structure:
     initializeFeed();
   }, []);
 
+  // ← Core improvement: Replace completed card with MORE ADVANCED one
   const markAsComplete = async (item: FeedItem) => {
+    // Mark as completed immediately
     setFeedItems(prev => prev.map(i => 
       i.id === item.id ? { ...i, completed: true } : i
     ));
 
     setTimeout(async () => {
+      // Remove completed card smoothly
       setFeedItems(prev => prev.filter(i => i.id !== item.id));
 
-      try {
-        const nextPrompt = `You are an expert educator for Skill Gain. The student just completed "${item.title}". Create a MORE DETAILED follow-up lesson on the same topic "${item.topic || 'this subject'}". Return JSON with "title" and "description" only.`;
+      // Generate a more advanced follow-up card
+      const nextPrompt = `You are an expert educator for Skill Gain.
+The student just completed: "${item.title}" (difficulty ${item.difficulty}).
 
+Create ONE more advanced follow-up card on the same topic "${item.topic || 'this subject'}".
+Make it clearly harder and deeper than the previous card (increase difficulty by 1-2 levels).
+Focus on: how it works, history/inventors, materials, connected systems, analogies, and practical knowledge.
+
+Return ONLY valid JSON with this structure:
+{
+  "type": "${item.type === 'info' ? 'info' : 'test'}",
+  "title": "short engaging title",
+  "description": "rich detailed content",
+  "testQuestion": "...",
+  "testOptions": ["opt1", "opt2", "opt3", "opt4"]
+}`;
+
+      try {
         const res = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -143,27 +168,29 @@ Return ONLY valid JSON array of objects with this structure:
 
         const newItem: FeedItem = {
           id: `feed-next-${Date.now()}`,
-          type: 'info',
-          title: nextData.title || `Advanced ${item.topic}`,
-          description: nextData.description || 'Deeper exploration of the topic with more detailed explanations and examples.',
+          type: nextData.type || (item.type === 'info' ? 'info' : 'test'),
+          title: nextData.title || `Advanced: ${item.title}`,
+          description: nextData.description || 'Deeper exploration with more advanced concepts.',
           mediaUrl: getTopicImage(nextData.title || item.topic || 'education'),
           mediaType: 'image',
+          testQuestion: nextData.testQuestion,
+          testOptions: nextData.testOptions,
           learningPathId: item.learningPathId,
           learningPathTitle: item.learningPathTitle,
           completed: false,
           topic: item.topic,
+          difficulty: (item.difficulty || 3) + 2,
         };
 
+        // Add the more advanced card
         setFeedItems(prev => [...prev, newItem]);
       } catch (e) {
-        console.error('Failed to generate next lesson');
+        console.error('Failed to generate advanced follow-up:', e);
       }
-    }, 600);
+    }, 500);
   };
 
-  const handleRefreshFeed = () => {
-    initializeFeed();
-  };
+  const handleRefreshFeed = () => initializeFeed();
 
   const recordInteraction = async (item: FeedItem, interactionType: 'ask_ai' | 'test_complete', result?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -191,8 +218,7 @@ Return ONLY valid JSON array of objects with this structure:
 
   const handleTestSubmit = async (item: FeedItem, answer: string) => {
     await recordInteraction(item, 'test_complete', answer);
-    setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
-    alert(`🎉 Test completed! +25 XP`);
+    markAsComplete(item); // ← Now uses the same advanced replacement flow
   };
 
   if (isLoading) {
@@ -224,78 +250,69 @@ Return ONLY valid JSON array of objects with this structure:
       <p className="text-muted-foreground mb-8">Personalized info &amp; test cards. Complete them to earn XP and unlock achievements.</p>
 
       <div className="space-y-8">
-        {feedItems.map((item) => (
-          <Card 
-            key={item.id} 
-            className={`transition-all duration-700 ${item.completed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
-                {item.title}
-                {item.completed && <Lock className="h-4 w-4 text-emerald-600 ml-auto" />}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Image with reliable fallback */}
-             {/* <div className="relative rounded-3xl overflow-hidden aspect-video bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
-                <img 
-                  src={item.mediaUrl} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback to gradient + icon if image fails
-                    e.currentTarget.style.display = 'none';
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="w-full h-full flex flex-col items-center justify-center text-zinc-400">
-                          ${item.type === 'info' 
-                            ? '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>' 
-                            : '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>'}
-                        </div>`;
-                    }
-                  }}
-                />
-              </div> */}
+        <AnimatePresence mode="popLayout">
+          {feedItems.map((item) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -30, transition: { duration: 0.4 } }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <Card className="transition-all">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
+                    {item.title}
+                    {item.completed && <CheckCircle className="h-4 w-4 text-emerald-600 ml-auto" />}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="text-lg leading-relaxed">{item.description}</p>
 
-              <p className="text-lg leading-relaxed">{item.description}</p>
-
-              {item.type === 'info' && !item.completed && (
-                <>
-                  <Button variant="outline" className="gap-2 w-full" onClick={() => handleAskAI(item)}>
-                    <MessageSquare className="h-4 w-4" />
-                    Ask AI about this
-                  </Button>
-                  <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
-                    <CheckCircle className="h-4 w-4" />
-                    Mark as Complete
-                  </Button>
-                </>
-              )}
-
-              {item.type === 'test' && !item.completed && (
-                <div className="space-y-4">
-                  <p className="font-medium">{item.testQuestion}</p>
-                  <div className="space-y-2">
-                    {item.testOptions?.map((option, idx) => (
-                      <Button key={idx} variant="outline" className="w-full justify-start text-left" onClick={() => handleTestSubmit(item, option)}>
-                        {option}
+                  {item.type === 'info' && !item.completed && (
+                    <>
+                      <Button variant="outline" className="gap-2 w-full" onClick={() => handleAskAI(item)}>
+                        <MessageSquare className="h-4 w-4" />
+                        Ask AI about this
                       </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
+                        <CheckCircle className="h-4 w-4" />
+                        Mark as Complete
+                      </Button>
+                    </>
+                  )}
 
-              {item.completed && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-4 rounded-2xl flex items-center gap-3">
-                  <Lock className="h-5 w-5" />
-                  Completed — XP awarded • Achievement unlocked
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                  {item.type === 'test' && !item.completed && (
+                    <div className="space-y-4">
+                      <p className="font-medium">{item.testQuestion}</p>
+                      <div className="space-y-2">
+                        {item.testOptions?.map((option, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            className="w-full justify-start text-left"
+                            onClick={() => handleTestSubmit(item, option)}
+                          >
+                            {option}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {item.completed && (
+                    <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-4 rounded-2xl flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5" />
+                      Completed — XP awarded • Next challenge unlocked
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
