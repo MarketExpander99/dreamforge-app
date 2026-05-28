@@ -21,7 +21,7 @@ interface FeedItem {
   learningPathTitle: string;
   completed: boolean;
   topic?: string;
-  difficulty: number;           // ← New: for progression
+  difficulty: number;
 }
 
 export default function Feed() {
@@ -56,19 +56,8 @@ export default function Feed() {
     const prompt = `You are an expert educator and master lesson architect for Skill Gain.
 Based ONLY on these active learning paths: ${pathSummaries}.
 
-Generate exactly 4 personalized feed cards (2 info cards + 2 test cards) with increasing difficulty.
-Return ONLY valid JSON array.
-
-Use this structure:
-[
-  {
-    "type": "info" or "test",
-    "title": "short engaging title",
-    "description": "rich lesson-style content",
-    "testQuestion": "optional for tests",
-    "testOptions": ["A", "B", "C", "D"]
-  }
-]`;
+Generate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty.
+Return ONLY valid JSON array.`;
 
     try {
       const response = await fetch('/api/grok', {
@@ -128,31 +117,25 @@ Use this structure:
     initializeFeed();
   }, []);
 
-  // ← Core improvement: Replace completed card with MORE ADVANCED one
   const markAsComplete = async (item: FeedItem) => {
-    // Mark as completed immediately
     setFeedItems(prev => prev.map(i => 
       i.id === item.id ? { ...i, completed: true } : i
     ));
 
     setTimeout(async () => {
-      // Remove completed card smoothly
       setFeedItems(prev => prev.filter(i => i.id !== item.id));
 
-      // Generate a more advanced follow-up card
       const nextPrompt = `You are an expert educator for Skill Gain.
 The student just completed: "${item.title}" (difficulty ${item.difficulty}).
 
-Create ONE more advanced follow-up card on the same topic "${item.topic || 'this subject'}".
-Make it clearly harder and deeper than the previous card (increase difficulty by 1-2 levels).
-Focus on: how it works, history/inventors, materials, connected systems, analogies, and practical knowledge.
-
-Return ONLY valid JSON with this structure:
+Create ONE more advanced follow-up card on "${item.topic || 'this subject'}".
+Make it clearly harder and deeper (increase difficulty by 1-2 levels).
+Return ONLY valid JSON object with the structure:
 {
   "type": "${item.type === 'info' ? 'info' : 'test'}",
   "title": "short engaging title",
   "description": "rich detailed content",
-  "testQuestion": "...",
+  "testQuestion": "... (if test)",
   "testOptions": ["opt1", "opt2", "opt3", "opt4"]
 }`;
 
@@ -182,7 +165,6 @@ Return ONLY valid JSON with this structure:
           difficulty: (item.difficulty || 3) + 2,
         };
 
-        // Add the more advanced card
         setFeedItems(prev => [...prev, newItem]);
       } catch (e) {
         console.error('Failed to generate advanced follow-up:', e);
@@ -218,7 +200,7 @@ Return ONLY valid JSON with this structure:
 
   const handleTestSubmit = async (item: FeedItem, answer: string) => {
     await recordInteraction(item, 'test_complete', answer);
-    markAsComplete(item); // ← Now uses the same advanced replacement flow
+    markAsComplete(item);
   };
 
   if (isLoading) {
@@ -247,7 +229,7 @@ Return ONLY valid JSON with this structure:
           </Button>
         </div>
       </div>
-      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards. Complete them to earn XP and unlock achievements.</p>
+      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards. Complete them to earn XP and unlock the next challenge.</p>
 
       <div className="space-y-8">
         <AnimatePresence mode="popLayout">
@@ -260,7 +242,7 @@ Return ONLY valid JSON with this structure:
               exit={{ opacity: 0, scale: 0.9, y: -30, transition: { duration: 0.4 } }}
               transition={{ duration: 0.5, ease: "easeInOut" }}
             >
-              <Card className="transition-all">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3">
                     {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
@@ -305,7 +287,7 @@ Return ONLY valid JSON with this structure:
                   {item.completed && (
                     <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-4 rounded-2xl flex items-center gap-3">
                       <CheckCircle className="h-5 w-5" />
-                      Completed — XP awarded • Next challenge unlocked
+                      Completed — XP awarded • Next advanced challenge unlocked
                     </div>
                   )}
                 </CardContent>
