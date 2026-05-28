@@ -145,27 +145,20 @@ export default function DiscoverPage() {
       const grade = userProfile?.grade_level || 'intermediate';
       const interests = userProfile?.interests?.join(', ') || 'general learning';
 
-      const prompt = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
-
-CRITICAL SAFETY RULES - NEVER BREAK THESE:
-- Under NO circumstances generate content that is harmful to kids, illegal, explicit, violent, hateful, discriminatory, or promotes any illegal/dangerous activity.
-- All content must be 100% safe, family-friendly, educational, and appropriate for children and teenagers.
-- Stay positive, encouraging, and fully educational at all times.
+      const prompt = `You are an expert educational assistant for Skill Gain, a gamified learning platform for students.
 
 User profile: ${grade} level student with interests in ${interests}.
 
-For the topic "${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic.
+For the topic "${topic}", create ONE focused, practical LESSON on a **specific actionable sub-topic** (example: for "bees" or "beekeeping" → "Cleaning the Hive", "Seasonal Hive Inspection", or "Safe Honey Extraction"). 
 
-IMPORTANT:
-- Start teaching real content immediately. Do NOT use teaser language like "Explore the advanced materials...", "Discover...", "Learn about..." or any advert-style hooks.
-- Deliver actual educational value right away with clear explanations, facts, and examples.
+NEVER return a broad topic as the label. Always choose one narrow, practical skill or concept.
 
 Return ONLY valid JSON with this exact structure:
 
 {
-  "label": "${topic}",
-  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style.",
-  "main_function": "Clear learning objective - what the student will understand or be able to do after this lesson",
+  "label": "Specific actionable lesson title (e.g. 'Cleaning the Hive')",
+  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style. Do not end with career or 'become a skilled' language.",
+  "main_function": "Clear learning objective - what the student will understand or be able to do after completing this lesson",
   "components": ["key concept 1", "key concept 2", ...],
   "self_similar": ["related lesson ideas", ...],
   ${isDeep ? `"deep_details": "FULL DETAILED LESSON CONTENT (600+ words). Write engaging, educational material at the student's exact level. Include step-by-step instructions where appropriate, clear explanations, examples, reference data, facts, and sources at the end. Stimulate their current understanding and gently challenge them to grow."` : `"deep_details": "Detailed lesson content (400+ words) adapted to the student's level with explanations, examples, and references."`}
@@ -246,10 +239,7 @@ Return ONLY valid JSON with this exact structure:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `You are a safe, helpful educational assistant on Skill-Gain.com.
-Current lesson topic is "${centerNode.label}".
-Keep all answers family-friendly, educational, and appropriate for students.
-Answer this question helpfully and clearly: ${currentQuestion}`
+          prompt: `The current lesson topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
         }),
       });
 
