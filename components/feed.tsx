@@ -37,7 +37,7 @@ export default function Feed() {
   const supabase = createBrowserSupabaseClient();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);     // ← New
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [activePaths, setActivePaths] = useState<any[]>([]);
   const [userCredits, setUserCredits] = useState(12);
 
@@ -160,7 +160,6 @@ export default function Feed() {
     setFeedItems(mappedItems);
     setLoadingProgress(100);
 
-    // Brief pause at 100% so user can see completion
     setTimeout(() => {
       setIsLoading(false);
       setLoadingProgress(0);
@@ -171,7 +170,6 @@ export default function Feed() {
     initializeFeed();
   }, []);
 
-  // Load chat messages when a card's chat is opened
   useEffect(() => {
     const loadChatMessages = async () => {
       if (!openChatId) return;
@@ -358,7 +356,6 @@ User question: ${messageText}`;
     markAsComplete(item);
   };
 
-  // ==================== LOADING STATE WITH PROGRESS BAR ====================
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
@@ -368,7 +365,6 @@ User question: ${messageText}`;
           transition={{ duration: 0.5 }}
           className="flex flex-col items-center gap-6 w-full max-w-md"
         >
-          {/* Grok + Sparkles animation */}
           <div className="relative">
             <motion.div
               animate={{ rotate: [0, 15, -10, 15, 0] }}
@@ -399,7 +395,6 @@ User question: ${messageText}`;
             Personalized AI cards • Powered by your active paths
           </p>
 
-          {/* Progress Bar */}
           <div className="w-full max-w-xs mt-4">
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <motion.div
@@ -418,7 +413,6 @@ User question: ${messageText}`;
       </div>
     );
   }
-  // ========================================================
 
   return (
     <div className="mt-12">
@@ -499,14 +493,20 @@ User question: ${messageText}`;
                         exit={{ opacity: 0, height: 0 }}
                         className="mt-4 border rounded-2xl p-4 bg-muted/50"
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2 text-purple-600">
-                            <Bot className="h-5 w-5" />
-                            <span className="font-semibold">AI Mastery Chat</span>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => setOpenChatId(null)}>
-                            <X className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center gap-3 mb-6">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-9 w-9 text-amber-500 animate-pulse flex-shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                          </svg>
+                          <h3 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            Ask Grok
+                          </h3>
                         </div>
 
                         <div className="h-64 overflow-y-auto space-y-4 mb-4 pr-2 bg-background/80 rounded-xl p-3">
@@ -531,7 +531,7 @@ User question: ${messageText}`;
                                   <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                                   <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                                 </div>
-                                <span className="text-xs text-muted-foreground">AI is thinking...</span>
+                                <span className="text-xs text-muted-foreground">Grok is thinking...</span>
                               </div>
                             </div>
                           )}
@@ -540,13 +540,18 @@ User question: ${messageText}`;
                         <div className="flex gap-2">
                           <Input
                             id={`chat-input-${item.id}`}
-                            placeholder="Ask AI anything..."
+                            placeholder="Ask Grok anything..."
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') handleSendMessage(item);
                             }}
                             disabled={sendingMessage}
                           />
-                          <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>
+                          <Button 
+                            onClick={() => handleSendMessage(item)} 
+                            disabled={sendingMessage}
+                            className="gap-2"
+                          >
+                            Send
                             <Send className="h-4 w-4" />
                           </Button>
                         </div>

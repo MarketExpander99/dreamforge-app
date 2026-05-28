@@ -404,8 +404,24 @@ Answer this question helpfully and clearly: ${currentQuestion}`
                 </Button>
               </div>
 
+              {/* Updated AI Chat Section – now matches Feed exactly */}
               <div className="pt-8 border-t">
-                <h4 className="font-semibold mb-3">Ask a question about this lesson</h4>
+                <div className="flex items-center gap-3 mb-6">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-9 w-9 text-amber-500 animate-pulse flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                  </svg>
+                  <h3 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    Ask Grok
+                  </h3>
+                </div>
+
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3 w-full">
                   {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this lesson...</p>}
                   {chatMessages.map((msg, i) => (
