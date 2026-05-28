@@ -10,6 +10,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, BookOpen, Plus, CreditCard, Crown, Loader2 } from 'lucide-react';
 import Feed from '@/components/feed';  // ← Preserved for My Feed section
 
+// TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
+const LESSON_PROMPT_TEMPLATE = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
+
+CRITICAL SAFETY RULES - NEVER BREAK THESE:
+- Under NO circumstances generate content that is harmful to kids, illegal, explicit, violent, hateful, discriminatory, or promotes any illegal/dangerous activity.
+- All content must be 100% safe, family-friendly, educational, and appropriate for children and teenagers.
+- Stay positive, encouraging, and fully educational at all times.
+
+User profile: \${grade} level student with interests in \${interests}.
+
+For the topic "\${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic.
+
+IMPORTANT:
+- Label must be a clear, specific lesson title (e.g. "How Starship's Heat Shield Tiles Work" or "Cleaning a Beehive").
+- Start teaching real content immediately. Do NOT use teaser language like "Explore...", "Discover...", "Learn about..." or any advert-style hooks.
+- Always teach "how it works", materials, mechanisms, and practical knowledge right from the start.
+
+Return ONLY valid JSON with this exact structure:
+
+{
+  "label": "Specific lesson title focused on how something works or a practical skill",
+  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style.",
+  "main_function": "Clear learning objective - what the student will understand or be able to do after this lesson",
+  "components": ["key concept 1", "key concept 2", ...],
+  "self_similar": ["related lesson ideas", ...],
+  \${isDeep ? \`"deep_details": "FULL DETAILED LESSON CONTENT (600+ words). Write engaging, educational material at the student's exact level. Include step-by-step instructions where appropriate, clear explanations, examples, reference data, facts, and sources at the end. Stimulate their current understanding and gently challenge them to grow."\` : \`"deep_details": "Detailed lesson content (400+ words) adapted to the student's level with explanations, examples, and references."\`}
+}`;
+
 interface Node {
   id: string;
   label: string;
@@ -145,36 +173,18 @@ export default function DiscoverPage() {
       const grade = userProfile?.grade_level || 'intermediate';
       const interests = userProfile?.interests?.join(', ') || 'general learning';
 
-      const prompt = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
+      let finalPrompt = LESSON_PROMPT_TEMPLATE
+        .replace('${grade}', grade)
+        .replace('${interests}', interests)
+        .replace('${topic}', topic);
 
-CRITICAL SAFETY RULES - NEVER BREAK THESE:
-- Under NO circumstances generate content that is harmful to kids, illegal, explicit, violent, hateful, discriminatory, or promotes any illegal/dangerous activity.
-- All content must be 100% safe, family-friendly, educational, and appropriate for children and teenagers.
-- Stay positive, encouraging, and fully educational at all times.
-
-User profile: ${grade} level student with interests in ${interests}.
-
-For the topic "${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic.
-
-IMPORTANT:
-- Start teaching real content immediately. Do NOT use teaser language like "Explore the advanced materials...", "Discover...", "Learn about..." or any advert-style hooks.
-- Deliver actual educational value right away with clear explanations, facts, and examples.
-
-Return ONLY valid JSON with this exact structure:
-
-{
-  "label": "${topic}",
-  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style.",
-  "main_function": "Clear learning objective - what the student will understand or be able to do after this lesson",
-  "components": ["key concept 1", "key concept 2", ...],
-  "self_similar": ["related lesson ideas", ...],
-  ${isDeep ? `"deep_details": "FULL DETAILED LESSON CONTENT (600+ words). Write engaging, educational material at the student's exact level. Include step-by-step instructions where appropriate, clear explanations, examples, reference data, facts, and sources at the end. Stimulate their current understanding and gently challenge them to grow."` : `"deep_details": "Detailed lesson content (400+ words) adapted to the student's level with explanations, examples, and references."`}
-}`;
+      // Handle the isDeep conditional
+      finalPrompt = finalPrompt.replace('${isDeep}', isDeep.toString());
 
       const response = await fetch('/api/grok', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: finalPrompt }),
       });
 
       const rawData = await response.json();
@@ -300,7 +310,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
         <div className="max-w-2xl mx-auto space-y-4 mb-10">
           <Input
             ref={searchInputRef}
-            placeholder="Search anything... (bees, photosynthesis, fractions...)"
+            placeholder="Search anything... (bees, starship heat shield, fractions...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()}
