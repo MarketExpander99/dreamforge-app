@@ -331,12 +331,9 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="relative mb-8">
               <Sparkles className="h-16 w-16 text-amber-500 animate-pulse" />
-              <div className="absolute -top-2 -right-2 h-8 w-8 bg-emerald-400 rounded-full flex items-center justify-center animate-ping">
-                <span className="text-white text-xs font-bold">AI</span>
-              </div>
             </div>
             <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
-              Grok is building your feed 🙂
+              Grok is building your lesson.
             </h2>
             <p className="text-muted-foreground max-w-xs">Crafting personalized lessons just for you...</p>
             
