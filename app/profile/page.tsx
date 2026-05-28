@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History, Sparkles, Lock } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,6 @@ import { Progress } from '@/components/ui/progress'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/user-context'
-import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 
 interface UserProfile {
   id: string
@@ -41,7 +40,6 @@ interface UserProfile {
     description: string
     icon: string
     earnedAt: string
-    fromFeed?: boolean
   }>
   categoryProgress: Array<{
     category: string
@@ -54,7 +52,6 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter()
   const { user, authLoading } = useAuth()
-  const supabase = createBrowserSupabaseClient()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -106,6 +103,9 @@ export default function ProfilePage() {
     if (!userProfile) return
     setSaving(true)
     try {
+      const { createBrowserSupabaseClient } = await import('@/lib/supabase-client')
+      const supabase = createBrowserSupabaseClient()
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -139,59 +139,18 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      // Base profile from existing API
       const response = await fetch('/api/profile')
-      let baseData: any = {}
       if (response.ok) {
-        baseData = await response.json()
+        const data = await response.json()
+        setUserProfile(data)
+        setFormData({
+          fullName: data.fullName,
+          bio: data.bio || '',
+          gradeLevel: data.gradeLevel,
+          interests: data.interests.join(', '),
+          learningGoals: data.learningGoals || ''
+        })
       }
-
-      // Fetch real achievements (including feed_mastery from My Feed)
-      const { data: achievementsData } = await supabase
-        .from('user_achievements')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-
-      // Fetch progress for XP and feed visualization
-      const { data: progressData } = await supabase
-        .from('user_progress')
-        .select('learning_path_id, xp_earned, item_type, completed_at')
-        .eq('user_id', user?.id)
-
-      const mappedAchievements = (achievementsData || []).map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        description: a.description,
-        icon: a.achievement_type === 'feed_mastery' ? 'sparkles' : 'trophy',
-        earnedAt: a.created_at,
-        fromFeed: a.achievement_type === 'feed_mastery'
-      }))
-
-      const totalXP = (progressData || []).reduce((sum: number, p: any) => sum + (p.xp_earned || 0), 0)
-
-      const fullProfile: UserProfile = {
-        ...baseData,
-        achievements: mappedAchievements,
-        achievementsCount: mappedAchievements.length,
-        categoryProgress: [
-          {
-            category: 'Feed Mastery',
-            progress: Math.min(100, totalXP / 3),
-            completed: progressData?.filter((p: any) => p.item_type === 'test').length || 0,
-            total: 10
-          }
-        ]
-      }
-
-      setUserProfile(fullProfile)
-      setFormData({
-        fullName: fullProfile.fullName || '',
-        bio: fullProfile.bio || '',
-        gradeLevel: fullProfile.gradeLevel || '',
-        interests: (fullProfile.interests || []).join(', '),
-        learningGoals: fullProfile.learningGoals || ''
-      })
     } catch (error) {
       console.error('Error fetching profile:', error)
     } finally {
@@ -221,14 +180,15 @@ export default function ProfilePage() {
         body: formDataUpload,
       })
       if (response.ok) {
-        alert('Avatar updated successfully')
-        fetchProfile()
+        // Refresh profile to show new avatar immediately
+        await fetchProfile()
       } else {
-        alert('Failed to upload avatar')
+        const errorText = await response.text()
+        alert(`Failed to upload avatar: ${errorText}`)
       }
     } catch (error) {
       console.error('Error uploading avatar:', error)
-      alert('Failed to upload avatar')
+      alert('Failed to upload avatar. Please try again.')
     } finally {
       setUploadingAvatar(false)
     }
@@ -283,25 +243,26 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header - exact Discover typography */}
+        <div className="max-w-5xl mx-auto">
+          {/* Gorgeous Header */}
           <div className="mb-10">
-            <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-zinc-900">
+            <Card className="border-0 shadow-sm overflow-hidden bg-white dark:bg-zinc-900">
               <CardContent className="p-8">
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                  <div className="relative flex-shrink-0">
-                    <Avatar className="h-28 w-28 ring-2 ring-zinc-100 dark:ring-zinc-800">
-                      <AvatarImage src={userProfile.avatar} />
-                      <AvatarFallback className="text-3xl font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                        {userProfile.fullName.split(' ').map(n => n[0]).join('')}
+                  {/* Avatar with upload overlay */}
+                  <div className="relative group">
+                    <Avatar className="h-32 w-32 border-4 border-white dark:border-zinc-800 shadow-xl">
+                      <AvatarImage src={userProfile.avatar} alt={userProfile.fullName} />
+                      <AvatarFallback className="text-4xl bg-gradient-to-br from-amber-400 to-emerald-500 text-white">
+                        {userProfile.fullName?.[0] || '👤'}
                       </AvatarFallback>
                     </Avatar>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="absolute -bottom-2 -right-2 h-9 w-9 rounded-full p-0 shadow-sm hover:shadow"
+                      variant="secondary"
+                      className="absolute bottom-2 right-2 h-8 w-8 rounded-full p-0 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingAvatar}
                     >
@@ -311,244 +272,231 @@ export default function ProfilePage() {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      onChange={handleAvatarUpload}
                       className="hidden"
+                      onChange={handleAvatarUpload}
                     />
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">{userProfile.fullName}</h1>
-                    <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-base">{userProfile.email}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="font-medium px-3 py-1 text-sm">{userProfile.gradeLevel}</Badge>
-                      {userProfile.interests.map((interest) => (
-                        <Badge key={interest} variant="outline" className="font-medium px-3 py-1 text-sm">{interest}</Badge>
-                      ))}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
+                          {userProfile.fullName}
+                          <Sparkles className="h-6 w-6 text-amber-500" />
+                        </h1>
+                        <p className="text-muted-foreground">{userProfile.email}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        {isEditing ? 'Cancel' : 'Edit Profile'}
+                      </Button>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-3 gap-6 mt-8">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-emerald-600">{userProfile.currentStreak}</div>
+                        <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-amber-600">{userProfile.completedModules}</div>
+                        <p className="text-xs text-muted-foreground">Modules Completed</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-purple-600">{userProfile.achievementsCount}</div>
+                        <p className="text-xs text-muted-foreground">Achievements</p>
+                      </div>
                     </div>
                   </div>
-
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    {isEditing ? 'Cancel' : 'Edit Profile'}
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-5 bg-white dark:bg-zinc-900 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm font-medium">Overview</TabsTrigger>
-              <TabsTrigger value="learning-path" className="rounded-xl data-[state=active]:shadow-sm font-medium">Learning Path</TabsTrigger>
-              <TabsTrigger value="achievements" className="rounded-xl data-[state=active]:shadow-sm font-medium">Achievements</TabsTrigger>
-              <TabsTrigger value="credits" className="rounded-xl data-[state=active]:shadow-sm font-medium">Credits</TabsTrigger>
-              <TabsTrigger value="account" className="rounded-xl data-[state=active]:shadow-sm font-medium">Account</TabsTrigger>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-zinc-900 border-0 shadow-sm">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+              <TabsTrigger value="achievements" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Achievements
+              </TabsTrigger>
+              <TabsTrigger value="credits" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Credits
+              </TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+            <TabsContent value="overview" className="mt-8 space-y-8">
+              <Card className="border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold tracking-tight">About Me</CardTitle>
+                  <CardTitle>Bio &amp; Goals</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
-                    {userProfile.bio || 'No bio yet. Tell the community a bit about yourself!'}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Learning Path Tab - enhanced with feed progress */}
-            <TabsContent value="learning-path" className="space-y-6">
-              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    Your Personalized Learning Path
-                  </CardTitle>
-                  <CardDescription className="text-zinc-500 dark:text-zinc-400">Progress powered by Discover + My Feed interactions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-3xl">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">📍 Continue building expertise through My Feed</p>
+                <CardContent className="space-y-6">
+                  <div>
+                    <p className="text-muted-foreground">{userProfile.bio || 'No bio yet. Tell us a little about yourself!'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Learning Goals</Label>
+                    <p className="mt-2">{userProfile.learningGoals || 'No goals set yet.'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Interests</Label>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {userProfile.interests.map((interest, i) => (
+                        <Badge key={i} variant="secondary">{interest}</Badge>
+                      ))}
                     </div>
-                    {userProfile.categoryProgress.map((cat, i) => (
-                      <div key={i} className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium">{cat.category}</span>
-                          <span className="text-emerald-600">{Math.round(cat.progress)}%</span>
-                        </div>
-                        <Progress value={cat.progress} className="h-3" />
-                        <p className="text-xs text-zinc-500">{cat.completed} / {cat.total} items completed via Feed</p>
-                      </div>
-                    ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Category Progress */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Subject Progress</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {userProfile.categoryProgress.map((cat, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>{cat.category}</span>
+                        <span className="font-medium">{cat.progress}%</span>
+                      </div>
+                      <Progress value={cat.progress} className="h-2" />
+                      <p className="text-xs text-muted-foreground mt-1">{cat.completed}/{cat.total} completed</p>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Achievements Tab - shows feed achievements */}
-            <TabsContent value="achievements" className="space-y-6">
-              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="mt-8">
+              <Card className="border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
-                    <Trophy className="h-5 w-5" />
-                    Achievements
-                  </CardTitle>
-                  <CardDescription>{userProfile.achievementsCount} unlocked • Feed mastery included</CardDescription>
+                  <CardTitle>Profile Information</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userProfile.achievements.map((achievement) => (
-                      <Card key={achievement.id} className="p-4">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            {achievement.fromFeed ? (
-                              <Sparkles className="h-8 w-8 text-amber-500" />
-                            ) : (
-                              <Trophy className="h-8 w-8 text-emerald-600" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{achievement.title}</h4>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400">{achievement.description}</p>
-                            <p className="text-xs text-zinc-400 mt-2">
-                              Earned {new Date(achievement.earnedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {achievement.fromFeed && <Lock className="h-5 w-5 text-emerald-600" />}
+                <CardContent className="space-y-6">
+                  {isEditing && (
+                    <>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <Label htmlFor="fullName">Full Name</Label>
+                          <Input id="fullName" value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} />
                         </div>
-                      </Card>
-                    ))}
-                    {userProfile.achievements.length === 0 && (
-                      <p className="text-zinc-500 italic col-span-2 text-center py-8">Complete more Feed cards to unlock achievements!</p>
-                    )}
-                  </div>
+                        <div>
+                          <Label htmlFor="gradeLevel">Grade Level</Label>
+                          <Input id="gradeLevel" value={formData.gradeLevel} onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+                      </div>
+                      <div>
+                        <Label htmlFor="interests">Interests (comma separated)</Label>
+                        <Input id="interests" value={formData.interests} onChange={(e) => setFormData({...formData, interests: e.target.value})} />
+                      </div>
+                      <div>
+                        <Label htmlFor="goals">Learning Goals</Label>
+                        <Textarea id="goals" value={formData.learningGoals} onChange={(e) => setFormData({...formData, learningGoals: e.target.value})} />
+                      </div>
+                      <Button onClick={handleSaveProfile} disabled={saving} className="gap-2 w-full md:w-auto">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Save Changes
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
+
+              {/* Password Change */}
+              <Card className="border-0 shadow-sm mt-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Key className="h-5 w-5" />Change Password</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input type="password" placeholder="Current password" value={passwordData.currentPassword} onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})} />
+                  <Input type="password" placeholder="New password" value={passwordData.newPassword} onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})} />
+                  <Input type="password" placeholder="Confirm new password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})} />
+                  <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto">
+                    {changingPassword ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Update Password
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Achievements Tab */}
+            <TabsContent value="achievements" className="mt-8">
+              <div className="grid gap-6 md:grid-cols-2">
+                {userProfile.achievements.map((ach) => (
+                  <Card key={ach.id} className="border-0 shadow-sm">
+                    <CardContent className="p-6 flex gap-4">
+                      <Trophy className="h-10 w-10 text-amber-500 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold">{ach.title}</h4>
+                        <p className="text-sm text-muted-foreground">{ach.description}</p>
+                        <p className="text-xs mt-2 text-emerald-600">Earned {ach.earnedAt}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </TabsContent>
 
             {/* Credits Tab */}
-            <TabsContent value="credits" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                      <CreditCard className="h-5 w-5" />
-                      Free Credits
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-5xl font-semibold tracking-tighter text-emerald-600">{creditsData.freeCreditsRemaining}</div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">remaining today • resets {creditsData.dailyFreeReset}</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                      <CreditCard className="h-5 w-5" />
-                      Paid Credits
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-5xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-100">{creditsData.paidCredits}</div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">available • no expiry</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+            <TabsContent value="credits" className="mt-8">
+              <Card className="border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
-                    <History className="h-5 w-5" />
-                    Purchase History
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Credits &amp; History
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-5">
-                    {purchaseHistory.map((purchase) => (
-                      <div key={purchase.id} className="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                  <div className="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Free Credits Remaining</p>
+                      <p className="text-5xl font-bold text-emerald-600">{creditsData.freeCreditsRemaining}</p>
+                      <p className="text-xs">Resets {creditsData.dailyFreeReset}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Paid Credits</p>
+                      <p className="text-5xl font-bold">{creditsData.paidCredits}</p>
+                    </div>
+                  </div>
+                  <h4 className="font-medium mb-4 flex items-center gap-2"><History className="h-4 w-4" />Purchase History</h4>
+                  <div className="space-y-4">
+                    {purchaseHistory.map(item => (
+                      <div key={item.id} className="flex justify-between border-b pb-4">
                         <div>
-                          <p className="font-medium text-zinc-900 dark:text-zinc-100">{purchase.type}</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.date}</p>
+                          <p className="font-medium">{item.type}</p>
+                          <p className="text-xs text-muted-foreground">{item.date}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-emerald-600">+{purchase.amount}</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{purchase.price}</p>
+                          <p className="font-semibold">+{item.amount}</p>
+                          <p className="text-xs text-muted-foreground">{item.price}</p>
                         </div>
                       </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Account Tab */}
-            <TabsContent value="account" className="space-y-6">
-              <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold tracking-tight">Account Management</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  <div className="space-y-3">
-                    <Label className="text-zinc-600 dark:text-zinc-400 font-medium">Display Name</Label>
-                    <Input 
-                      value={formData.fullName} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))} 
-                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 font-medium">
-                      <Key className="h-4 w-4" />
-                      Change Password
-                    </Label>
-                    <Input
-                      type="password"
-                      placeholder="Current password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                    />
-                    <Input
-                      type="password"
-                      placeholder="New password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                    />
-                    <Input
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                    />
-                    <Button onClick={handleChangePassword} disabled={changingPassword} className="w-full md:w-auto font-medium">
-                      {changingPassword ? 'Updating...' : 'Update Password'}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-
-          {isEditing && (
-            <div className="fixed bottom-8 right-8 z-50">
-              <Button onClick={handleSaveProfile} disabled={saving} size="lg" className="shadow-lg hover:shadow-xl transition-shadow font-medium">
-                <Save className="h-4 w-4 mr-2" />
-                Save All Changes
-              </Button>
-            </div>
-          )}
         </div>
       </main>
     </div>
