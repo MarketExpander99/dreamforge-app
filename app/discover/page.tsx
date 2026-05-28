@@ -7,7 +7,7 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, BookOpen, Plus, CreditCard, Crown, Loader2 } from 'lucide-react';
+import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
 import Feed from '@/components/feed';  // ← Preserved for My Feed section
 
 // TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
@@ -326,8 +326,28 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </div>
         </div>
 
-        {/* Result Card - Lesson focused */}
-        {centerNode ? (
+        {/* Grok Loading State - Flashy & Themed */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="relative mb-8">
+              <Sparkles className="h-16 w-16 text-amber-500 animate-pulse" />
+              <div className="absolute -top-2 -right-2 h-8 w-8 bg-emerald-400 rounded-full flex items-center justify-center animate-ping">
+                <span className="text-white text-xs font-bold">AI</span>
+              </div>
+            </div>
+            <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
+              Grok is building your feed 🙂
+            </h2>
+            <p className="text-muted-foreground max-w-xs">Crafting personalized lessons just for you...</p>
+            
+            {/* Flashy animated dots */}
+            <div className="flex gap-2 mt-10">
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce"></div>
+            </div>
+          </div>
+        ) : centerNode ? (
           <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
