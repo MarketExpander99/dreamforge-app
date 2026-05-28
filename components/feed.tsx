@@ -5,7 +5,8 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Loader2, BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Bot, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MASTER_LESSON_PROMPT, NEXT_CARD_PROMPT } from '@/lib/prompts/lesson-generator';
 
@@ -25,12 +26,24 @@ interface FeedItem {
   difficulty: number;
 }
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 export default function Feed() {
   const supabase = createBrowserSupabaseClient();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePaths, setActivePaths] = useState<any[]>([]);
   const [userCredits, setUserCredits] = useState(12);
+
+  // Chat state
+  const [openChatId, setOpenChatId] = useState<string | null>(null);
+  const [chatMessagesMap, setChatMessagesMap] = useState<Record<string, ChatMessage[]>>({});
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const fetchActivePaths = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -114,6 +127,29 @@ export default function Feed() {
     initializeFeed();
   }, []);
 
+  // Load chat messages when a card's chat is opened
+  useEffect(() => {
+    const loadChatMessages = async () => {
+      if (!openChatId) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('card_id', openChatId)
+        .order('created_at', { ascending: true });
+
+      if (error) console.error('Chat load error:', error);
+      else {
+        setChatMessagesMap(prev => ({ ...prev, [openChatId]: data || [] }));
+      }
+    };
+
+    loadChatMessages();
+  }, [openChatId, supabase]);
+
   const markAsComplete = async (item: FeedItem) => {
     setFeedItems(prev => prev.map(i => 
       i.id === item.id ? { ...i, completed: true } : i
@@ -177,10 +213,103 @@ export default function Feed() {
     }
   };
 
-  const handleAskAI = async (item: FeedItem) => {
-    const question = prompt('Ask AI anything about this card:') || 'General question';
+  const handleSendMessage = async (item: FeedItem) => {
+    const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
+    const messageText = input?.value.trim();
+    if (!messageText || sendingMessage) return;
+
+    setSendingMessage(true);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setSendingMessage(false);
+      return;
+    }
+
+    // Optimistic user message
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageText,
+      created_at: new Date().toISOString()
+    };
+
+    setChatMessagesMap(prev => ({
+      ...prev,
+      [item.id]: [...(prev[item.id] || []), userMsg]
+    }));
+
+    // Clear input
+    input.value = '';
+
+    // Save user message
+    await supabase
+      .from('chat_messages')
+      .insert({
+        user_id: session.user.id,
+        card_id: item.id,
+        learning_path_id: item.learningPathId,
+        topic: item.topic,
+        message_role: 'user',
+        content: messageText
+      });
+
+    // Record interaction
     await recordInteraction(item, 'ask_ai');
-    alert(`✅ Ask AI interaction recorded (+10 XP)`);
+
+    // Get real AI response via existing /api/grok
+    try {
+      const chatPrompt = `You are an expert tutor on the Skill Gain platform. 
+The user is studying: "${item.title}" 
+Topic: "${item.topic || 'general'}"
+Description: "${item.description}"
+Help them master this concept with a clear, encouraging, and educational response. Keep it concise but insightful.
+
+User question: ${messageText}`;
+
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: chatPrompt }),
+      });
+
+      const raw = await response.json();
+      const assistantResponse = typeof raw === 'string' 
+        ? raw 
+        : raw.response || raw.text || raw.message || 'Great question! Let me explain this in more detail to help build your mastery.';
+
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: assistantResponse,
+        created_at: new Date().toISOString()
+      };
+
+      setChatMessagesMap(prev => ({
+        ...prev,
+        [item.id]: [...(prev[item.id] || []), assistantMsg]
+      }));
+
+      // Save assistant message
+      await supabase
+        .from('chat_messages')
+        .insert({
+          user_id: session.user.id,
+          card_id: item.id,
+          learning_path_id: item.learningPathId,
+          topic: item.topic,
+          message_role: 'assistant',
+          content: assistantResponse
+        });
+    } catch (err) {
+      console.error('AI chat response failed:', err);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const toggleChat = (itemId: string) => {
+    setOpenChatId(openChatId === itemId ? null : itemId);
   };
 
   const handleTestSubmit = async (item: FeedItem, answer: string) => {
@@ -239,16 +368,14 @@ export default function Feed() {
                   <p className="text-lg leading-relaxed">{item.description}</p>
 
                   {item.type === 'info' && !item.completed && (
-                    <>
-                      <Button variant="outline" className="gap-2 w-full" onClick={() => handleAskAI(item)}>
-                        <MessageSquare className="h-4 w-4" />
-                        Ask AI about this
-                      </Button>
-                      <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
-                        <CheckCircle className="h-4 w-4" />
-                        Mark as Complete
-                      </Button>
-                    </>
+                    <Button 
+                      variant="outline" 
+                      className="gap-2 w-full" 
+                      onClick={() => toggleChat(item.id)}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Ask AI about this
+                    </Button>
                   )}
 
                   {item.type === 'test' && !item.completed && (
@@ -267,6 +394,64 @@ export default function Feed() {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {/* AI Chat Panel */}
+                  <AnimatePresence>
+                    {openChatId === item.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 border rounded-2xl p-4 bg-muted/50"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2 text-purple-600">
+                            <Bot className="h-5 w-5" />
+                            <span className="font-semibold">AI Mastery Chat</span>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setOpenChatId(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="h-64 overflow-y-auto space-y-4 mb-4 pr-2 bg-background/80 rounded-xl p-3">
+                          {chatMessagesMap[item.id]?.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">Ask anything to deepen your mastery on this card!</p>
+                          ) : (
+                            chatMessagesMap[item.id]?.map((msg) => (
+                              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Input
+                            id={`chat-input-${item.id}`}
+                            placeholder="Ask AI anything..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSendMessage(item);
+                            }}
+                            disabled={sendingMessage}
+                          />
+                          <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Mark as Complete button — now always last, below the chat */}
+                  {item.type === 'info' && !item.completed && (
+                    <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
+                      <CheckCircle className="h-4 w-4" />
+                      Mark as Complete
+                    </Button>
                   )}
 
                   {item.completed && (
