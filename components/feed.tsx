@@ -37,6 +37,7 @@ export default function Feed() {
   const supabase = createBrowserSupabaseClient();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);     // ← New
   const [activePaths, setActivePaths] = useState<any[]>([]);
   const [userCredits, setUserCredits] = useState(12);
 
@@ -122,10 +123,14 @@ export default function Feed() {
 
   const initializeFeed = async () => {
     setIsLoading(true);
+    setLoadingProgress(10);
+
     const paths = await fetchActivePaths();
     setActivePaths(paths);
+    setLoadingProgress(30);
 
     let aiItems: any[] = await generateAIFeed(paths);
+    setLoadingProgress(70);
 
     if (aiItems.length === 0 && paths.length > 0) {
       aiItems = [
@@ -133,6 +138,8 @@ export default function Feed() {
         { type: 'test', title: 'Knowledge Check', description: 'Quick test', testQuestion: `Apply concepts from ${paths[0].label}?`, testOptions: ['A', 'B', 'C', 'D'], difficulty: 2 },
       ];
     }
+
+    setLoadingProgress(90);
 
     const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
       id: `feed-${Date.now()}-${index}`,
@@ -151,7 +158,13 @@ export default function Feed() {
     }));
 
     setFeedItems(mappedItems);
-    setIsLoading(false);
+    setLoadingProgress(100);
+
+    // Brief pause at 100% so user can see completion
+    setTimeout(() => {
+      setIsLoading(false);
+      setLoadingProgress(0);
+    }, 400);
   };
 
   useEffect(() => {
@@ -259,7 +272,6 @@ export default function Feed() {
       return;
     }
 
-    // Optimistic user message
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -272,10 +284,8 @@ export default function Feed() {
       [item.id]: [...(prev[item.id] || []), userMsg]
     }));
 
-    // Clear input
     input.value = '';
 
-    // Save user message
     await supabase
       .from('chat_messages')
       .insert({
@@ -287,10 +297,8 @@ export default function Feed() {
         content: messageText
       });
 
-    // Record interaction
     await recordInteraction(item, 'ask_ai');
 
-    // Get real AI response via existing /api/grok
     try {
       const chatPrompt = `You are an expert tutor on the Skill Gain platform. 
 The user is studying: "${item.title}" 
@@ -323,7 +331,6 @@ User question: ${messageText}`;
         [item.id]: [...(prev[item.id] || []), assistantMsg]
       }));
 
-      // Save assistant message
       await supabase
         .from('chat_messages')
         .insert({
@@ -351,7 +358,7 @@ User question: ${messageText}`;
     markAsComplete(item);
   };
 
-  // ==================== NEW LOADING STATE ====================
+  // ==================== LOADING STATE WITH PROGRESS BAR ====================
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
@@ -359,28 +366,20 @@ User question: ${messageText}`;
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-6"
+          className="flex flex-col items-center gap-6 w-full max-w-md"
         >
           {/* Grok + Sparkles animation */}
           <div className="relative">
             <motion.div
               animate={{ rotate: [0, 15, -10, 15, 0] }}
-              transition={{ 
-                duration: 2.5, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
             >
               <Sparkles className="h-14 w-14 text-amber-500" />
             </motion.div>
             
             <motion.div
               animate={{ scale: [1, 1.15, 1] }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -bottom-1 -right-1"
             >
               <Bot className="h-6 w-6 text-purple-500" />
@@ -390,24 +389,31 @@ User question: ${messageText}`;
           <div className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-foreground">
             Grok is building your feed
             <div className="flex space-x-1.5">
-              <div 
-                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
-                style={{ animationDelay: '0ms' }}
-              />
-              <div 
-                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
-                style={{ animationDelay: '150ms' }}
-              />
-              <div 
-                className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" 
-                style={{ animationDelay: '300ms' }}
-              />
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
           </div>
 
           <p className="text-muted-foreground text-center max-w-xs">
             Personalized AI cards • Powered by your active paths
           </p>
+
+          {/* Progress Bar */}
+          <div className="w-full max-w-xs mt-4">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-amber-500 via-amber-600 to-purple-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${loadingProgress}%` }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <span>Generating personalized cards...</span>
+              <span>{loadingProgress}%</span>
+            </div>
+          </div>
         </motion.div>
       </div>
     );
@@ -485,7 +491,6 @@ User question: ${messageText}`;
                     </div>
                   )}
 
-                  {/* AI Chat Panel */}
                   <AnimatePresence>
                     {openChatId === item.id && (
                       <motion.div
