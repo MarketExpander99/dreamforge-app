@@ -19,7 +19,7 @@ interface FeedItem {
   learningPathId: string;
   learningPathTitle: string;
   completed: boolean;
-  topic?: string; // for generating next lesson
+  topic?: string;
 }
 
 export default function Feed() {
@@ -79,6 +79,11 @@ Return ONLY valid JSON array of objects with this structure:
     }
   };
 
+  const getTopicImage = (title: string) => {
+    const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 900;
+    return `https://picsum.photos/id/${300 + hash}/800/400`;
+  };
+
   const initializeFeed = async () => {
     setIsLoading(true);
     const paths = await fetchActivePaths();
@@ -88,20 +93,17 @@ Return ONLY valid JSON array of objects with this structure:
 
     if (aiItems.length === 0 && paths.length > 0) {
       aiItems = [
-        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights and real explanations.', testQuestion: undefined, testOptions: undefined },
+        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights and real explanations.' },
         { type: 'test', title: 'Knowledge Check', description: 'Quick test to solidify learning', testQuestion: `Apply concepts from ${paths[0].label || 'this path'}?`, testOptions: ['Option A', 'Option B', 'Option C', 'Option D'] },
       ];
     }
-
-    const learningImage = 'https://picsum.photos/id/1015/800/400';
-    const quizImage = 'https://picsum.photos/id/201/800/400';
 
     const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
       id: `feed-${Date.now()}-${index}`,
       type: item.type || 'info',
       title: item.title || 'Personalized Lesson',
       description: item.description || 'AI-generated educational content',
-      mediaUrl: item.type === 'info' ? learningImage : quizImage,
+      mediaUrl: getTopicImage(item.title || 'education'),
       mediaType: 'image',
       testQuestion: item.testQuestion,
       testOptions: item.testOptions,
@@ -120,19 +122,15 @@ Return ONLY valid JSON array of objects with this structure:
   }, []);
 
   const markAsComplete = async (item: FeedItem) => {
-    // Mark current card as completed with animation
     setFeedItems(prev => prev.map(i => 
       i.id === item.id ? { ...i, completed: true } : i
     ));
 
-    // Small delay for fade-out animation
     setTimeout(async () => {
-      // Remove completed card
       setFeedItems(prev => prev.filter(i => i.id !== item.id));
 
-      // Generate and add next more detailed lesson in same topic
       try {
-        const nextPrompt = `You are an expert educator for Skill Gain. The student just completed "${item.title}". Create a MORE DETAILED follow-up lesson on the same topic "${item.topic || 'this subject'}". Make it deeper and more advanced. Return JSON with "title" and "description" only.`;
+        const nextPrompt = `You are an expert educator for Skill Gain. The student just completed "${item.title}". Create a MORE DETAILED follow-up lesson on the same topic "${item.topic || 'this subject'}". Return JSON with "title" and "description" only.`;
 
         const res = await fetch('/api/grok', {
           method: 'POST',
@@ -148,7 +146,7 @@ Return ONLY valid JSON array of objects with this structure:
           type: 'info',
           title: nextData.title || `Advanced ${item.topic}`,
           description: nextData.description || 'Deeper exploration of the topic with more detailed explanations and examples.',
-          mediaUrl: 'https://picsum.photos/id/1015/800/400',
+          mediaUrl: getTopicImage(nextData.title || item.topic || 'education'),
           mediaType: 'image',
           learningPathId: item.learningPathId,
           learningPathTitle: item.learningPathTitle,
@@ -156,7 +154,6 @@ Return ONLY valid JSON array of objects with this structure:
           topic: item.topic,
         };
 
-        // Add new card with animation
         setFeedItems(prev => [...prev, newItem]);
       } catch (e) {
         console.error('Failed to generate next lesson');
@@ -168,7 +165,6 @@ Return ONLY valid JSON array of objects with this structure:
     initializeFeed();
   };
 
-  // Your existing recordInteraction, handleAskAI, handleTestSubmit remain unchanged
   const recordInteraction = async (item: FeedItem, interactionType: 'ask_ai' | 'test_complete', result?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -238,31 +234,40 @@ Return ONLY valid JSON array of objects with this structure:
                 {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
                 {item.title}
                 {item.completed && <Lock className="h-4 w-4 text-emerald-600 ml-auto" />}
-                <span className="text-xs text-muted-foreground ml-auto">for {item.learningPathTitle}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="relative rounded-3xl overflow-hidden aspect-video">
-                <img src={item.mediaUrl} alt={item.title} className="w-full h-full object-cover" />
-              </div>
+              {/* Image with reliable fallback */}
+             {/* <div className="relative rounded-3xl overflow-hidden aspect-video bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
+                <img 
+                  src={item.mediaUrl} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to gradient + icon if image fails
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `
+                        <div class="w-full h-full flex flex-col items-center justify-center text-zinc-400">
+                          ${item.type === 'info' 
+                            ? '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>' 
+                            : '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>'}
+                        </div>`;
+                    }
+                  }}
+                />
+              </div> */}
 
               <p className="text-lg leading-relaxed">{item.description}</p>
 
               {item.type === 'info' && !item.completed && (
                 <>
-                  <Button
-                    variant="outline"
-                    className="gap-2 w-full"
-                    onClick={() => handleAskAI(item)}
-                  >
+                  <Button variant="outline" className="gap-2 w-full" onClick={() => handleAskAI(item)}>
                     <MessageSquare className="h-4 w-4" />
                     Ask AI about this
                   </Button>
-                  <Button
-                    variant="default"
-                    className="gap-2 w-full"
-                    onClick={() => markAsComplete(item)}
-                  >
+                  <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
                     <CheckCircle className="h-4 w-4" />
                     Mark as Complete
                   </Button>
@@ -274,12 +279,7 @@ Return ONLY valid JSON array of objects with this structure:
                   <p className="font-medium">{item.testQuestion}</p>
                   <div className="space-y-2">
                     {item.testOptions?.map((option, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                        onClick={() => handleTestSubmit(item, option)}
-                      >
+                      <Button key={idx} variant="outline" className="w-full justify-start text-left" onClick={() => handleTestSubmit(item, option)}>
                         {option}
                       </Button>
                     ))}
