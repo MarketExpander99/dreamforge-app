@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MASTER_LESSON_PROMPT, NEXT_CARD_PROMPT } from '@/lib/prompts/lesson-generator';
 
 interface FeedItem {
   id: string;
@@ -53,11 +54,7 @@ export default function Feed() {
 
     const pathSummaries = paths.map(p => p.label || p.title || 'learning topic').join(', ');
 
-    const prompt = `You are an expert educator and master lesson architect for Skill Gain.
-Based ONLY on these active learning paths: ${pathSummaries}.
-
-Generate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty.
-Return ONLY valid JSON array.`;
+    const prompt = `${MASTER_LESSON_PROMPT}\n\nBased ONLY on these active learning paths: ${pathSummaries}.\nGenerate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty.`;
 
     try {
       const response = await fetch('/api/grok', {
@@ -125,25 +122,13 @@ Return ONLY valid JSON array.`;
     setTimeout(async () => {
       setFeedItems(prev => prev.filter(i => i.id !== item.id));
 
-      const nextPrompt = `You are an expert educator for Skill Gain.
-The student just completed: "${item.title}" (difficulty ${item.difficulty}).
-
-Create ONE more advanced follow-up card on "${item.topic || 'this subject'}".
-Make it clearly harder and deeper (increase difficulty by 1-2 levels).
-Return ONLY valid JSON object with the structure:
-{
-  "type": "${item.type === 'info' ? 'info' : 'test'}",
-  "title": "short engaging title",
-  "description": "rich detailed content",
-  "testQuestion": "... (if test)",
-  "testOptions": ["opt1", "opt2", "opt3", "opt4"]
-}`;
+      const prompt = NEXT_CARD_PROMPT(item.title, item.topic || 'this subject', item.difficulty);
 
       try {
         const res = await fetch('/api/grok', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: nextPrompt }),
+          body: JSON.stringify({ prompt }),
         });
 
         const raw = await res.json();
