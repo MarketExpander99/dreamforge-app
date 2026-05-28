@@ -7,36 +7,7 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles, Send } from 'lucide-react';
-import Feed  from  '@/components/feed';  // ← Preserved for My Feed section
-
-// TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
-const LESSON_PROMPT_TEMPLATE = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
-
-CRITICAL SAFETY RULES - NEVER BREAK THESE:
-- Under NO circumstances generate content that is harmful to kids, illegal, explicit, violent, hateful, discriminatory, or promotes any illegal/dangerous activity.
-- All content must be 100% safe, family-friendly, educational, and appropriate for children and teenagers.
-- Stay positive, encouraging, and fully educational at all times.
-
-User profile: \${grade} level student with interests in \${interests}.
-
-For the topic "\${topic}", create ONE focused, practical LESSON on a specific actionable sub-topic.
-
-IMPORTANT:
-- Label must be a clear, specific lesson title (e.g. "How Starship's Heat Shield Tiles Work" or "Cleaning a Beehive").
-- Start teaching real content immediately. Do NOT use teaser language like "Explore...", "Discover...", "Learn about..." or any advert-style hooks.
-- Always teach "how it works", materials, mechanisms, and practical knowledge right from the start.
-
-Return ONLY valid JSON with this exact structure:
-
-{
-  "label": "Specific lesson title focused on how something works or a practical skill",
-  "short_description": "Actual engaging lesson introduction - the opening section of the full lesson. Dynamically adjust length and depth based on the student's grade_level and interests: beginner (3-4 detailed sentences), intermediate (4-6 detailed sentences), advanced (5-7+ detailed sentences). Start teaching the content right away at the student's exact level. Educational, substantive, and never teaser/advert style.",
-  "main_function": "Clear learning objective - what the student will understand or be able to do after this lesson",
-  "components": ["key concept 1", "key concept 2", ...],
-  "self_similar": ["related lesson ideas", ...],
-  \${isDeep ? \`"deep_details": "FULL DETAILED LESSON CONTENT (600+ words). Write engaging, educational material at the student's exact level. Include step-by-step instructions where appropriate, clear explanations, examples, reference data, facts, and sources at the end. Stimulate their current understanding and gently challenge them to grow."\` : \`"deep_details": "Detailed lesson content (400+ words) adapted to the student's level with explanations, examples, and references."\`}
-}`;
+import { Search, BookOpen, Plus, CreditCard, Crown, Loader2 } from 'lucide-react';
 
 interface Node {
   id: string;
@@ -51,6 +22,21 @@ interface Node {
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface LearningModule {
+  title: string;
+  lessons: string[];
+  estimated_time: string;
+  description?: string;
+}
+
+interface LearningPath {
+  id?: string;
+  title: string;
+  description: string;
+  modules: LearningModule[];
+  generated_at: string;
 }
 
 export default function DiscoverPage() {
@@ -68,16 +54,13 @@ export default function DiscoverPage() {
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSessionReady, setIsSessionReady] = useState(false);
-  const [userProfile, setUserProfile] = useState<{ grade_level?: string; interests?: string[] } | null>(null);
 
-  // Auto-focus search input on load
   useEffect(() => {
     if (isSessionReady) {
       searchInputRef.current?.focus();
     }
   }, [isSessionReady]);
 
-  // Session initialization
   useEffect(() => {
     let mounted = true;
 
@@ -118,29 +101,6 @@ export default function DiscoverPage() {
     return () => { mounted = false; };
   }, [supabase, router]);
 
-  // Fetch user profile for personalization (grade_level + interests)
-  useEffect(() => {
-    if (!isSessionReady) return;
-
-    const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('grade_level, interests')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profile) {
-        setUserProfile(profile);
-      }
-    };
-
-    fetchProfile();
-  }, [isSessionReady, supabase]);
-
-  // Auto-save exploration to database
   const saveExploration = async (node: Node) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -170,21 +130,22 @@ export default function DiscoverPage() {
     setCenterNode(null);
 
     try {
-      const grade = userProfile?.grade_level || 'intermediate';
-      const interests = userProfile?.interests?.join(', ') || 'general learning';
+      const prompt = `You are a helpful exploration assistant.
+For the topic "${topic}", return ONLY valid JSON with this structure:
 
-      let finalPrompt = LESSON_PROMPT_TEMPLATE
-        .replace('${grade}', grade)
-        .replace('${interests}', interests)
-        .replace('${topic}', topic);
-
-      // Handle the isDeep conditional
-      finalPrompt = finalPrompt.replace('${isDeep}', isDeep.toString());
+{
+  "label": "${topic}",
+  "short_description": "Clear 1-2 sentence description",
+  "main_function": "What this thing does or its purpose",
+  "components": ["component1", "component2", ...],
+  "self_similar": ["similar item 1", "similar item 2", ...],
+  ${isDeep ? `"deep_details": "Detailed information including manufacturing processes, materials, variations, cost factors, or deeper insights"` : ''}
+}`;
 
       const response = await fetch('/api/grok', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: finalPrompt }),
+        body: JSON.stringify({ prompt }),
       });
 
       const rawData = await response.json();
@@ -194,7 +155,7 @@ export default function DiscoverPage() {
         id: Date.now().toString(),
         label: parsed.label || topic,
         short_description: parsed.short_description || "No description available.",
-        main_function: parsed.main_function || "No objective available.",
+        main_function: parsed.main_function || "No function information available.",
         components: Array.isArray(parsed.components) ? parsed.components : [],
         self_similar: Array.isArray(parsed.self_similar) ? parsed.self_similar : [],
         deep_details: parsed.deep_details,
@@ -208,7 +169,7 @@ export default function DiscoverPage() {
 
     } catch (error) {
       console.error(error);
-      alert("Failed to generate lesson.");
+      alert("Failed to explore topic.");
     } finally {
       setIsLoading(false);
     }
@@ -229,10 +190,117 @@ export default function DiscoverPage() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  // Enhanced: Add to Learning Path now also generates + saves expanded path
   const handleAddToLearningPath = async () => {
     if (!centerNode) return;
+
     await saveExploration(centerNode);
-    alert("✅ Successfully added to your Learning Path! You can now view it at /path");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Fetch data needed for generation (same as /path)
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('username, interests')
+        .eq('id', session.user.id)
+        .single();
+
+      const { data: expl } = await supabase
+        .from('user_explorations')
+        .select('label, short_description, main_function')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+      const { data: existingPath } = await supabase
+        .from('learning_paths')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const interestsText = prof?.interests?.join(', ') || 'general learning';
+      const explorationText = expl?.map(e => `${e.label}: ${e.short_description}`).join('\n') || 'no previous explorations yet';
+
+      let prompt = `You are an expert learning path designer.
+
+Student interests: ${interestsText}
+
+Recent topics they have explored:
+${explorationText}
+
+`;
+
+      if (existingPath) {
+        prompt += `Existing learning path title: ${existingPath.title}
+Existing modules: ${JSON.stringify(existingPath.modules || [])}
+
+The user just added a new discovery: ${centerNode.label} - ${centerNode.short_description}
+
+EXPAND the existing path:
+- Keep ALL previous modules and lessons intact (do not remove or replace anything).
+- Add new modules or additional lessons related to the new discovery.
+- Regenerate a fresh catchy title and description for the updated path.
+`;
+      } else {
+        prompt += `Create a complete, engaging, and realistic personalized learning path.`;
+      }
+
+      prompt += `
+Return ONLY valid JSON with this exact structure:
+
+{
+  "title": "Short catchy title for the entire path",
+  "description": "2-3 sentence overview of why this path is perfect for them",
+  "modules": [
+    {
+      "title": "Module name",
+      "description": "Short description of this module",
+      "lessons": ["Lesson 1 title", "Lesson 2 title", ...],
+      "estimated_time": "X hours"
+    }
+  ]
+}
+
+Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and connected to what they've already explored.`;
+
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const raw = await response.json();
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+      const newPath: LearningPath = {
+        title: parsed.title || "My Personalized Learning Path",
+        description: parsed.description || "",
+        modules: parsed.modules || [],
+        generated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('learning_paths')
+        .insert({
+          user_id: session.user.id,
+          title: newPath.title,
+          description: newPath.description,
+          modules: newPath.modules,
+        });
+
+      if (error) throw error;
+
+      alert("✅ Successfully added to your Learning Path and expanded the full path!");
+      router.push('/path'); // optional: take user to see the updated path
+
+    } catch (error) {
+      console.error('Path expansion error:', error);
+      alert("Exploration saved, but path expansion encountered an issue. You can still view it on /path.");
+    }
   };
 
   const sendChatMessage = async () => {
@@ -256,10 +324,7 @@ export default function DiscoverPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `You are a safe, helpful educational assistant on Skill-Gain.com.
-Current lesson topic is "${centerNode.label}".
-Keep all answers family-friendly, educational, and appropriate for students.
-Answer this question helpfully and clearly: ${currentQuestion}`
+          prompt: `The current topic is "${centerNode.label}". Answer this question helpfully: ${currentQuestion}`
         }),
       });
 
@@ -290,7 +355,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Discover</h1>
-            <p className="text-muted-foreground">Personalized lessons • Adapted to your level • Earn XP as you learn</p>
+            <p className="text-muted-foreground">Explore anything • Break it down • Drill deeper</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -306,11 +371,10 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </div>
         </div>
 
-        {/* Search Bar - Full width with buttons below */}
         <div className="max-w-2xl mx-auto space-y-4 mb-10">
           <Input
             ref={searchInputRef}
-            placeholder="Search anything... (bees, starship heat shield, fractions...)"
+            placeholder="Search anything... (cheese burger, car, laptop...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()}
@@ -318,60 +382,40 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           />
           <div className="flex gap-3">
             <Button onClick={exploreNormal} disabled={isLoading} className="flex-1">
-              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Get Lesson'}
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Explore'}
             </Button>
             <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1">
-              Deep Lesson
+              Deep Dive
             </Button>
           </div>
         </div>
 
-        {/* Grok Loading State - Flashy & Themed */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="relative mb-8">
-              <Sparkles className="h-16 w-16 text-amber-500 animate-pulse" />
-            </div>
-            <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
-              Grok is building your lesson.
-            </h2>
-            <p className="text-muted-foreground max-w-xs">Crafting personalized lessons just for you...</p>
-            
-            {/* Flashy animated dots */}
-            <div className="flex gap-2 mt-10">
-              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce"></div>
-            </div>
-          </div>
-        ) : centerNode ? (
+        {centerNode ? (
           <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-3xl">{centerNode.label}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-8 p-8">
               <div>
-                <h4 className="font-semibold mb-2">Lesson Introduction</h4>
+                <h4 className="font-semibold mb-2">What it is</h4>
                 <p className="text-lg leading-relaxed break-words">{centerNode.short_description}</p>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Learning Objective</h4>
+                <h4 className="font-semibold mb-2">Main Function</h4>
                 <p className="text-lg break-words">{centerNode.main_function}</p>
               </div>
 
               {centerNode.deep_details && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 p-6 rounded-2xl">
-                  <h4 className="font-semibold mb-3 text-emerald-700 dark:text-emerald-300">Full Lesson Content</h4>
-                  <div className="text-emerald-800 dark:text-emerald-200 whitespace-pre-wrap prose dark:prose-invert max-w-none">
-                    {centerNode.deep_details}
-                  </div>
+                <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-2xl">
+                  <h4 className="font-semibold mb-3 text-blue-700">Deep Dive Details</h4>
+                  <p className="text-blue-800 dark:text-blue-300 break-words">{centerNode.deep_details}</p>
                 </div>
               )}
 
               {centerNode.self_similar?.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3">Related Lessons</h4>
+                  <h4 className="font-semibold mb-3">Self-Similar / Variants</h4>
                   <div className="flex flex-wrap gap-2">
                     {centerNode.self_similar.map((item, i) => (
                       <Button key={i} variant="outline" size="sm" onClick={() => { setSearchQuery(item); callGrok(item, false); }}>
@@ -383,7 +427,7 @@ Answer this question helpfully and clearly: ${currentQuestion}`
               )}
 
               <div>
-                <h4 className="font-semibold mb-3">Key Concepts &amp; Steps</h4>
+                <h4 className="font-semibold mb-3">Components & Connected Parts</h4>
                 <div className="flex flex-wrap gap-2">
                   {centerNode.components.map((comp, i) => (
                     <Button key={i} variant="outline" size="sm" onClick={() => handleComponentClick(comp)}>
@@ -404,26 +448,10 @@ Answer this question helpfully and clearly: ${currentQuestion}`
                 </Button>
               </div>
 
-              {/* Updated AI Chat Section – now matches Feed exactly */}
               <div className="pt-8 border-t">
-                <div className="flex items-center gap-3 mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-9 w-9 text-amber-500 animate-pulse flex-shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
-                  </svg>
-                  <h3 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                    Ask Grok
-                  </h3>
-                </div>
-
+                <h4 className="font-semibold mb-3">Ask a question about {centerNode.label}</h4>
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3 w-full">
-                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this lesson...</p>}
+                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this topic...</p>}
                   {chatMessages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white dark:bg-zinc-800 border'}`}>
@@ -442,15 +470,14 @@ Answer this question helpfully and clearly: ${currentQuestion}`
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Ask anything about this lesson..."
+                    placeholder="Ask anything about this topic..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()}
                     disabled={isChatLoading}
                   />
-                  <Button onClick={sendChatMessage} disabled={isChatLoading} className="gap-2">
+                  <Button onClick={sendChatMessage} disabled={isChatLoading}>
                     Send
-                    <Send className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -458,12 +485,9 @@ Answer this question helpfully and clearly: ${currentQuestion}`
           </Card>
         ) : (
           <Card className="p-20 text-center w-full">
-            <p className="text-xl text-muted-foreground">Search a topic above to get your personalized lesson</p>
+            <p className="text-xl text-muted-foreground">Search something above to begin exploring</p>
           </Card>
         )}
-
-        {/* My Feed Section - AI-generated personalized feed based on active learning paths */}
-        <Feed />
       </div>
     </div>
   );

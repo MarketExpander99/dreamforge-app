@@ -4,12 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Navigation } from '@/components/navigation';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Sparkles, BookOpen, Clock, Save, RotateCcw, CheckCircle2, Trophy, RefreshCw } from 'lucide-react';
+import { Loader2, Sparkles, BookOpen, Clock, CheckCircle2, Trophy } from 'lucide-react';
 
 interface LearningModule {
   title: string;
@@ -57,14 +56,9 @@ export default function LearningPathPage() {
   const supabase = createBrowserSupabaseClient();
 
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
-
   const [profile, setProfile] = useState<any>(null);
   const [explorations, setExplorations] = useState<Exploration[]>([]);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
-  const [generatedPath, setGeneratedPath] = useState<LearningPath | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [enhancedModules, setEnhancedModules] = useState<EnhancedModule[]>([]);
 
   useEffect(() => {
@@ -74,8 +68,6 @@ export default function LearningPathPage() {
         router.push('/auth/login');
         return;
       }
-
-      setUserId(session.user.id);
 
       const { data: prof } = await supabase
         .from('profiles')
@@ -107,7 +99,7 @@ export default function LearningPathPage() {
           ...path,
           modules: path.modules || [],
         });
-        // Enhance modules with progress data for UI (safe mock until real user_progress join)
+
         const enhanced = (path.modules || []).map((module: LearningModule, index: number) => ({
           title: module.title,
           description: module.description || 'Master this module through interactive lessons and quizzes',
@@ -133,112 +125,6 @@ export default function LearningPathPage() {
 
     init();
   }, [supabase, router]);
-
-  const generatePath = async () => {
-    setGenerating(true);
-    setGeneratedPath(null);
-
-    try {
-      const interestsText = profile?.interests?.join(', ') || 'general learning';
-      const explorationText = explorations.length > 0 
-        ? explorations.map(e => `${e.label}: ${e.short_description}`).join('\n')
-        : 'no previous explorations yet';
-
-      const prompt = `You are an expert learning path designer.
-
-Student interests: ${interestsText}
-
-Recent topics they have explored:
-${explorationText}
-
-Create a complete, engaging, and realistic personalized learning path.
-
-Return ONLY valid JSON with this exact structure:
-
-{
-  "title": "Short catchy title for the entire path",
-  "description": "2-3 sentence overview of why this path is perfect for them",
-  "modules": [
-    {
-      "title": "Module name",
-      "description": "Short description of this module",
-      "lessons": ["Lesson 1 title", "Lesson 2 title", ...],
-      "estimated_time": "X hours"
-    }
-  ]
-}
-
-Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and connected to what they've already explored.`;
-
-      const response = await fetch('/api/grok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const raw = await response.json();
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
-      const newPath: LearningPath = {
-        title: parsed.title || "My Personalized Learning Path",
-        description: parsed.description || "",
-        modules: parsed.modules || [],
-        generated_at: new Date().toISOString(),
-      };
-
-      setGeneratedPath(newPath);
-    } catch (error) {
-      console.error('Generate path error:', error);
-      alert("Failed to generate learning path. Please try again.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const savePath = async () => {
-    if (!generatedPath || !userId) {
-      alert("Cannot save: missing data or not logged in");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('learning_paths')
-        .insert({
-          user_id: userId,
-          title: generatedPath.title,
-          description: generatedPath.description || "",
-          modules: generatedPath.modules,
-        });
-
-      if (error) throw error;
-
-      alert("Learning path saved successfully!");
-
-      const { data: freshPath } = await supabase
-        .from('learning_paths')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (freshPath) {
-        setCurrentPath({
-          ...freshPath,
-          modules: freshPath.modules || [],
-        });
-      }
-
-      setGeneratedPath(null);
-    } catch (error: any) {
-      console.error('Save path error:', error);
-      alert(`Failed to save: ${error.message || 'Unknown error'}`);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const inProgress = enhancedModules.filter(m => m.status === 'in_progress');
   const completed = enhancedModules.filter(m => m.status === 'completed');
@@ -269,34 +155,22 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
               <Sparkles className="h-8 w-8 text-amber-500" />
               My Learning Path
             </h1>
-            <p className="text-muted-foreground">AI-generated • Personalized • Track progress, review tests &amp; earn XP</p>
+            <p className="text-muted-foreground">AI-generated • Personalized • Track progress, review tests & earn XP</p>
           </div>
-          <Button variant="outline" onClick={generatePath} disabled={generating} className="gap-2">
-            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Generate New Path
-          </Button>
         </div>
 
-        {/* Current Saved Path Summary */}
         {currentPath && (
           <Card className="mb-10 border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Current Saved Path: {currentPath.title}
+                {currentPath.title}
               </CardTitle>
               <CardDescription>{currentPath.description}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={savePath} disabled={!generatedPath || saving} className="gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? 'Saving...' : 'Save Generated Path'}
-              </Button>
-            </CardContent>
           </Card>
         )}
 
-        {/* In Progress Section */}
         <div className="mb-12">
           <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
             <Clock className="h-6 w-6 text-amber-500" />
@@ -304,7 +178,7 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
           </h2>
           {inProgress.length === 0 ? (
             <Card className="p-12 text-center text-muted-foreground">
-              No modules in progress yet. Generate and save a path to begin!
+              No modules in progress yet. Add discoveries on the Discover page to expand and build your path!
             </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
@@ -340,7 +214,6 @@ Aim for 4-6 modules with 3-6 lessons each. Make it practical, exciting and conne
           )}
         </div>
 
-        {/* Completed Section */}
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
             <CheckCircle2 className="h-6 w-6 text-emerald-500" />
