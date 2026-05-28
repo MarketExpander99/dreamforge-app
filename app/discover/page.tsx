@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles, Send } from 'lucide-react';
-import Feed from '@/components/feed';  // ← Preserved for My Feed section
+import Feed  from  '@/components/feed';  // ← Preserved for My Feed section
 
 // TODO: Later we can move this to lib/prompts/discover-lesson-prompt.txt and load via API route for easier editing
 const LESSON_PROMPT_TEMPLATE = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.

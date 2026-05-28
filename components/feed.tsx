@@ -1,558 +1,583 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck, Send, Loader2 } from 'lucide-react'
-import { FeedCard as FeedCardType } from '@/lib/sample-content'
-import { useBookmarks } from '@/lib/bookmarks'
-import { useProgress } from '@/lib/progress'
-import { useAchievements } from '@/lib/achievements'
-import { useLikes } from '@/lib/likes'
-import { useComments, Comment } from '@/lib/comments'
-import { clientData } from '@/lib/data'
-import { useUser } from '@/lib/user-context'
+import React, { useState, useEffect } from 'react';
+import { createBrowserSupabaseClient } from '@/lib/supabase-client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Loader2, BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Bot, Send, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MASTER_LESSON_PROMPT, NEXT_CARD_PROMPT } from '@/lib/prompts/lesson-generator';
 
-interface FeedCardProps {
-  card: FeedCardType
+interface FeedItem {
+  id: string;
+  type: 'info' | 'test';
+  title: string;
+  description: string;
+  mediaUrl: string;
+  mediaType: 'image';
+  testQuestion?: string;
+  testOptions?: string[];
+  learningPathId: string;
+  learningPathTitle: string;
+  completed: boolean;
+  topic?: string;
+  difficulty: number;
 }
 
-export function FeedCard({ card }: FeedCardProps) {
-  const [isLiked, setIsLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(card.likes || 0)
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [showQuiz, setShowQuiz] = useState(false)
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
-  const [showResult, setShowResult] = useState(false)
-  const [bookmarkLoading, setBookmarkLoading] = useState(false)
-  const [likeLoading, setLikeLoading] = useState(false)
-  const [progressLoading, setProgressLoading] = useState(false)
-  const [showComments, setShowComments] = useState(false)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [commentCount, setCommentCount] = useState(card.comments || 0)
-  const [commentLoading, setCommentLoading] = useState(false)
-  const [newComment, setNewComment] = useState('')
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
 
-  const { toggleBookmark, checkStatus } = useBookmarks()
-  const { markStarted, markCompleted, addTime } = useProgress()
-  const { checkAchievements } = useAchievements()
-  const { toggleLike, checkStatus: checkLikeStatus, getLikeCount } = useLikes()
-  const { addComment, getComments, getCommentCount } = useComments()
-  const { user } = useUser()
+export default function Feed() {
+  const supabase = createBrowserSupabaseClient();
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [activePaths, setActivePaths] = useState<any[]>([]);
+  const [userCredits, setUserCredits] = useState(12);
 
-  // Check bookmark and like status on component mount
-  useEffect(() => {
-    const checkBookmarkStatus = async () => {
-      const status = await checkStatus(card.id)
-      setIsBookmarked(status)
+  // Chat state
+  const [openChatId, setOpenChatId] = useState<string | null>(null);
+  const [chatMessagesMap, setChatMessagesMap] = useState<Record<string, ChatMessage[]>>({});
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
+
+  const fetchActivePaths = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
+    const { data } = await supabase
+      .from('user_explorations')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    return data || [];
+  };
+
+  const fetchMasteryContext = async (userId: string) => {
+    const { data: completed } = await supabase
+      .from('user_progress')
+      .select('item_type, learning_path_id, result, completed_at')
+      .eq('user_id', userId)
+      .eq('interaction_type', 'test_complete')
+      .order('completed_at', { ascending: false })
+      .limit(8);
+
+    const { data: chats } = await supabase
+      .from('chat_messages')
+      .select('card_id, topic, content, message_role')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    return {
+      completedSummary: completed?.length 
+        ? `User has successfully completed ${completed.length} recent items across paths: ${[...new Set(completed.map(c => c.learning_path_id))].join(', ')}.` 
+        : 'User is relatively new and has few completions.',
+      chatSummary: chats?.length 
+        ? `User has engaged in deep AI chats on topics: ${[...new Set(chats.map(c => c.topic).filter(Boolean))].join(', ')}. Recent conversations show strong interest in mastery.` 
+        : 'No prior chat history.'
+    };
+  };
+
+  const generateAIFeed = async (paths: any[]) => {
+    if (paths.length === 0) return [];
+    if (userCredits < 2) {
+      alert("Not enough credits to refresh AI Feed.");
+      return [];
     }
-    checkBookmarkStatus()
-  }, [card.id, checkStatus])
+    setUserCredits(prev => prev - 2);
 
-  // Check like status and get real like count on component mount (only for authenticated users)
-  useEffect(() => {
-    if (user) {
-      const checkLikeStatusAndCount = async () => {
-        const [likeStatus, count] = await Promise.all([
-          checkLikeStatus(card.id),
-          getLikeCount(card.id)
-        ])
-        setIsLiked(likeStatus)
-        setLikeCount(count)
-      }
-      checkLikeStatusAndCount()
-    } else {
-      // For unauthenticated users, use default values
-      setIsLiked(false)
-      setLikeCount(card.likes || 0)
-    }
-  }, [card.id, checkLikeStatus, getLikeCount, user])
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
 
-  // Check comment count on component mount
-  useEffect(() => {
-    const checkCommentCount = async () => {
-      const count = await getCommentCount(card.id)
-      setCommentCount(count)
-    }
-    checkCommentCount()
-  }, [card.id, getCommentCount])
+    const mastery = await fetchMasteryContext(session.user.id);
+    const pathSummaries = paths.map(p => p.label || p.title || 'learning topic').join(', ');
 
-  // Track content view progress (only for authenticated users)
-  useEffect(() => {
-    if (user) {
-      const trackContentView = async () => {
-        setProgressLoading(true)
-        try {
-          await markStarted(card.id)
-          // Add estimated reading time
-          await addTime(card.id, Math.min(card.readTime, 2)) // Cap at 2 minutes for initial view
-        } catch (error) {
-          console.error('Progress tracking error:', error)
-        } finally {
-          setProgressLoading(false)
-        }
-      }
+    const prompt = `${MASTER_LESSON_PROMPT}\n\nBased ONLY on these active learning paths: ${pathSummaries}.\n${mastery.completedSummary}\n${mastery.chatSummary}\nGenerate exactly 4 personalized feed cards (2 info + 2 test) with increasing difficulty that perfectly match the user's current mastery level and chat depth.`;
 
-      // Only track if not already loading
-      if (!progressLoading) {
-        trackContentView()
-      }
-    }
-  }, [card.id, markStarted, addTime, progressLoading, user])
-
-  // Track quiz completion
-  useEffect(() => {
-    const trackQuizCompletion = async () => {
-      if (showResult && card.quiz && selectedAnswer !== null) {
-        const isCorrect = selectedAnswer === card.quiz.correctAnswer
-        setProgressLoading(true)
-        try {
-          if (isCorrect) {
-            await markCompleted(card.id)
-            // Check for new achievements after completing content
-            if (user) {
-              await checkAchievements(user.id)
-            }
-          } else {
-            // Mark as in progress if incorrect
-            await markStarted(card.id)
-          }
-          // Add time spent on quiz
-          await addTime(card.id, 3) // Assume 3 minutes for quiz
-        } catch (error) {
-          console.error('Quiz progress tracking error:', error)
-        } finally {
-          setProgressLoading(false)
-        }
-      }
-    }
-
-    trackQuizCompletion()
-  }, [showResult, selectedAnswer, card.id, card.quiz, markCompleted, markStarted, addTime, checkAchievements])
-
-  const handleLike = async () => {
-    setLikeLoading(true)
     try {
-      const result = await toggleLike(card.id)
-      if (result.success) {
-        setIsLiked(result.isLiked || false)
-        // Refresh like count after toggle
-        const newCount = await getLikeCount(card.id)
-        setLikeCount(newCount)
-      }
-    } catch (error) {
-      console.error('Like error:', error)
-    } finally {
-      setLikeLoading(false)
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const raw = await response.json();
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.error('AI feed generation failed:', err);
+      return [];
     }
-  }
+  };
 
-  const handleBookmark = async () => {
-    setBookmarkLoading(true)
-    try {
-      const result = await toggleBookmark(card.id)
-      if (result.success) {
-        setIsBookmarked(result.isBookmarked || false)
-      }
-    } catch (error) {
-      console.error('Bookmark error:', error)
-    } finally {
-      setBookmarkLoading(false)
+  const getTopicImage = (title: string) => {
+    const hash = title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 900;
+    return `https://picsum.photos/id/${300 + hash}/800/400`;
+  };
+
+  const initializeFeed = async () => {
+    setIsLoading(true);
+    setLoadingProgress(10);
+
+    const paths = await fetchActivePaths();
+    setActivePaths(paths);
+    setLoadingProgress(30);
+
+    let aiItems: any[] = await generateAIFeed(paths);
+    setLoadingProgress(70);
+
+    if (aiItems.length === 0 && paths.length > 0) {
+      aiItems = [
+        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights.', difficulty: 1 },
+        { type: 'test', title: 'Knowledge Check', description: 'Quick test', testQuestion: `Apply concepts from ${paths[0].label}?`, testOptions: ['A', 'B', 'C', 'D'], difficulty: 2 },
+      ];
     }
-  }
 
-  const handleQuizAnswer = (answerIndex: number) => {
-    setSelectedAnswer(answerIndex)
-    setShowResult(true)
-  }
+    setLoadingProgress(90);
 
-  const handleCommentToggle = async () => {
-    if (!showComments) {
-      // Load comments when opening
-      setCommentLoading(true)
+    const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
+      id: `feed-${Date.now()}-${index}`,
+      type: item.type || 'info',
+      title: item.title || 'Personalized Lesson',
+      description: item.description || 'AI-generated educational content',
+      mediaUrl: getTopicImage(item.title || 'education'),
+      mediaType: 'image',
+      testQuestion: item.testQuestion,
+      testOptions: item.testOptions,
+      learningPathId: paths[0]?.id || 'path-default',
+      learningPathTitle: paths[0]?.label || 'Your Active Path',
+      completed: false,
+      topic: paths[0]?.label || 'general',
+      difficulty: item.difficulty || 3,
+    }));
+
+    setFeedItems(mappedItems);
+    setLoadingProgress(100);
+
+    setTimeout(() => {
+      setIsLoading(false);
+      setLoadingProgress(0);
+    }, 400);
+  };
+
+  useEffect(() => {
+    initializeFeed();
+  }, []);
+
+  useEffect(() => {
+    const loadChatMessages = async () => {
+      if (!openChatId) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('card_id', openChatId)
+        .order('created_at', { ascending: true });
+
+      if (error) console.error('Chat load error:', error);
+      else {
+        setChatMessagesMap(prev => ({ ...prev, [openChatId]: data || [] }));
+      }
+    };
+
+    loadChatMessages();
+  }, [openChatId, supabase]);
+
+  const markAsComplete = async (item: FeedItem) => {
+    setFeedItems(prev => prev.map(i => 
+      i.id === item.id ? { ...i, completed: true } : i
+    ));
+
+    setTimeout(async () => {
+      setFeedItems(prev => prev.filter(i => i.id !== item.id));
+
+      const prompt = NEXT_CARD_PROMPT(item.title, item.topic || 'this subject', item.difficulty);
+
       try {
-        const fetchedComments = await getComments(card.id)
-        setComments(fetchedComments)
-      } catch (error) {
-        console.error('Error loading comments:', error)
-      } finally {
-        setCommentLoading(false)
+        const res = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const raw = await res.json();
+        const nextData = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+        const newItem: FeedItem = {
+          id: `feed-next-${Date.now()}`,
+          type: nextData.type || (item.type === 'info' ? 'info' : 'test'),
+          title: nextData.title || `Advanced: ${item.title}`,
+          description: nextData.description || 'Deeper exploration with more advanced concepts.',
+          mediaUrl: getTopicImage(nextData.title || item.topic || 'education'),
+          mediaType: 'image',
+          testQuestion: nextData.testQuestion,
+          testOptions: nextData.testOptions,
+          learningPathId: item.learningPathId,
+          learningPathTitle: item.learningPathTitle,
+          completed: false,
+          topic: item.topic,
+          difficulty: (item.difficulty || 3) + 2,
+        };
+
+        setFeedItems(prev => [...prev, newItem]);
+      } catch (e) {
+        console.error('Failed to generate advanced follow-up:', e);
       }
-    }
-    setShowComments(!showComments)
-  }
+    }, 500);
+  };
 
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return
+  const handleRefreshFeed = () => initializeFeed();
 
-    setCommentLoading(true)
+  const recordInteraction = async (item: FeedItem, interactionType: 'ask_ai' | 'test_complete', result?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     try {
-      const result = await addComment(card.id, newComment)
-      if (result.success && result.comment) {
-        setComments(prev => [...prev, result.comment!])
-        setCommentCount(prev => prev + 1)
-        setNewComment('')
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error)
+      await supabase.from('user_progress').insert({
+        user_id: session.user.id,
+        learning_path_id: item.learningPathId,
+        item_type: item.type,
+        interaction_type: interactionType,
+        result: result || null,
+        xp_earned: interactionType === 'test_complete' ? 25 : 10,
+        completed_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Interaction recording failed:', err);
+    }
+  };
+
+  const handleSendMessage = async (item: FeedItem) => {
+    const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
+    const messageText = input?.value.trim();
+    if (!messageText || sendingMessage) return;
+
+    setSendingMessage(true);
+    setThinkingCardId(item.id);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setSendingMessage(false);
+      setThinkingCardId(null);
+      return;
+    }
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageText,
+      created_at: new Date().toISOString()
+    };
+
+    setChatMessagesMap(prev => ({
+      ...prev,
+      [item.id]: [...(prev[item.id] || []), userMsg]
+    }));
+
+    input.value = '';
+
+    await supabase
+      .from('chat_messages')
+      .insert({
+        user_id: session.user.id,
+        card_id: item.id,
+        learning_path_id: item.learningPathId,
+        topic: item.topic,
+        message_role: 'user',
+        content: messageText
+      });
+
+    await recordInteraction(item, 'ask_ai');
+
+    try {
+      const chatPrompt = `You are an expert tutor on the Skill Gain platform. 
+The user is studying: "${item.title}" 
+Topic: "${item.topic || 'general'}"
+Description: "${item.description}"
+Help them master this concept with a clear, encouraging, and educational response. Keep it concise but insightful.
+
+User question: ${messageText}`;
+
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: chatPrompt }),
+      });
+
+      const raw = await response.json();
+      const assistantResponse = typeof raw === 'string' 
+        ? raw 
+        : raw.response || raw.text || raw.message || 'Great question! Let me explain this in more detail to help build your mastery.';
+
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: assistantResponse,
+        created_at: new Date().toISOString()
+      };
+
+      setChatMessagesMap(prev => ({
+        ...prev,
+        [item.id]: [...(prev[item.id] || []), assistantMsg]
+      }));
+
+      await supabase
+        .from('chat_messages')
+        .insert({
+          user_id: session.user.id,
+          card_id: item.id,
+          learning_path_id: item.learningPathId,
+          topic: item.topic,
+          message_role: 'assistant',
+          content: assistantResponse
+        });
+    } catch (err) {
+      console.error('AI chat response failed:', err);
     } finally {
-      setCommentLoading(false)
+      setSendingMessage(false);
+      setThinkingCardId(null);
     }
-  }
+  };
 
-  const renderCardContent = () => {
-    switch (card.type) {
-      case 'text-image':
-        return (
-          <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-            {card.imageUrl && (
-              <div className="relative aspect-video rounded-lg overflow-hidden">
-                <Image
-                  src={card.imageUrl}
-                  alt={card.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
-              </div>
-            )}
+  const toggleChat = (itemId: string) => {
+    setOpenChatId(openChatId === itemId ? null : itemId);
+  };
+
+  const handleTestSubmit = async (item: FeedItem, answer: string) => {
+    await recordInteraction(item, 'test_complete', answer);
+    markAsComplete(item);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-6 w-full max-w-md"
+        >
+          <div className="relative">
+            <motion.div
+              animate={{ rotate: [0, 15, -10, 15, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="h-14 w-14 text-amber-500" />
+            </motion.div>
+            
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -bottom-1 -right-1"
+            >
+              <Bot className="h-6 w-6 text-purple-500" />
+            </motion.div>
           </div>
-        )
 
-      case 'video':
-        return (
-          <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-              {card.videoUrl ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => window.open(card.videoUrl, '_blank')}
-                >
-                  <Play className="h-6 w-6 mr-2" />
-                  Watch Video
-                </Button>
-              ) : (
-                <Button variant="secondary" size="lg" disabled>
-                  <Play className="h-6 w-6 mr-2" />
-                  Video Not Available
-                </Button>
-              )}
-            </div>
-          </div>
-        )
-
-      case 'audio':
-        return (
-          <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-            <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
-              {card.audioUrl ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => window.open(card.audioUrl, '_blank')}
-                >
-                  <Volume2 className="h-6 w-6 mr-2" />
-                  Play Audio
-                </Button>
-              ) : (
-                <Button variant="secondary" size="lg" disabled>
-                  <Volume2 className="h-6 w-6 mr-2" />
-                  Audio Not Available
-                </Button>
-              )}
+          <div className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-foreground">
+            Grok is building your feed
+            <div className="flex space-x-1.5">
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
           </div>
-        )
 
-      case 'quiz':
-        if (!showQuiz) {
-          return (
-            <div className="space-y-4">
-              <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-              <Button onClick={() => setShowQuiz(true)} className="w-full">
-                Take Quiz
-              </Button>
+          <p className="text-muted-foreground text-center max-w-xs">
+            Personalized AI cards • Powered by your active paths
+          </p>
+
+          <div className="w-full max-w-xs mt-4">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-amber-500 via-amber-600 to-purple-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${loadingProgress}%` }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              />
             </div>
-          )
-        }
-
-        if (showResult && card.quiz) {
-          const isCorrect = selectedAnswer === card.quiz.correctAnswer
-          return (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-lg ${isCorrect ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {isCorrect ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <X className="h-5 w-5 text-red-600" />
-                  )}
-                  <span className={`font-semibold ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                    {isCorrect ? 'Correct!' : 'Incorrect'}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{card.quiz.explanation}</p>
-              </div>
-              <Button onClick={() => {
-                setShowQuiz(false)
-                setSelectedAnswer(null)
-                setShowResult(false)
-              }} variant="outline">
-                Try Again
-              </Button>
-            </div>
-          )
-        }
-
-        return (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">{card.quiz?.question}</h3>
-            <div className="space-y-2">
-              {card.quiz?.options.map((option, index) => (
-                <Button
-                  key={index}
-                  onClick={() => handleQuizAnswer(index)}
-                  variant="outline"
-                  className="w-full justify-start text-left"
-                  disabled={showResult}
-                >
-                  {option}
-                </Button>
-              ))}
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <span>Generating personalized cards...</span>
+              <span>{loadingProgress}%</span>
             </div>
           </div>
-        )
-
-      default:
-        return (
-          <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-        )
-    }
+        </motion.div>
+      </div>
+    );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="w-full max-w-2xl mx-auto mb-6"
-    >
-      <Card className="overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 border-2 hover:border-primary/30 group">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <motion.h2
-                className="text-xl font-bold mb-2"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                {card.title}
-              </motion.h2>
-              <motion.div
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Badge variant="secondary" className="transition-colors hover:bg-primary hover:text-primary-foreground">
-                  {card.category}
-                </Badge>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {card.readTime} min read
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {renderCardContent()}
-          </motion.div>
+    <div className="mt-12">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <Sparkles className="h-8 w-8 text-amber-500" />
+          My Feed
+        </h2>
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            AI-powered • {activePaths.length} path{activePaths.length !== 1 ? 's' : ''}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={handleRefreshFeed} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards. Complete them to earn XP and unlock the next challenge.</p>
 
-          <motion.div
-            className="flex items-center justify-between mt-6 pt-4 border-t"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLike}
-                  disabled={likeLoading}
-                  className={`transition-all duration-200 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
-                >
-                  <motion.div
-                    animate={{ scale: isLiked ? [1, 1.2, 1] : 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-                  </motion.div>
-                  <motion.span
-                    key={likeCount}
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="font-medium"
-                  >
-                    {likeCount}
-                  </motion.span>
-                </Button>
-              </motion.div>
+      <div className="space-y-8">
+        <AnimatePresence mode="popLayout">
+          {feedItems.map((item) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -30, transition: { duration: 0.4 } }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
+                    {item.title}
+                    {item.completed && <CheckCircle className="h-4 w-4 text-emerald-600 ml-auto" />}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="text-lg leading-relaxed">{item.description}</p>
 
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCommentToggle}
-                  disabled={commentLoading}
-                  className="transition-colors hover:text-blue-500"
-                >
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  <motion.span
-                    key={commentCount}
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="font-medium"
-                  >
-                    {commentCount}
-                  </motion.span>
-                </Button>
-              </motion.div>
+                  {item.type === 'info' && !item.completed && (
+                    <Button 
+                      variant="outline" 
+                      className="gap-2 w-full" 
+                      onClick={() => toggleChat(item.id)}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Ask AI about this
+                    </Button>
+                  )}
 
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBookmark}
-                  disabled={bookmarkLoading}
-                  className={`transition-all duration-200 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
-                >
-                  <motion.div
-                    animate={{ rotate: isBookmarked ? [0, -10, 10, 0] : 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {isBookmarked ? (
-                      <BookmarkCheck className="h-4 w-4 mr-1 fill-current" />
-                    ) : (
-                      <Bookmark className="h-4 w-4 mr-1" />
-                    )}
-                  </motion.div>
-                  <span className="font-medium">
-                    {bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}
-                  </span>
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          <AnimatePresence>
-            {showComments && (
-              <motion.div
-                className="mt-4 pt-4 border-t space-y-4"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {user && (
-                  <div className="flex gap-2">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarImage src={user.user_metadata?.avatar_url} />
-                      <AvatarFallback>
-                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Write a comment..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
-                          disabled={commentLoading}
-                        />
-                        <Button 
-                          onClick={handleAddComment} 
-                          disabled={commentLoading || !newComment.trim()}
-                          className="gap-2"
-                        >
-                          {commentLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              Send
-                              <Send className="h-4 w-4" />
-                            </>
-                          )}
-                        </Button>
+                  {item.type === 'test' && !item.completed && (
+                    <div className="space-y-4">
+                      <p className="font-medium">{item.testQuestion}</p>
+                      <div className="space-y-2">
+                        {item.testOptions?.map((option, idx) => (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            className="w-full justify-start text-left"
+                            onClick={() => handleTestSubmit(item, option)}
+                          >
+                            {option}
+                          </Button>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Comments list - now styled like Discover chat */}
-                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto space-y-3 w-full">
-                  {commentLoading && comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Loading comments...</p>
-                  ) : comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No comments yet. Be the first to comment!</p>
-                  ) : (
-                    comments.map((comment) => (
+                  <AnimatePresence>
+                    {openChatId === item.id && (
                       <motion.div
-                        key={comment.id}
-                        className="flex gap-3"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 border rounded-2xl p-4 bg-muted/50"
                       >
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={comment.profiles?.avatar_url} />
-                          <AvatarFallback>
-                            {comment.profiles?.full_name?.charAt(0) || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="bg-white dark:bg-zinc-800 border rounded-2xl px-4 py-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm">
-                                {comment.profiles?.full_name || 'Anonymous'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(comment.created_at).toLocaleDateString()}
-                              </span>
+                        <div className="flex items-center gap-3 mb-6">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-9 w-9 text-amber-500 animate-pulse flex-shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                          </svg>
+                          <h3 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            Ask Grok
+                          </h3>
+                        </div>
+
+                        <div className="h-64 overflow-y-auto space-y-4 mb-4 pr-2 bg-background/80 rounded-xl p-3">
+                          {chatMessagesMap[item.id]?.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">Ask anything to deepen your mastery on this card!</p>
+                          ) : (
+                            chatMessagesMap[item.id]?.map((msg) => (
+                              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+
+                          {thinkingCardId === item.id && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted flex items-center gap-2">
+                                <Bot className="h-4 w-4 text-purple-500" />
+                                <div className="flex space-x-1">
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                                <span className="text-xs text-muted-foreground">Grok is thinking...</span>
+                              </div>
                             </div>
-                            <p className="text-sm leading-relaxed">{comment.comment}</p>
-                          </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Input
+                            id={`chat-input-${item.id}`}
+                            placeholder="Ask Grok anything..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSendMessage(item);
+                            }}
+                            disabled={sendingMessage}
+                          />
+                          <Button 
+                            onClick={() => handleSendMessage(item)} 
+                            disabled={sendingMessage}
+                            className="gap-2"
+                          >
+                            Send
+                            <Send className="h-4 w-4" />
+                          </Button>
                         </div>
                       </motion.div>
-                    ))
+                    )}
+                  </AnimatePresence>
+
+                  {item.type === 'info' && !item.completed && (
+                    <Button variant="default" className="gap-2 w-full" onClick={() => markAsComplete(item)}>
+                      <CheckCircle className="h-4 w-4" />
+                      Mark as Complete
+                    </Button>
                   )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-    </motion.div>
-  )
+
+                  {item.completed && (
+                    <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-4 rounded-2xl flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5" />
+                      Completed — XP awarded • Next advanced challenge unlocked
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
 }
