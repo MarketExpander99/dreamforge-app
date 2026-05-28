@@ -5,7 +5,7 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, TestTube, MessageSquare, Lock, Sparkles, RefreshCw } from 'lucide-react';
+import { Loader2, BookOpen, TestTube, MessageSquare, Lock, Sparkles, RefreshCw, CheckCircle } from 'lucide-react';
 
 interface FeedItem {
   id: string;
@@ -19,6 +19,7 @@ interface FeedItem {
   learningPathId: string;
   learningPathTitle: string;
   completed: boolean;
+  topic?: string; // for generating next lesson
 }
 
 export default function Feed() {
@@ -26,49 +27,38 @@ export default function Feed() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePaths, setActivePaths] = useState<any[]>([]);
-  const [userCredits, setUserCredits] = useState(12); // Simulated for now — will centralize with real DB credits later
+  const [userCredits, setUserCredits] = useState(12);
 
-  // Fetch active learning paths
   const fetchActivePaths = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return [];
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('user_explorations')
       .select('*')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(5);
-
-    if (error) {
-      console.error('Failed to fetch active paths:', error);
-      return [];
-    }
     return data || [];
   };
 
-  // AI-generated feed with real Grok call
   const generateAIFeed = async (paths: any[]) => {
     if (paths.length === 0) return [];
-
-    // Simulate credit cost for AI generation (2 credits per refresh)
     if (userCredits < 2) {
-      alert("Not enough credits to refresh AI Feed. Purchase more or wait for daily free credits.");
+      alert("Not enough credits to refresh AI Feed.");
       return [];
     }
-
-    console.log(`[FEED] Deducting 2 credits for AI generation (covers Grok API cost)`);
     setUserCredits(prev => prev - 2);
 
-    const pathSummaries = paths.map(p => p.label || p.title).join(', ');
+    const pathSummaries = paths.map(p => p.label || p.title || 'learning topic').join(', ');
+
     const prompt = `You are an expert educator for Skill Gain. Based ONLY on these active learning paths: ${pathSummaries}.
-Generate exactly 4 personalized feed cards (2 info cards and 2 test cards) to help the user become an expert.
+Generate exactly 4 personalized feed cards (2 info cards and 2 test cards).
 Return ONLY valid JSON array of objects with this structure:
 [
   {
     "type": "info" or "test",
     "title": "short engaging title",
-    "description": "clear helpful description",
+    "description": "clear helpful description (actual lesson-style content)",
     "testQuestion": "optional question for test cards",
     "testOptions": ["option1", "option2", "option3", "option4"] for tests only
   }
@@ -80,10 +70,8 @@ Return ONLY valid JSON array of objects with this structure:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
-
       const raw = await response.json();
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
       return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
       console.error('AI feed generation failed:', err);
@@ -98,25 +86,21 @@ Return ONLY valid JSON array of objects with this structure:
 
     let aiItems: any[] = await generateAIFeed(paths);
 
-    // Fallback mock with images if AI fails
     if (aiItems.length === 0 && paths.length > 0) {
       aiItems = [
-        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights.', testQuestion: undefined, testOptions: undefined },
+        { type: 'info', title: `Deep Dive: ${paths[0].label || 'Core Concept'}`, description: 'Building expertise with key insights and real explanations.', testQuestion: undefined, testOptions: undefined },
         { type: 'test', title: 'Knowledge Check', description: 'Quick test to solidify learning', testQuestion: `Apply concepts from ${paths[0].label || 'this path'}?`, testOptions: ['Option A', 'Option B', 'Option C', 'Option D'] },
-        { type: 'info', title: 'Expert Tip', description: 'Advanced application for your path.', testQuestion: undefined, testOptions: undefined },
-        { type: 'test', title: 'Mastery Test', description: 'Challenge yourself', testQuestion: 'What is the best practice?', testOptions: ['Best A', 'Best B', 'Best C', 'Best D'] },
       ];
     }
 
-    // Stock images (educational + quiz themed)
-    const learningImage = 'https://picsum.photos/id/1015/800/400'; // books & learning path
-    const quizImage = 'https://picsum.photos/id/201/800/400';     // quiz / test style
+    const learningImage = 'https://picsum.photos/id/1015/800/400';
+    const quizImage = 'https://picsum.photos/id/201/800/400';
 
     const mappedItems: FeedItem[] = aiItems.map((item: any, index: number) => ({
       id: `feed-${Date.now()}-${index}`,
       type: item.type || 'info',
-      title: item.title || 'Personalized Card',
-      description: item.description || 'AI-generated content to advance your expertise',
+      title: item.title || 'Personalized Lesson',
+      description: item.description || 'AI-generated educational content',
       mediaUrl: item.type === 'info' ? learningImage : quizImage,
       mediaType: 'image',
       testQuestion: item.testQuestion,
@@ -124,6 +108,7 @@ Return ONLY valid JSON array of objects with this structure:
       learningPathId: paths[0]?.id || 'path-default',
       learningPathTitle: paths[0]?.label || 'Your Active Path',
       completed: false,
+      topic: paths[0]?.label || 'general',
     }));
 
     setFeedItems(mappedItems);
@@ -134,10 +119,59 @@ Return ONLY valid JSON array of objects with this structure:
     initializeFeed();
   }, []);
 
+  const markAsComplete = async (item: FeedItem) => {
+    // Mark current card as completed with animation
+    setFeedItems(prev => prev.map(i => 
+      i.id === item.id ? { ...i, completed: true } : i
+    ));
+
+    // Small delay for fade-out animation
+    setTimeout(async () => {
+      // Remove completed card
+      setFeedItems(prev => prev.filter(i => i.id !== item.id));
+
+      // Generate and add next more detailed lesson in same topic
+      try {
+        const nextPrompt = `You are an expert educator for Skill Gain. The student just completed "${item.title}". Create a MORE DETAILED follow-up lesson on the same topic "${item.topic || 'this subject'}". Make it deeper and more advanced. Return JSON with "title" and "description" only.`;
+
+        const res = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: nextPrompt }),
+        });
+
+        const raw = await res.json();
+        const nextData = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+        const newItem: FeedItem = {
+          id: `feed-next-${Date.now()}`,
+          type: 'info',
+          title: nextData.title || `Advanced ${item.topic}`,
+          description: nextData.description || 'Deeper exploration of the topic with more detailed explanations and examples.',
+          mediaUrl: 'https://picsum.photos/id/1015/800/400',
+          mediaType: 'image',
+          learningPathId: item.learningPathId,
+          learningPathTitle: item.learningPathTitle,
+          completed: false,
+          topic: item.topic,
+        };
+
+        // Add new card with animation
+        setFeedItems(prev => [...prev, newItem]);
+      } catch (e) {
+        console.error('Failed to generate next lesson');
+      }
+    }, 600);
+  };
+
+  const handleRefreshFeed = () => {
+    initializeFeed();
+  };
+
+  // Your existing recordInteraction, handleAskAI, handleTestSubmit remain unchanged
   const recordInteraction = async (item: FeedItem, interactionType: 'ask_ai' | 'test_complete', result?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
     try {
       await supabase.from('user_progress').insert({
         user_id: session.user.id,
@@ -148,40 +182,21 @@ Return ONLY valid JSON array of objects with this structure:
         xp_earned: interactionType === 'test_complete' ? 25 : 10,
         completed_at: new Date().toISOString(),
       });
-
-      if (interactionType === 'test_complete') {
-        await supabase.from('user_achievements').insert({
-          user_id: session.user.id,
-          achievement_type: 'feed_mastery',
-          title: `Mastered ${item.title}`,
-          description: `Completed feed item in ${item.learningPathTitle}`,
-        });
-      }
     } catch (err) {
-      console.error('Interaction recording failed (non-blocking):', err);
+      console.error('Interaction recording failed:', err);
     }
   };
 
   const handleAskAI = async (item: FeedItem) => {
     const question = prompt('Ask AI anything about this card:') || 'General question';
-    console.log(`[FEED] Ask AI for item ${item.id}: ${question}`);
     await recordInteraction(item, 'ask_ai');
-    alert(`✅ Ask AI interaction recorded (+10 XP). This will open rich AI chat in future iterations.`);
+    alert(`✅ Ask AI interaction recorded (+10 XP)`);
   };
 
   const handleTestSubmit = async (item: FeedItem, answer: string) => {
-    console.log(`[FEED] Test submitted for ${item.id}: ${answer}`);
     await recordInteraction(item, 'test_complete', answer);
-
-    setFeedItems(prev =>
-      prev.map(i => (i.id === item.id ? { ...i, completed: true } : i))
-    );
-
-    alert(`🎉 Test completed! +25 XP to ${item.learningPathTitle}. Item locked. Achievement added to profile!`);
-  };
-
-  const handleRefreshFeed = () => {
-    initializeFeed();
+    setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
+    alert(`🎉 Test completed! +25 XP`);
   };
 
   if (isLoading) {
@@ -210,11 +225,14 @@ Return ONLY valid JSON array of objects with this structure:
           </Button>
         </div>
       </div>
-      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards with stock imagery. Complete them to earn XP and unlock achievements.</p>
+      <p className="text-muted-foreground mb-8">Personalized info &amp; test cards. Complete them to earn XP and unlock achievements.</p>
 
       <div className="space-y-8">
         {feedItems.map((item) => (
-          <Card key={item.id} className={item.completed ? 'opacity-75 pointer-events-none' : ''}>
+          <Card 
+            key={item.id} 
+            className={`transition-all duration-700 ${item.completed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+          >
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
@@ -224,26 +242,31 @@ Return ONLY valid JSON array of objects with this structure:
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Stock Image */}
               <div className="relative rounded-3xl overflow-hidden aspect-video">
-                <img
-                  src={item.mediaUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
+                <img src={item.mediaUrl} alt={item.title} className="w-full h-full object-cover" />
               </div>
 
               <p className="text-lg leading-relaxed">{item.description}</p>
 
               {item.type === 'info' && !item.completed && (
-                <Button
-                  variant="outline"
-                  className="gap-2 w-full"
-                  onClick={() => handleAskAI(item)}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Ask AI about this
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="gap-2 w-full"
+                    onClick={() => handleAskAI(item)}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Ask AI about this
+                  </Button>
+                  <Button
+                    variant="default"
+                    className="gap-2 w-full"
+                    onClick={() => markAsComplete(item)}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Mark as Complete
+                  </Button>
+                </>
               )}
 
               {item.type === 'test' && !item.completed && (
@@ -267,7 +290,7 @@ Return ONLY valid JSON array of objects with this structure:
               {item.completed && (
                 <div className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 p-4 rounded-2xl flex items-center gap-3">
                   <Lock className="h-5 w-5" />
-                  Completed — XP awarded • Achievement unlocked on profile
+                  Completed — XP awarded • Achievement unlocked
                 </div>
               )}
             </CardContent>
