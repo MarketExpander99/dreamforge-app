@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Sparkles, BookOpen, Clock, CheckCircle2, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Sparkles, BookOpen, Clock, CheckCircle2, Trophy, BarChart3 } from 'lucide-react';
 
 interface LearningModule {
   title: string;
@@ -61,6 +62,18 @@ export default function LearningPathPage() {
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [enhancedModules, setEnhancedModules] = useState<EnhancedModule[]>([]);
 
+  // New DB-driven states
+  const [stats, setStats] = useState({
+    totalCompleted: 0,
+    totalInProgress: 0,
+    overallProgress: 0,
+    totalTimeSpent: 0,
+  });
+  const [displayedCompleted, setDisplayedCompleted] = useState<EnhancedModule[]>([]);
+  const [completedPage, setCompletedPage] = useState(1);
+  const ITEMS_PER_PAGE = 4;
+  const [loadMoreLoading, setLoadMoreLoading] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -74,7 +87,6 @@ export default function LearningPathPage() {
         .select('username, interests')
         .eq('id', session.user.id)
         .single();
-
       setProfile(prof);
 
       const { data: expl } = await supabase
@@ -83,9 +95,9 @@ export default function LearningPathPage() {
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(8);
-
       if (expl) setExplorations(expl);
 
+      // Current saved path (unchanged)
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
@@ -99,25 +111,62 @@ export default function LearningPathPage() {
           ...path,
           modules: path.modules || [],
         });
+      }
 
-        const enhanced = (path.modules || []).map((module: LearningModule, index: number) => ({
-          title: module.title,
-          description: module.description || 'Master this module through interactive lessons and quizzes',
-          estimatedTime: module.estimated_time,
-          status: index % 2 === 0 ? 'in_progress' : 'completed' as const,
-          progress_percentage: index % 2 === 0 ? 65 : 92,
-          xp_earned: index % 2 === 0 ? 325 : 920,
-          xp_total: index % 2 === 0 ? 500 : 1000,
-          last_accessed: index % 2 === 0 ? '2 days ago' : '1 week ago',
-          quiz: index % 2 === 1 ? {
-            questions: [
-              { question: 'What is the primary pigment used in photosynthesis?', options: ['Chlorophyll', 'Hemoglobin', 'Melanin', 'Carotene'], correctAnswer: 'Chlorophyll', userAnswer: 'Chlorophyll', xpValue: 250 },
-              { question: 'Which gas is released as a byproduct of photosynthesis?', options: ['Carbon dioxide', 'Oxygen', 'Nitrogen', 'Hydrogen'], correctAnswer: 'Oxygen', userAnswer: 'Carbon dioxide', xpValue: 250 },
-              { question: 'Where does photosynthesis primarily occur in plants?', options: ['Roots', 'Leaves', 'Stem', 'Flowers'], correctAnswer: 'Leaves', userAnswer: 'Leaves', xpValue: 250 }
-            ]
-          } : undefined
-        }));
-        setEnhancedModules(enhanced);
+      // NEW: Real progress from DB (joined with content_items for title + quiz)
+      const { data: progressData } = await supabase
+        .from('user_progress')
+        .select(`
+          status,
+          progress_percentage,
+          time_spent,
+          completed_at,
+          last_accessed_at,
+          content_items (
+            title,
+            quiz
+          )
+        `)
+        .eq('user_id', session.user.id)
+        .order('last_accessed_at', { ascending: false });
+
+      if (progressData) {
+        const mapped: EnhancedModule[] = progressData.map((p: any) => {
+          const content = p.content_items || {};
+          const lastAccessed = p.last_accessed_at 
+            ? new Date(p.last_accessed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ago'
+            : 'Recently';
+
+          return {
+            title: content.title || 'Untitled Item',
+            description: 'Progress tracked via Skill Gain learning path',
+            estimatedTime: 'Varies',
+            status: p.status === 'completed' ? 'completed' : 'in_progress',
+            progress_percentage: p.progress_percentage || 0,
+            xp_earned: Math.floor((p.progress_percentage || 0) * 8), // light derivation – no schema change
+            xp_total: 1000,
+            last_accessed: lastAccessed,
+            quiz: content.quiz || undefined,
+          };
+        });
+
+        setEnhancedModules(mapped);
+
+        // Stats
+        const completed = mapped.filter(m => m.status === 'completed');
+        const inProgress = mapped.filter(m => m.status === 'in_progress');
+        const totalProgress = mapped.reduce((acc, m) => acc + m.progress_percentage, 0);
+        const avgProgress = mapped.length > 0 ? Math.round(totalProgress / mapped.length) : 0;
+
+        setStats({
+          totalCompleted: completed.length,
+          totalInProgress: inProgress.length,
+          overallProgress: avgProgress,
+          totalTimeSpent: progressData.reduce((acc: number, p: any) => acc + (p.time_spent || 0), 0),
+        });
+
+        // Initial lazy load batch for completed
+        setDisplayedCompleted(completed.slice(0, ITEMS_PER_PAGE));
       }
 
       setLoading(false);
@@ -125,6 +174,17 @@ export default function LearningPathPage() {
 
     init();
   }, [supabase, router]);
+
+  const loadMoreCompleted = () => {
+    setLoadMoreLoading(true);
+    const nextPage = completedPage + 1;
+    const start = (nextPage - 1) * ITEMS_PER_PAGE;
+    const allCompleted = enhancedModules.filter(m => m.status === 'completed');
+    const end = start + ITEMS_PER_PAGE;
+    setDisplayedCompleted(allCompleted.slice(0, end));
+    setCompletedPage(nextPage);
+    setLoadMoreLoading(false);
+  };
 
   const inProgress = enhancedModules.filter(m => m.status === 'in_progress');
   const completed = enhancedModules.filter(m => m.status === 'completed');
@@ -159,6 +219,7 @@ export default function LearningPathPage() {
           </div>
         </div>
 
+        {/* Current Path Header (unchanged styling) */}
         {currentPath && (
           <Card className="mb-10 border-0 shadow-sm">
             <CardHeader>
@@ -171,13 +232,44 @@ export default function LearningPathPage() {
           </Card>
         )}
 
+        {/* NEW: Stats Overview – styled to match existing cards */}
+        <Card className="mb-12 border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BarChart3 className="h-5 w-5" />
+              Your Learning Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-3xl font-bold text-emerald-600">{stats.totalCompleted}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-3xl font-bold text-amber-600">{stats.totalInProgress}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Progress</p>
+                <p className="text-3xl font-bold">{stats.overallProgress}%</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Time Spent</p>
+                <p className="text-3xl font-bold">{stats.totalTimeSpent} min</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* In Progress – now real DB data, exact same styling */}
         <div className="mb-12">
           <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
             <Clock className="h-6 w-6 text-amber-500" />
             In Progress
           </h2>
           {inProgress.length === 0 ? (
-            <Card className="p-12 text-center text-muted-foreground">
+            <Card className="p-12 text-center text-muted-foreground border-0 shadow-sm">
               No modules in progress yet. Add discoveries on the Discover page to expand and build your path!
             </Card>
           ) : (
@@ -214,18 +306,19 @@ export default function LearningPathPage() {
           )}
         </div>
 
+        {/* Completed – now real DB data + lazy loading, exact same styling */}
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-semibold mb-6">
             <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-            Completed
+            Completed ({completed.length})
           </h2>
           {completed.length === 0 ? (
-            <Card className="p-12 text-center text-muted-foreground">
+            <Card className="p-12 text-center text-muted-foreground border-0 shadow-sm">
               No completed modules yet. Finish modules to review tests and see XP breakdown.
             </Card>
           ) : (
             <div className="space-y-6">
-              {completed.map((module, index) => (
+              {displayedCompleted.map((module, index) => (
                 <Card key={index} className="border-0 shadow-sm overflow-hidden">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -253,44 +346,58 @@ export default function LearningPathPage() {
                       <span className="font-semibold text-emerald-600">{module.xp_earned} / {module.xp_total} XP</span>
                     </div>
 
-                    <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="review">
-                        <AccordionTrigger className="hover:no-underline">
-                          <span className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            Review Test Questions &amp; Answers
-                          </span>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-8 pt-4">
-                            {module.quiz?.questions.map((q, qIdx) => (
-                              <div key={qIdx} className="border border-zinc-100 dark:border-zinc-800 rounded-2xl p-5">
-                                <p className="font-medium mb-3">{q.question}</p>
-                                <div className="space-y-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Your answer:</span>
-                                    <span className={q.userAnswer === q.correctAnswer ? 'text-emerald-600' : 'text-red-500'}>
-                                      {q.userAnswer}
-                                    </span>
+                    {module.quiz && (
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="review">
+                          <AccordionTrigger className="hover:no-underline">
+                            <span className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              Review Test Questions &amp; Answers
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-8 pt-4">
+                              {module.quiz.questions.map((q, qIdx) => (
+                                <div key={qIdx} className="border border-zinc-100 dark:border-zinc-800 rounded-2xl p-5">
+                                  <p className="font-medium mb-3">{q.question}</p>
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-muted-foreground">Your answer:</span>
+                                      <span className={q.userAnswer === q.correctAnswer ? 'text-emerald-600' : 'text-red-500'}>
+                                        {q.userAnswer}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-muted-foreground">Correct answer:</span>
+                                      <span className="text-emerald-600 font-medium">{q.correctAnswer}</span>
+                                    </div>
                                   </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Correct answer:</span>
-                                    <span className="text-emerald-600 font-medium">{q.correctAnswer}</span>
+                                  <div className="mt-4 text-xs flex items-center justify-between">
+                                    <span className="text-muted-foreground">XP for this question</span>
+                                    <Badge variant="outline">+{q.xpValue}</Badge>
                                   </div>
                                 </div>
-                                <div className="mt-4 text-xs flex items-center justify-between">
-                                  <span className="text-muted-foreground">XP for this question</span>
-                                  <Badge variant="outline">+{q.xpValue}</Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    )}
                   </CardContent>
                 </Card>
               ))}
+
+              {displayedCompleted.length < completed.length && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-6"
+                  onClick={loadMoreCompleted}
+                  disabled={loadMoreLoading}
+                >
+                  {loadMoreLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Load More Completed Items
+                </Button>
+              )}
             </div>
           )}
         </div>
