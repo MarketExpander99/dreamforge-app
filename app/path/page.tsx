@@ -62,7 +62,7 @@ export default function LearningPathPage() {
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [enhancedModules, setEnhancedModules] = useState<EnhancedModule[]>([]);
 
-  // New DB-driven states
+  // DB-driven states
   const [stats, setStats] = useState({
     totalCompleted: 0,
     totalInProgress: 0,
@@ -113,14 +113,13 @@ export default function LearningPathPage() {
         });
       }
 
-      // NEW: Real progress from DB (joined with content_items for title + quiz)
+      // Real progress from exact schema (status TEXT, content_id FK, time_spent in minutes, last_accessed_at)
       const { data: progressData } = await supabase
         .from('user_progress')
         .select(`
           status,
           progress_percentage,
           time_spent,
-          completed_at,
           last_accessed_at,
           content_items (
             title,
@@ -131,42 +130,43 @@ export default function LearningPathPage() {
         .order('last_accessed_at', { ascending: false });
 
       if (progressData) {
-        const mapped: EnhancedModule[] = progressData.map((p: any) => {
-          const content = p.content_items || {};
-          const lastAccessed = p.last_accessed_at 
-            ? new Date(p.last_accessed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ago'
-            : 'Recently';
+        const mapped: EnhancedModule[] = progressData
+          .filter((p: any) => p.status === 'in_progress' || p.status === 'completed')
+          .map((p: any) => {
+            const content = p.content_items || {};
+            const lastAccessedDate = p.last_accessed_at ? new Date(p.last_accessed_at) : new Date();
+            const lastAccessed = lastAccessedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ago';
 
-          return {
-            title: content.title || 'Untitled Item',
-            description: 'Progress tracked via Skill Gain learning path',
-            estimatedTime: 'Varies',
-            status: p.status === 'completed' ? 'completed' : 'in_progress',
-            progress_percentage: p.progress_percentage || 0,
-            xp_earned: Math.floor((p.progress_percentage || 0) * 8), // light derivation – no schema change
-            xp_total: 1000,
-            last_accessed: lastAccessed,
-            quiz: content.quiz || undefined,
-          };
-        });
+            return {
+              title: content.title || 'Untitled Item',
+              description: 'Progress tracked via Skill Gain learning path',
+              estimatedTime: 'Varies',
+              status: p.status === 'completed' ? 'completed' : 'in_progress',
+              progress_percentage: Number(p.progress_percentage) || 0,
+              xp_earned: Math.floor((Number(p.progress_percentage) || 0) * 8),
+              xp_total: 1000,
+              last_accessed: lastAccessed,
+              quiz: content.quiz || undefined,
+            };
+          });
 
         setEnhancedModules(mapped);
 
-        // Stats
-        const completed = mapped.filter(m => m.status === 'completed');
-        const inProgress = mapped.filter(m => m.status === 'in_progress');
+        // Accurate stats from real DB data
+        const completedItems = mapped.filter(m => m.status === 'completed');
+        const inProgressItems = mapped.filter(m => m.status === 'in_progress');
         const totalProgress = mapped.reduce((acc, m) => acc + m.progress_percentage, 0);
         const avgProgress = mapped.length > 0 ? Math.round(totalProgress / mapped.length) : 0;
 
         setStats({
-          totalCompleted: completed.length,
-          totalInProgress: inProgress.length,
+          totalCompleted: completedItems.length,
+          totalInProgress: inProgressItems.length,
           overallProgress: avgProgress,
           totalTimeSpent: progressData.reduce((acc: number, p: any) => acc + (p.time_spent || 0), 0),
         });
 
         // Initial lazy load batch for completed
-        setDisplayedCompleted(completed.slice(0, ITEMS_PER_PAGE));
+        setDisplayedCompleted(completedItems.slice(0, ITEMS_PER_PAGE));
       }
 
       setLoading(false);
@@ -219,7 +219,7 @@ export default function LearningPathPage() {
           </div>
         </div>
 
-        {/* Current Path Header (unchanged styling) */}
+        {/* Current Path Header (unchanged) */}
         {currentPath && (
           <Card className="mb-10 border-0 shadow-sm">
             <CardHeader>
@@ -232,7 +232,7 @@ export default function LearningPathPage() {
           </Card>
         )}
 
-        {/* NEW: Stats Overview – styled to match existing cards */}
+        {/* Stats Overview – styled to match existing cards */}
         <Card className="mb-12 border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
