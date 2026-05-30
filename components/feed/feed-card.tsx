@@ -1,3 +1,4 @@
+// components/feed.tsx  (or wherever FeedCard is located)
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -15,14 +16,17 @@ import { useProgress } from '@/lib/progress'
 import { useAchievements } from '@/lib/achievements'
 import { useLikes } from '@/lib/likes'
 import { useComments, Comment } from '@/lib/comments'
-import { clientData } from '@/lib/data'
 import { useUser } from '@/lib/user-context'
+import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 
 interface FeedCardProps {
   card: FeedCardType
 }
 
 export function FeedCard({ card }: FeedCardProps) {
+  const supabase = createBrowserSupabaseClient()
+  const { user } = useUser()
+
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(card.likes || 0)
   const [isBookmarked, setIsBookmarked] = useState(false)
@@ -43,7 +47,37 @@ export function FeedCard({ card }: FeedCardProps) {
   const { checkAchievements } = useAchievements()
   const { toggleLike, checkStatus: checkLikeStatus, getLikeCount } = useLikes()
   const { addComment, getComments, getCommentCount } = useComments()
-  const { user } = useUser()
+
+  // Direct reliable progress saver to user_progress table
+  const saveProgress = async (contentId: string, increment: number = 20, isComplete: boolean = false) => {
+    if (!user?.id) return
+    setProgressLoading(true)
+    try {
+      const { data: current } = await supabase
+        .from('user_progress')
+        .select('progress_percentage, time_spent')
+        .eq('user_id', user.id)
+        .eq('content_id', contentId)
+        .single()
+
+      const newPercentage = Math.min(100, (current?.progress_percentage || 15) + increment)
+
+      await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          content_id: contentId,
+          status: isComplete || newPercentage >= 100 ? 'completed' : 'in_progress',
+          progress_percentage: newPercentage,
+          time_spent: (current?.time_spent || 0) + 5,
+          last_accessed_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,content_id' })
+    } catch (err) {
+      console.error('Direct progress save error:', err)
+    } finally {
+      setProgressLoading(false)
+    }
+  }
 
   // Check bookmark and like status on component mount
   useEffect(() => {
@@ -54,7 +88,6 @@ export function FeedCard({ card }: FeedCardProps) {
     checkBookmarkStatus()
   }, [card.id, checkStatus])
 
-  // Check like status and get real like count on component mount (only for authenticated users)
   useEffect(() => {
     if (user) {
       const checkLikeStatusAndCount = async () => {
@@ -67,13 +100,11 @@ export function FeedCard({ card }: FeedCardProps) {
       }
       checkLikeStatusAndCount()
     } else {
-      // For unauthenticated users, use default values
       setIsLiked(false)
       setLikeCount(card.likes || 0)
     }
   }, [card.id, checkLikeStatus, getLikeCount, user])
 
-  // Check comment count on component mount
   useEffect(() => {
     const checkCommentCount = async () => {
       const count = await getCommentCount(card.id)
@@ -82,58 +113,32 @@ export function FeedCard({ card }: FeedCardProps) {
     checkCommentCount()
   }, [card.id, getCommentCount])
 
-  // Track content view progress (only for authenticated users)
+  // Track content view + save to real DB
   useEffect(() => {
     if (user) {
-      const trackContentView = async () => {
-        setProgressLoading(true)
-        try {
-          await markStarted(card.id)
-          // Add estimated reading time
-          await addTime(card.id, Math.min(card.readTime, 2)) // Cap at 2 minutes for initial view
-        } catch (error) {
-          console.error('Progress tracking error:', error)
-        } finally {
-          setProgressLoading(false)
-        }
-      }
-
-      // Only track if not already loading
-      if (!progressLoading) {
-        trackContentView()
-      }
+      saveProgress(card.id, 18) // View progress
+      markStarted(card.id) // Keep existing hook for compatibility
     }
-  }, [card.id, markStarted, addTime, progressLoading, user])
+  }, [card.id, user])
 
-  // Track quiz completion
+  // Track quiz completion + strong DB save
   useEffect(() => {
     const trackQuizCompletion = async () => {
       if (showResult && card.quiz && selectedAnswer !== null) {
         const isCorrect = selectedAnswer === card.quiz.correctAnswer
-        setProgressLoading(true)
-        try {
-          if (isCorrect) {
-            await markCompleted(card.id)
-            // Check for new achievements after completing content
-            if (user) {
-              await checkAchievements(user.id)
-            }
-          } else {
-            // Mark as in progress if incorrect
-            await markStarted(card.id)
-          }
-          // Add time spent on quiz
-          await addTime(card.id, 3) // Assume 3 minutes for quiz
-        } catch (error) {
-          console.error('Quiz progress tracking error:', error)
-        } finally {
-          setProgressLoading(false)
+        const increment = isCorrect ? 48 : 12
+        await saveProgress(card.id, increment, isCorrect)
+
+        if (isCorrect && user) {
+          await checkAchievements(user.id)
+          await markCompleted(card.id)
+        } else {
+          await markStarted(card.id)
         }
       }
     }
-
     trackQuizCompletion()
-  }, [showResult, selectedAnswer, card.id, card.quiz, markCompleted, markStarted, addTime, checkAchievements])
+  }, [showResult, selectedAnswer, card.id, card.quiz, user])
 
   const handleLike = async () => {
     setLikeLoading(true)
@@ -141,9 +146,9 @@ export function FeedCard({ card }: FeedCardProps) {
       const result = await toggleLike(card.id)
       if (result.success) {
         setIsLiked(result.isLiked || false)
-        // Refresh like count after toggle
         const newCount = await getLikeCount(card.id)
         setLikeCount(newCount)
+        await saveProgress(card.id, 8) // Like engagement
       }
     } catch (error) {
       console.error('Like error:', error)
@@ -158,6 +163,7 @@ export function FeedCard({ card }: FeedCardProps) {
       const result = await toggleBookmark(card.id)
       if (result.success) {
         setIsBookmarked(result.isBookmarked || false)
+        await saveProgress(card.id, 15) // Bookmark = solid progress
       }
     } catch (error) {
       console.error('Bookmark error:', error)
@@ -173,7 +179,6 @@ export function FeedCard({ card }: FeedCardProps) {
 
   const handleCommentToggle = async () => {
     if (!showComments) {
-      // Load comments when opening
       setCommentLoading(true)
       try {
         const fetchedComments = await getComments(card.id)
@@ -197,6 +202,7 @@ export function FeedCard({ card }: FeedCardProps) {
         setComments(prev => [...prev, result.comment!])
         setCommentCount(prev => prev + 1)
         setNewComment('')
+        await saveProgress(card.id, 14) // Comment = good engagement boost
       }
     } catch (error) {
       console.error('Error adding comment:', error)
@@ -232,19 +238,11 @@ export function FeedCard({ card }: FeedCardProps) {
             <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
               {card.videoUrl ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => window.open(card.videoUrl, '_blank')}
-                >
-                  <Play className="h-6 w-6 mr-2" />
-                  Watch Video
+                <Button variant="secondary" size="lg" onClick={() => window.open(card.videoUrl, '_blank')}>
+                  <Play className="h-6 w-6 mr-2" /> Watch Video
                 </Button>
               ) : (
-                <Button variant="secondary" size="lg" disabled>
-                  <Play className="h-6 w-6 mr-2" />
-                  Video Not Available
-                </Button>
+                <Button variant="secondary" size="lg" disabled>Video Not Available</Button>
               )}
             </div>
           </div>
@@ -256,19 +254,11 @@ export function FeedCard({ card }: FeedCardProps) {
             <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
               {card.audioUrl ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => window.open(card.audioUrl, '_blank')}
-                >
-                  <Volume2 className="h-6 w-6 mr-2" />
-                  Play Audio
+                <Button variant="secondary" size="lg" onClick={() => window.open(card.audioUrl, '_blank')}>
+                  <Volume2 className="h-6 w-6 mr-2" /> Play Audio
                 </Button>
               ) : (
-                <Button variant="secondary" size="lg" disabled>
-                  <Volume2 className="h-6 w-6 mr-2" />
-                  Audio Not Available
-                </Button>
+                <Button variant="secondary" size="lg" disabled>Audio Not Available</Button>
               )}
             </div>
           </div>
@@ -279,9 +269,7 @@ export function FeedCard({ card }: FeedCardProps) {
           return (
             <div className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-              <Button onClick={() => setShowQuiz(true)} className="w-full">
-                Take Quiz
-              </Button>
+              <Button onClick={() => setShowQuiz(true)} className="w-full">Take Quiz</Button>
             </div>
           )
         }
@@ -292,22 +280,14 @@ export function FeedCard({ card }: FeedCardProps) {
             <div className="space-y-4">
               <div className={`p-4 rounded-lg ${isCorrect ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  {isCorrect ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <X className="h-5 w-5 text-red-600" />
-                  )}
-                  <span className={`font-semibold ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                  {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600" /> : <X className="h-5 w-5 text-red-600" />}
+                  <span className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
                     {isCorrect ? 'Correct!' : 'Incorrect'}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{card.quiz.explanation}</p>
               </div>
-              <Button onClick={() => {
-                setShowQuiz(false)
-                setSelectedAnswer(null)
-                setShowResult(false)
-              }} variant="outline">
+              <Button onClick={() => { setShowQuiz(false); setSelectedAnswer(null); setShowResult(false) }} variant="outline">
                 Try Again
               </Button>
             </div>
@@ -319,13 +299,7 @@ export function FeedCard({ card }: FeedCardProps) {
             <h3 className="font-semibold text-lg">{card.quiz?.question}</h3>
             <div className="space-y-2">
               {card.quiz?.options.map((option, index) => (
-                <Button
-                  key={index}
-                  onClick={() => handleQuizAnswer(index)}
-                  variant="outline"
-                  className="w-full justify-start text-left"
-                  disabled={showResult}
-                >
+                <Button key={index} onClick={() => handleQuizAnswer(index)} variant="outline" className="w-full justify-start text-left" disabled={showResult}>
                   {option}
                 </Button>
               ))}
@@ -334,9 +308,7 @@ export function FeedCard({ card }: FeedCardProps) {
         )
 
       default:
-        return (
-          <p className="text-muted-foreground leading-relaxed">{card.content}</p>
-        )
+        return <p className="text-muted-foreground leading-relaxed">{card.content}</p>
     }
   }
 
@@ -353,23 +325,11 @@ export function FeedCard({ card }: FeedCardProps) {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <motion.h2
-                className="text-xl font-bold mb-2"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-              >
+              <motion.h2 className="text-xl font-bold mb-2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
                 {card.title}
               </motion.h2>
-              <motion.div
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Badge variant="secondary" className="transition-colors hover:bg-primary hover:text-primary-foreground">
-                  {card.category}
-                </Badge>
+              <motion.div className="flex items-center gap-2 text-sm text-muted-foreground" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                <Badge variant="secondary">{card.category}</Badge>
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {card.readTime} min read
@@ -379,87 +339,28 @@ export function FeedCard({ card }: FeedCardProps) {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
             {renderCardContent()}
           </motion.div>
 
-          <motion.div
-            className="flex items-center justify-between mt-6 pt-4 border-t"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
+          <motion.div className="flex items-center justify-between mt-6 pt-4 border-t" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <div className="flex items-center gap-2">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLike}
-                  disabled={likeLoading}
-                  className={`transition-all duration-200 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
-                >
-                  <motion.div
-                    animate={{ scale: isLiked ? [1, 1.2, 1] : 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-                  </motion.div>
-                  <motion.span
-                    key={likeCount}
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="font-medium"
-                  >
-                    {likeCount}
-                  </motion.span>
+                <Button variant="ghost" size="sm" onClick={handleLike} disabled={likeLoading} className={`transition-all duration-200 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}>
+                  <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} /> {likeCount}
                 </Button>
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCommentToggle}
-                  disabled={commentLoading}
-                  className="transition-colors hover:text-blue-500"
-                >
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  <motion.span
-                    key={commentCount}
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="font-medium"
-                  >
-                    {commentCount}
-                  </motion.span>
+                <Button variant="ghost" size="sm" onClick={handleCommentToggle} disabled={commentLoading} className="transition-colors hover:text-blue-500">
+                  <MessageCircle className="h-4 w-4 mr-1" /> {commentCount}
                 </Button>
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBookmark}
-                  disabled={bookmarkLoading}
-                  className={`transition-all duration-200 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
-                >
-                  <motion.div
-                    animate={{ rotate: isBookmarked ? [0, -10, 10, 0] : 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {isBookmarked ? (
-                      <BookmarkCheck className="h-4 w-4 mr-1 fill-current" />
-                    ) : (
-                      <Bookmark className="h-4 w-4 mr-1" />
-                    )}
-                  </motion.div>
-                  <span className="font-medium">
-                    {bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}
-                  </span>
+                <Button variant="ghost" size="sm" onClick={handleBookmark} disabled={bookmarkLoading} className={`transition-all duration-200 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}>
+                  {isBookmarked ? <BookmarkCheck className="h-4 w-4 mr-1 fill-current" /> : <Bookmark className="h-4 w-4 mr-1" />}
+                  <span>{bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}</span>
                 </Button>
               </motion.div>
             </div>
@@ -467,76 +368,35 @@ export function FeedCard({ card }: FeedCardProps) {
 
           <AnimatePresence>
             {showComments && (
-              <motion.div
-                className="mt-4 pt-4 border-t space-y-4"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
+              <motion.div className="mt-4 pt-4 border-t space-y-4" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                 {user && (
                   <div className="flex gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.user_metadata?.avatar_url} />
-                      <AvatarFallback>
-                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                      </AvatarFallback>
+                      <AvatarFallback>{user.user_metadata?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 flex gap-2">
-                      <Input
-                        placeholder="Write a comment..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
-                        disabled={commentLoading}
-                      />
-                      <Button
-                        onClick={handleAddComment}
-                        disabled={commentLoading || !newComment.trim()}
-                        size="sm"
-                      >
+                      <Input placeholder="Write a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()} disabled={commentLoading} />
+                      <Button onClick={handleAddComment} disabled={commentLoading || !newComment.trim()} size="sm">
                         {commentLoading ? 'Posting...' : 'Post'}
                       </Button>
                     </div>
                   </div>
                 )}
-
+                {/* Comments list */}
                 <div className="space-y-3">
-                  {commentLoading && comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Loading comments...</p>
-                  ) : comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
-                  ) : (
-                    comments.map((comment) => (
-                      <motion.div
-                        key={comment.id}
-                        className="flex gap-3"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={comment.profiles?.avatar_url} />
-                          <AvatarFallback>
-                            {comment.profiles?.full_name?.charAt(0) || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="bg-muted rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm">
-                                {comment.profiles?.full_name || 'Anonymous'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(comment.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-sm">{comment.comment}</p>
-                          </div>
+                  {comments.map((comment) => (
+                    <motion.div key={comment.id} className="flex gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="bg-muted rounded-lg p-3">
+                          <p className="text-sm">{comment.comment}</p>
                         </div>
-                      </motion.div>
-                    ))
-                  )}
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
             )}
