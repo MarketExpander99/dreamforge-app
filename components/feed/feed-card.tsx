@@ -1,4 +1,4 @@
-// components/feed.tsx  (or wherever FeedCard is located)
+// components/feed/feed-card.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck } from 'lucide-react'
+import { Heart, MessageCircle, Clock, Play, Volume2, CheckCircle, X, Bookmark, BookmarkCheck, Trophy } from 'lucide-react'
 import { FeedCard as FeedCardType } from '@/lib/sample-content'
 import { useBookmarks } from '@/lib/bookmarks'
 import { useProgress } from '@/lib/progress'
@@ -41,15 +41,16 @@ export function FeedCard({ card }: FeedCardProps) {
   const [commentCount, setCommentCount] = useState(card.comments || 0)
   const [commentLoading, setCommentLoading] = useState(false)
   const [newComment, setNewComment] = useState('')
+  const [isCardCompleted, setIsCardCompleted] = useState(false)
 
   const { toggleBookmark, checkStatus } = useBookmarks()
-  const { markStarted, markCompleted, addTime } = useProgress()
+  const { markStarted, markCompleted } = useProgress()
   const { checkAchievements } = useAchievements()
   const { toggleLike, checkStatus: checkLikeStatus, getLikeCount } = useLikes()
   const { addComment, getComments, getCommentCount } = useComments()
 
-  // Direct reliable progress saver to user_progress table
-  const saveProgress = async (contentId: string, increment: number = 20, isComplete: boolean = false) => {
+  // Fixed & Strong Progress Saver
+  const saveProgress = async (contentId: string, increment: number = 35, forceComplete: boolean = false) => {
     if (!user?.id) return
     setProgressLoading(true)
     try {
@@ -60,85 +61,58 @@ export function FeedCard({ card }: FeedCardProps) {
         .eq('content_id', contentId)
         .single()
 
-      const newPercentage = Math.min(100, (current?.progress_percentage || 15) + increment)
+      let newPct = Math.min(100, (current?.progress_percentage || 0) + increment)
+      if (forceComplete) newPct = 100
 
-      await supabase
-        .from('user_progress')
-        .upsert({
-          user_id: user.id,
-          content_id: contentId,
-          status: isComplete || newPercentage >= 100 ? 'completed' : 'in_progress',
-          progress_percentage: newPercentage,
-          time_spent: (current?.time_spent || 0) + 5,
-          last_accessed_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,content_id' })
+      await supabase.from('user_progress').upsert({
+        user_id: user.id,
+        content_id: contentId,
+        status: newPct >= 100 ? 'completed' : 'in_progress',
+        progress_percentage: newPct,
+        time_spent: (current?.time_spent || 0) + 10,
+        last_accessed_at: new Date().toISOString(),
+        completed_at: newPct >= 100 ? new Date().toISOString() : null,
+      }, { onConflict: 'user_id,content_id' })
+
+      if (newPct >= 100) setIsCardCompleted(true)
+      console.log(`✅ Progress updated → ${newPct}% for ${contentId}`)
     } catch (err) {
-      console.error('Direct progress save error:', err)
+      console.error('Progress save error:', err)
     } finally {
       setProgressLoading(false)
     }
   }
 
-  // Check bookmark and like status on component mount
-  useEffect(() => {
-    const checkBookmarkStatus = async () => {
-      const status = await checkStatus(card.id)
-      setIsBookmarked(status)
-    }
-    checkBookmarkStatus()
-  }, [card.id, checkStatus])
-
+  // Initial view tracking
   useEffect(() => {
     if (user) {
-      const checkLikeStatusAndCount = async () => {
-        const [likeStatus, count] = await Promise.all([
-          checkLikeStatus(card.id),
-          getLikeCount(card.id)
-        ])
-        setIsLiked(likeStatus)
-        setLikeCount(count)
-      }
-      checkLikeStatusAndCount()
-    } else {
-      setIsLiked(false)
-      setLikeCount(card.likes || 0)
-    }
-  }, [card.id, checkLikeStatus, getLikeCount, user])
-
-  useEffect(() => {
-    const checkCommentCount = async () => {
-      const count = await getCommentCount(card.id)
-      setCommentCount(count)
-    }
-    checkCommentCount()
-  }, [card.id, getCommentCount])
-
-  // Track content view + save to real DB
-  useEffect(() => {
-    if (user) {
-      saveProgress(card.id, 18) // View progress
-      markStarted(card.id) // Keep existing hook for compatibility
+      saveProgress(card.id, 25)
+      markStarted(card.id)
     }
   }, [card.id, user])
 
-  // Track quiz completion + strong DB save
+  // Quiz completion
   useEffect(() => {
-    const trackQuizCompletion = async () => {
-      if (showResult && card.quiz && selectedAnswer !== null) {
-        const isCorrect = selectedAnswer === card.quiz.correctAnswer
-        const increment = isCorrect ? 48 : 12
-        await saveProgress(card.id, increment, isCorrect)
-
-        if (isCorrect && user) {
-          await checkAchievements(user.id)
-          await markCompleted(card.id)
-        } else {
-          await markStarted(card.id)
-        }
+    if (showResult && selectedAnswer !== null && card.quiz) {
+      const isCorrect = selectedAnswer === card.quiz.correctAnswer
+      saveProgress(card.id, isCorrect ? 55 : 20, isCorrect)
+      if (isCorrect) {
+        markCompleted(card.id)
+        if (user) checkAchievements(user.id)
       }
     }
-    trackQuizCompletion()
   }, [showResult, selectedAnswer, card.id, card.quiz, user])
+
+  const handleMarkAsComplete = async () => {
+    await saveProgress(card.id, 70, true)
+    alert(`🎉 ${card.title} marked as completed! Progress updated to 100%.`)
+    setIsCardCompleted(true)
+  }
+
+  const handleQuizAnswer = (answerIndex: number) => {
+    setSelectedAnswer(answerIndex)
+    setShowResult(true)
+  }
 
   const handleLike = async () => {
     setLikeLoading(true)
@@ -148,67 +122,46 @@ export function FeedCard({ card }: FeedCardProps) {
         setIsLiked(result.isLiked || false)
         const newCount = await getLikeCount(card.id)
         setLikeCount(newCount)
-        await saveProgress(card.id, 8) // Like engagement
+        await saveProgress(card.id, 10)
       }
-    } catch (error) {
-      console.error('Like error:', error)
-    } finally {
-      setLikeLoading(false)
-    }
+    } catch (e) { console.error(e) }
+    setLikeLoading(false)
   }
 
   const handleBookmark = async () => {
     setBookmarkLoading(true)
     try {
       const result = await toggleBookmark(card.id)
-      if (result.success) {
-        setIsBookmarked(result.isBookmarked || false)
-        await saveProgress(card.id, 15) // Bookmark = solid progress
-      }
-    } catch (error) {
-      console.error('Bookmark error:', error)
-    } finally {
-      setBookmarkLoading(false)
-    }
+      if (result.success) setIsBookmarked(result.isBookmarked || false)
+      await saveProgress(card.id, 22)
+    } catch (e) {}
+    setBookmarkLoading(false)
   }
 
-  const handleQuizAnswer = (answerIndex: number) => {
-    setSelectedAnswer(answerIndex)
-    setShowResult(true)
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return
+    setCommentLoading(true)
+    try {
+      const result = await addComment(card.id, newComment)
+      if (result.success) {
+        setCommentCount(prev => prev + 1)
+        setNewComment('')
+        await saveProgress(card.id, 16)
+      }
+    } catch (e) {}
+    setCommentLoading(false)
   }
 
   const handleCommentToggle = async () => {
     if (!showComments) {
       setCommentLoading(true)
       try {
-        const fetchedComments = await getComments(card.id)
-        setComments(fetchedComments)
-      } catch (error) {
-        console.error('Error loading comments:', error)
-      } finally {
-        setCommentLoading(false)
-      }
-    }
-    setShowComments(!showComments)
-  }
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return
-
-    setCommentLoading(true)
-    try {
-      const result = await addComment(card.id, newComment)
-      if (result.success && result.comment) {
-        setComments(prev => [...prev, result.comment!])
-        setCommentCount(prev => prev + 1)
-        setNewComment('')
-        await saveProgress(card.id, 14) // Comment = good engagement boost
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error)
-    } finally {
+        const fetched = await getComments(card.id)
+        setComments(fetched)
+      } catch (e) {}
       setCommentLoading(false)
     }
+    setShowComments(!showComments)
   }
 
   const renderCardContent = () => {
@@ -219,14 +172,7 @@ export function FeedCard({ card }: FeedCardProps) {
             <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             {card.imageUrl && (
               <div className="relative aspect-video rounded-lg overflow-hidden">
-                <Image
-                  src={card.imageUrl}
-                  alt={card.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
+                <Image src={card.imageUrl} alt={card.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
               </div>
             )}
           </div>
@@ -273,7 +219,6 @@ export function FeedCard({ card }: FeedCardProps) {
             </div>
           )
         }
-
         if (showResult && card.quiz) {
           const isCorrect = selectedAnswer === card.quiz.correctAnswer
           return (
@@ -293,7 +238,6 @@ export function FeedCard({ card }: FeedCardProps) {
             </div>
           )
         }
-
         return (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">{card.quiz?.question}</h3>
@@ -321,7 +265,7 @@ export function FeedCard({ card }: FeedCardProps) {
       whileTap={{ scale: 0.98 }}
       className="w-full max-w-2xl mx-auto mb-6"
     >
-      <Card className="overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 border-2 hover:border-primary/30 group">
+      <Card className={`overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 border-2 hover:border-primary/30 group ${isCardCompleted ? 'border-emerald-500 bg-emerald-50/30' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -334,6 +278,7 @@ export function FeedCard({ card }: FeedCardProps) {
                   <Clock className="h-4 w-4" />
                   {card.readTime} min read
                 </div>
+                {isCardCompleted && <Badge className="bg-emerald-600">✅ Completed</Badge>}
               </motion.div>
             </div>
           </div>
@@ -343,28 +288,17 @@ export function FeedCard({ card }: FeedCardProps) {
             {renderCardContent()}
           </motion.div>
 
-          <motion.div className="flex items-center justify-between mt-6 pt-4 border-t" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="sm" onClick={handleLike} disabled={likeLoading} className={`transition-all duration-200 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}>
-                  <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} /> {likeCount}
-                </Button>
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="sm" onClick={handleCommentToggle} disabled={commentLoading} className="transition-colors hover:text-blue-500">
-                  <MessageCircle className="h-4 w-4 mr-1" /> {commentCount}
-                </Button>
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="sm" onClick={handleBookmark} disabled={bookmarkLoading} className={`transition-all duration-200 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}>
-                  {isBookmarked ? <BookmarkCheck className="h-4 w-4 mr-1 fill-current" /> : <Bookmark className="h-4 w-4 mr-1" />}
-                  <span>{bookmarkLoading ? 'Saving...' : isBookmarked ? 'Saved' : 'Save'}</span>
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
+          <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
+            <Button onClick={handleMarkAsComplete} className="flex-1" variant="default">
+              <Trophy className="mr-2 h-4 w-4" /> Mark as Complete
+            </Button>
+            <Button onClick={() => setShowQuiz(true)} variant="outline">Take Quiz</Button>
+            <Button onClick={handleBookmark} disabled={bookmarkLoading}>
+              {isBookmarked ? "✅ Saved" : "Bookmark"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLike}>❤️ {likeCount}</Button>
+            <Button variant="ghost" size="sm" onClick={handleCommentToggle}>💬 {commentCount}</Button>
+          </div>
 
           <AnimatePresence>
             {showComments && (
@@ -383,17 +317,12 @@ export function FeedCard({ card }: FeedCardProps) {
                     </div>
                   </div>
                 )}
-                {/* Comments list */}
                 <div className="space-y-3">
                   {comments.map((comment) => (
                     <motion.div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>U</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="bg-muted rounded-lg p-3">
-                          <p className="text-sm">{comment.comment}</p>
-                        </div>
+                      <Avatar className="h-8 w-8"><AvatarFallback>U</AvatarFallback></Avatar>
+                      <div className="flex-1 bg-muted rounded-lg p-3">
+                        <p className="text-sm">{comment.comment}</p>
                       </div>
                     </motion.div>
                   ))}
