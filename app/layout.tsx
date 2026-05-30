@@ -3,12 +3,13 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navigation from '@/components/navigation';
 import { Providers } from '@/components/providers';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Skill Gain — Discover',
-  description: 'Powered by Grok',
+  description: 'Powered by Grok • Gamified Learning for Students & Parents',
 };
 
 export default function RootLayout({
@@ -29,6 +30,9 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+
+          {/* Global Toaster - placed inside Providers for full toast support across feed, learning, and discover */}
+          <Toaster position="top-center" richColors closeButton />
         </Providers>
       </body>
     </html>
