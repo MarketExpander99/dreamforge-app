@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/lib/user-context'
 import { getPersonalizedRecommendations, ContentItem } from '@/lib/data'
-import { FeedCard } from '@/components/feed/feed-card'
+// FeedCard not used here; import removed to fix incorrect named import
 import Image from 'next/image'
 
 interface RecommendationsProps {
