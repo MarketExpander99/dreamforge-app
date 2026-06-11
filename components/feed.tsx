@@ -52,14 +52,11 @@ export default function Feed() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
 
-  // Load completed IDs from localStorage into state
   const loadCompletedIds = () => {
     if (typeof window === 'undefined') return new Set<string>();
     try {
       const stored = localStorage.getItem(COMPLETED_STORAGE_KEY);
-      const ids = stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
-      console.log('[Feed] Loaded completed IDs from localStorage:', Array.from(ids));
-      return ids;
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
     } catch {
       return new Set<string>();
     }
@@ -68,7 +65,6 @@ export default function Feed() {
   const persistCompletedIds = (ids: Set<string>) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(COMPLETED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
-    console.log('[Feed] Saved to localStorage:', Array.from(ids));
   };
 
   const loadFeedFromDB = async () => {
@@ -88,8 +84,6 @@ export default function Feed() {
       .limit(8);
 
     const paths = explorations || [];
-
-    // Load persisted completed state
     const loadedCompleted = loadCompletedIds();
     setCompletedIds(loadedCompleted);
 
@@ -178,7 +172,6 @@ export default function Feed() {
 
     setFeedItems(mapped);
 
-    // Calculate current round based on completed state
     const initialState: TopicState = {};
     mapped.forEach(item => {
       if (!initialState[item.topicId]) {
@@ -211,7 +204,6 @@ export default function Feed() {
     return roundCards.length > 0 && roundCards.every(card => card.completed);
   };
 
-  // Update both state and localStorage together
   const updateCompleted = (newIds: Set<string>) => {
     setCompletedIds(newIds);
     persistCompletedIds(newIds);
@@ -222,7 +214,6 @@ export default function Feed() {
     newIds.add(item.id);
     updateCompleted(newIds);
 
-    // Also update the visible item immediately
     setFeedItems(prev =>
       prev.map(i => (i.id === item.id ? { ...i, completed: true } : i))
     );
@@ -241,8 +232,6 @@ export default function Feed() {
       .forEach(item => newIds.add(item.id));
 
     updateCompleted(newIds);
-
-    // Remove topic from view immediately
     setFeedItems(prev => prev.filter(item => item.topicId !== topicId));
   };
 
@@ -330,10 +319,14 @@ export default function Feed() {
         </Button>
       </div>
 
+      <p className="text-muted-foreground mb-8">
+        Only active topics with incomplete cards are shown. Completed topics are hidden (view history on another page).
+      </p>
+
       <div className="space-y-12">
         {topics.length === 0 && (
           <Card className="p-12 text-center">
-            <p className="text-xl text-muted-foreground">No topics yet. Add some from Discover!</p>
+            <p className="text-xl text-muted-foreground">No active topics. All done or add more from Discover!</p>
           </Card>
         )}
 
@@ -343,9 +336,15 @@ export default function Feed() {
 
           const topicTitle = topicItems[0].topic;
           const currentRound = getCurrentRound(topicId);
-          const currentRoundItems = topicItems.filter(i => i.round === currentRound);
+
+          const currentRoundAll = topicItems.filter(i => i.round === currentRound);
+          const currentRoundItems = currentRoundAll.filter(i => !i.completed);
+
           const roundComplete = isRoundComplete(topicId, currentRound);
           const allRoundsDone = currentRound === 3 && roundComplete;
+
+          // Hide the entire topic once all rounds are complete
+          if (allRoundsDone) return null;
 
           return (
             <div key={topicId} className="space-y-6">
@@ -355,10 +354,11 @@ export default function Feed() {
                   <div className="flex items-center gap-3 mt-1">
                     <Badge>Round {currentRound} of 3</Badge>
                     <span className="text-sm text-muted-foreground">
-                      {currentRoundItems.filter(c => c.completed).length} / {currentRoundItems.length} cards complete
+                      {currentRoundAll.filter(c => c.completed).length} / {currentRoundAll.length} cards complete
                     </span>
                   </div>
                 </div>
+
                 <div className="flex gap-3">
                   {roundComplete && currentRound < 3 && (
                     <Button onClick={() => advanceToNextRound(topicId)} className="gap-2">
@@ -377,6 +377,10 @@ export default function Feed() {
               </div>
 
               <div className="grid gap-6">
+                {currentRoundItems.length === 0 && !roundComplete && (
+                  <p className="text-muted-foreground">No active cards in this round.</p>
+                )}
+
                 {currentRoundItems.map(item => (
                   <motion.div key={item.id} layout>
                     <Card>
@@ -384,7 +388,6 @@ export default function Feed() {
                         <CardTitle className="flex items-center gap-3">
                           {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
                           {item.title}
-                          {item.completed && <CheckCircle className="h-4 w-4 text-emerald-600 ml-auto" />}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -446,13 +449,6 @@ export default function Feed() {
                   <Button onClick={() => advanceToNextRound(topicId)} className="mt-4 gap-2">
                     Start Round {currentRound + 1} <ArrowRight className="h-4 w-4" />
                   </Button>
-                </div>
-              )}
-
-              {allRoundsDone && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6 text-center">
-                  <Trophy className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
-                  <h4 className="text-xl font-semibold">All rounds complete for {topicTitle}!</h4>
                 </div>
               )}
             </div>
