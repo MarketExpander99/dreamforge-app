@@ -330,10 +330,6 @@ export default function Feed() {
         </Button>
       </div>
 
-      <p className="text-muted-foreground mb-8">
-        Completion is now managed through dedicated state + localStorage. Should survive hard refresh reliably.
-      </p>
-
       <div className="space-y-12">
         {topics.length === 0 && (
           <Card className="p-12 text-center">
