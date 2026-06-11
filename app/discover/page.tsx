@@ -11,6 +11,7 @@ import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
 import Feed from '@/components/feed';
 
@@ -90,12 +91,34 @@ export default function DiscoverPage() {
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [chatUsedForNode, setChatUsedForNode] = useState(false);
   const [isAddingToPath, setIsAddingToPath] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   useEffect(() => {
     if (isSessionReady) {
       searchInputRef.current?.focus();
     }
   }, [isSessionReady]);
+
+  // Animate progress bar while Grok builds the lesson
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    if (isLoading) {
+      setLoadProgress(6);
+      interval = setInterval(() => {
+        setLoadProgress((prev) => {
+          const next = prev + (Math.random() * 13 + 5);
+          return next > 93 ? 93 : next;
+        });
+      }, 210);
+    } else {
+      setLoadProgress(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading]);
 
   useEffect(() => {
     let mounted = true;
@@ -183,21 +206,37 @@ export default function DiscoverPage() {
   const saveProgress = async (contentId: string, basePct: number = 30, increment: number = 0) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        console.warn('saveProgress: No session found');
+        return;
+      }
+
       const progressPercentage = Math.min(100, Math.max(0, basePct + increment));
+      const payload = {
+        user_id: session.user.id,
+        content_id: contentId,
+        status: progressPercentage >= 100 ? 'completed' : 'in_progress',
+        progress_percentage: progressPercentage,
+        time_spent: 15 + Math.floor(Math.random() * 25),
+        last_accessed_at: new Date().toISOString(),
+      };
+
+      console.log('Attempting progress upsert with payload:', payload);
+
       const { error } = await supabase
         .from('user_progress')
-        .upsert({
-          user_id: session.user.id,
-          content_id: contentId,
-          status: progressPercentage >= 100 ? 'completed' : 'in_progress',
-          progress_percentage: progressPercentage,
-          time_spent: 15 + Math.floor(Math.random() * 25),
-          last_accessed_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,content_id' });
-      if (error) console.error('Progress save error:', error);
+        .upsert(payload, { onConflict: 'user_id,content_id' });
+
+      if (error) {
+        console.error('Progress save error object:', error);
+        console.error('Progress save error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        console.error('Error constructor name:', error?.constructor?.name);
+        console.error('Error keys:', Object.keys(error || {}));
+      } else {
+        console.log('Progress saved successfully for:', contentId);
+      }
     } catch (err) {
-      console.error('Progress save failed:', err);
+      console.error('Progress save failed (catch block):', err);
     }
   };
 
@@ -256,8 +295,8 @@ export default function DiscoverPage() {
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
 
-      await saveExploration(newNode);
-      await saveProgress(newNode.label, isDeep ? 55 : 40);
+      // Nothing is saved on generation anymore.
+      // Both exploration + progress are only recorded when the user clicks "Add to Learning Path".
     } catch (error) {
       console.error(error);
       alert("Failed to generate lesson. Please try again.");
@@ -290,7 +329,7 @@ export default function DiscoverPage() {
     }
 
     await saveExploration(centerNode);
-    await saveProgress(centerNode.label, 70, 20);
+    await saveProgress(centerNode.label, 35, 25);
 
     let modules: LearningModule[] = currentPath?.modules || [];
     const newModule: LearningModule = {
@@ -406,7 +445,16 @@ export default function DiscoverPage() {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Sparkles className="h-16 w-16 text-amber-500 animate-pulse mb-8" />
             <h2 className="text-3xl font-semibold tracking-tight">Grok is building your lesson...</h2>
-            <p className="text-muted-foreground">Personalizing for you</p>
+            <p className="text-muted-foreground">Personalizing for you • Structured round in progress</p>
+
+            <div className="w-full max-w-sm mt-8 px-6">
+              <Progress value={loadProgress} className="h-3 rounded-full" />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+                <span>Building structured lesson</span>
+                <span>{Math.round(loadProgress)}%</span>
+              </div>
+            </div>
+
             <div className="flex gap-2 mt-10">
               <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
               <div className="h-3 w-3 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
@@ -415,10 +463,8 @@ export default function DiscoverPage() {
           </div>
         ) : centerNode ? (
           <Card className="w-full">
-            {/* Your full beautiful lesson UI remains unchanged */}
             <CardHeader><CardTitle className="text-3xl">{centerNode.label}</CardTitle></CardHeader>
             <CardContent className="space-y-8 p-8">
-              {/* All sections kept exactly as you had */}
               <div><h4 className="font-semibold mb-2">Lesson Introduction</h4><p className="text-lg leading-relaxed break-words">{centerNode.short_description}</p></div>
               <div><h4 className="font-semibold mb-2">Learning Objective</h4><p className="text-lg break-words">{centerNode.main_function}</p></div>
 
