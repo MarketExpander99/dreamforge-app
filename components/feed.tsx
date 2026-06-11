@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
-import { progressUtils } from '@/lib/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,23 +38,35 @@ interface TopicState {
   [topicId: string]: { currentRound: number };
 }
 
+const COMPLETED_STORAGE_KEY = 'skillgain_feed_completed_ids';
+
 export default function Feed() {
   const supabase = createBrowserSupabaseClient();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [topicState, setTopicState] = useState<TopicState>({});
-
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatMessagesMap, setChatMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [sendingMessage, setSendingMessage] = useState(false);
   const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
 
-  // =====================================================
-  // LOAD FEED + REAL PROGRESS (more reliable version)
-  // =====================================================
+  const getCompletedFromStorage = (): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(COMPLETED_STORAGE_KEY);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+
+  const saveCompletedToStorage = (ids: Set<string>) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(COMPLETED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  };
+
   const loadFeedFromDB = async () => {
     setIsLoading(true);
-    console.log('[Feed] Starting loadFeedFromDB...');
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -71,20 +82,7 @@ export default function Feed() {
       .limit(8);
 
     const paths = explorations || [];
-
-    // === Direct & reliable way to get completed IDs ===
-    const { data: progressRows, error: progressError } = await supabase
-      .from('user_progress')
-      .select('content_id')
-      .eq('user_id', session.user.id)
-      .in('status', ['completed']);
-
-    if (progressError) {
-      console.warn('[Feed] Error loading progress:', progressError);
-    }
-
-    const completedIds = new Set((progressRows || []).map((p: any) => p.content_id));
-    console.log('[Feed] Completed IDs from DB:', Array.from(completedIds));
+    const completedIds = getCompletedFromStorage();
 
     const mapped: FeedItem[] = [];
 
@@ -92,160 +90,85 @@ export default function Feed() {
       const topicId = exp.id || `topic-${topicIndex}`;
       const topicTitle = exp.label || 'Learning Topic';
 
-      // Round 1
       for (let i = 1; i <= 3; i++) {
         const id = `r1-learn-${topicId}-${i}`;
         mapped.push({
-          id,
-          type: 'info',
-          title: `${topicTitle} - Core Concept ${i}`,
+          id, type: 'info', title: `${topicTitle} - Core Concept ${i}`,
           description: exp.short_description || `Fundamental idea #${i} of ${topicTitle}.`,
-          mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`,
-          mediaType: 'image',
-          learningPathId: 'path-default',
-          learningPathTitle: 'Your Path',
-          completed: completedIds.has(id),
-          topic: topicTitle,
-          topicId,
-          round: 1,
-          difficulty: 1,
+          mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`, mediaType: 'image',
+          learningPathId: 'path-default', learningPathTitle: 'Your Path',
+          completed: completedIds.has(id), topic: topicTitle, topicId, round: 1, difficulty: 1,
         });
       }
 
       const r1TestId = `r1-test-${topicId}-1`;
       mapped.push({
-        id: r1TestId,
-        type: 'test',
-        title: `${topicTitle} - Quick Check`,
+        id: r1TestId, type: 'test', title: `${topicTitle} - Quick Check`,
         description: 'Test your understanding of the basics.',
-        mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`,
-        mediaType: 'image',
+        mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`, mediaType: 'image',
         testQuestion: `What is the main idea behind ${topicTitle}?`,
-        testOptions: [
-          `It is the core purpose of ${topicTitle}`,
-          `It has nothing to do with ${topicTitle}`,
-          `It only works in specific conditions`,
-          `It was invented recently`
-        ],
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: completedIds.has(r1TestId),
-        topic: topicTitle,
-        topicId,
-        round: 1,
-        difficulty: 1,
+        testOptions: [`It is the core purpose of ${topicTitle}`, `It has nothing to do with ${topicTitle}`, `It only works in specific conditions`, `It was invented recently`],
+        learningPathId: 'path-default', learningPathTitle: 'Your Path',
+        completed: completedIds.has(r1TestId), topic: topicTitle, topicId, round: 1, difficulty: 1,
       });
 
-      // Round 2 + Round 3 (same pattern, abbreviated for brevity)
       for (let i = 1; i <= 3; i++) {
         const id = `r2-learn-${topicId}-${i}`;
         mapped.push({
-          id,
-          type: 'info',
-          title: `${topicTitle} - Deeper Dive ${i}`,
+          id, type: 'info', title: `${topicTitle} - Deeper Dive ${i}`,
           description: `How ${topicTitle} actually works in practice.`,
-          mediaUrl: `https://picsum.photos/id/${340 + topicIndex + i}/800/400`,
-          mediaType: 'image',
-          learningPathId: 'path-default',
-          learningPathTitle: 'Your Path',
-          completed: completedIds.has(id),
-          topic: topicTitle,
-          topicId,
-          round: 2,
-          difficulty: 2,
+          mediaUrl: `https://picsum.photos/id/${340 + topicIndex + i}/800/400`, mediaType: 'image',
+          learningPathId: 'path-default', learningPathTitle: 'Your Path',
+          completed: completedIds.has(id), topic: topicTitle, topicId, round: 2, difficulty: 2,
         });
       }
 
       const r2TestId = `r2-test-${topicId}-1`;
       mapped.push({
-        id: r2TestId,
-        type: 'test',
-        title: `${topicTitle} - Intermediate Challenge`,
+        id: r2TestId, type: 'test', title: `${topicTitle} - Intermediate Challenge`,
         description: 'Apply what you learned in Round 1.',
-        mediaUrl: `https://picsum.photos/id/${360 + topicIndex}/800/400`,
-        mediaType: 'image',
+        mediaUrl: `https://picsum.photos/id/${360 + topicIndex}/800/400`, mediaType: 'image',
         testQuestion: `How would you apply ${topicTitle} in a real situation?`,
-        testOptions: [
-          `By using the core principles directly`,
-          `By ignoring the fundamentals`,
-          `Only in theoretical scenarios`,
-          `It cannot be applied practically`
-        ],
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: completedIds.has(r2TestId),
-        topic: topicTitle,
-        topicId,
-        round: 2,
-        difficulty: 2,
+        testOptions: [`By using the core principles directly`, `By ignoring the fundamentals`, `Only in theoretical scenarios`, `It cannot be applied practically`],
+        learningPathId: 'path-default', learningPathTitle: 'Your Path',
+        completed: completedIds.has(r2TestId), topic: topicTitle, topicId, round: 2, difficulty: 2,
       });
 
-      // Round 3
       for (let i = 1; i <= 3; i++) {
         const id = `r3-learn-${topicId}-${i}`;
         mapped.push({
-          id,
-          type: 'info',
-          title: `${topicTitle} - Advanced ${i}`,
+          id, type: 'info', title: `${topicTitle} - Advanced ${i}`,
           description: `Complex applications and expert-level understanding of ${topicTitle}.`,
-          mediaUrl: `https://picsum.photos/id/${380 + topicIndex + i}/800/400`,
-          mediaType: 'image',
-          learningPathId: 'path-default',
-          learningPathTitle: 'Your Path',
-          completed: completedIds.has(id),
-          topic: topicTitle,
-          topicId,
-          round: 3,
-          difficulty: 3,
+          mediaUrl: `https://picsum.photos/id/${380 + topicIndex + i}/800/400`, mediaType: 'image',
+          learningPathId: 'path-default', learningPathTitle: 'Your Path',
+          completed: completedIds.has(id), topic: topicTitle, topicId, round: 3, difficulty: 3,
         });
       }
 
       const r3TestId = `r3-test-${topicId}-1`;
       mapped.push({
-        id: r3TestId,
-        type: 'test',
-        title: `${topicTitle} - Mastery Challenge`,
+        id: r3TestId, type: 'test', title: `${topicTitle} - Mastery Challenge`,
         description: 'Final test for this topic.',
-        mediaUrl: `https://picsum.photos/id/${400 + topicIndex}/800/400`,
-        mediaType: 'image',
+        mediaUrl: `https://picsum.photos/id/${400 + topicIndex}/800/400`, mediaType: 'image',
         testQuestion: `Design or explain an advanced use of ${topicTitle}.`,
-        testOptions: [
-          `Combine multiple advanced techniques`,
-          `Use only basic methods`,
-          `It has no advanced applications`,
-          `Avoid using it in production`
-        ],
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: completedIds.has(r3TestId),
-        topic: topicTitle,
-        topicId,
-        round: 3,
-        difficulty: 3,
+        testOptions: [`Combine multiple advanced techniques`, `Use only basic methods`, `It has no advanced applications`, `Avoid using it in production`],
+        learningPathId: 'path-default', learningPathTitle: 'Your Path',
+        completed: completedIds.has(r3TestId), topic: topicTitle, topicId, round: 3, difficulty: 3,
       });
     });
 
     if (mapped.length === 0) {
       mapped.push({
-        id: 'empty',
-        type: 'info',
-        title: 'Start Exploring',
+        id: 'empty', type: 'info', title: 'Start Exploring',
         description: 'Add topics from the Discover page to begin structured rounds.',
-        mediaUrl: 'https://picsum.photos/id/1015/800/400',
-        mediaType: 'image',
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: false,
-        topic: 'Getting Started',
-        topicId: 'start',
-        round: 1,
-        difficulty: 1,
+        mediaUrl: 'https://picsum.photos/id/1015/800/400', mediaType: 'image',
+        learningPathId: 'path-default', learningPathTitle: 'Your Path',
+        completed: false, topic: 'Getting Started', topicId: 'start', round: 1, difficulty: 1,
       });
     }
 
     setFeedItems(mapped);
 
-    // Calculate current round based on real completed cards
     const initialState: TopicState = {};
     mapped.forEach(item => {
       if (!initialState[item.topicId]) {
@@ -257,7 +180,6 @@ export default function Feed() {
     });
     setTopicState(initialState);
 
-    console.log('[Feed] Finished loading. Total items:', mapped.length);
     setIsLoading(false);
   };
 
@@ -279,32 +201,42 @@ export default function Feed() {
     return roundCards.length > 0 && roundCards.every(card => card.completed);
   };
 
-  // Real progress saving
-  const markAsComplete = async (item: FeedItem) => {
-    setFeedItems(prev =>
-      prev.map(i => (i.id === item.id ? { ...i, completed: true } : i))
-    );
+  // FIXED: Use functional setState so we always have fresh data when saving to localStorage
+  const markAsComplete = (item: FeedItem) => {
+    setFeedItems(prev => {
+      const updated = prev.map(i =>
+        i.id === item.id ? { ...i, completed: true } : i
+      );
 
-    try {
-      await progressUtils.markAsCompleted(item.id);
-      console.log('[Feed] Saved progress for:', item.id);
-    } catch (err) {
-      console.error('[Feed] Failed to save progress:', err);
-    }
+      const newCompletedIds = new Set(updated.filter(i => i.completed).map(i => i.id));
+      saveCompletedToStorage(newCompletedIds);
+
+      return updated;
+    });
   };
 
   const handleTestSubmit = (item: FeedItem, answer: string) => {
     markAsComplete(item);
   };
 
+  // FIXED: Same pattern for topic-level complete
   const markTopicComplete = (topicId: string, topicTitle: string) => {
     if (!confirm(`Mark entire topic "${topicTitle}" as complete?`)) return;
-    setFeedItems(prev => prev.filter(item => item.topicId !== topicId));
+
+    setFeedItems(prev => {
+      const remainingCompleted = new Set(
+        prev
+          .filter(item => item.topicId !== topicId && item.completed)
+          .map(item => item.id)
+      );
+
+      saveCompletedToStorage(remainingCompleted);
+      return prev.filter(item => item.topicId !== topicId);
+    });
   };
 
   const handleRefreshFeed = () => loadFeedFromDB();
 
-  // Chat functions (unchanged)
   const handleSendMessage = async (item: FeedItem) => {
     const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
     const messageText = input?.value.trim();
@@ -321,54 +253,37 @@ export default function Feed() {
     }
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: messageText,
-      created_at: new Date().toISOString()
+      id: crypto.randomUUID(), role: 'user', content: messageText, created_at: new Date().toISOString()
     };
     setChatMessagesMap(prev => ({
-      ...prev,
-      [item.id]: [...(prev[item.id] || []), userMsg]
+      ...prev, [item.id]: [...(prev[item.id] || []), userMsg]
     }));
     input.value = '';
 
     await supabase.from('chat_messages').insert({
-      user_id: session.user.id,
-      card_id: item.id,
-      learning_path_id: item.learningPathId,
-      topic: item.topic,
-      message_role: 'user',
-      content: messageText
+      user_id: session.user.id, card_id: item.id, learning_path_id: item.learningPathId,
+      topic: item.topic, message_role: 'user', content: messageText
     });
 
     try {
       const chatPrompt = `You are an expert tutor on Skill Gain. The user is studying "${item.title}". Answer helpfully: ${messageText}`;
       const response = await fetch('/api/grok', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: chatPrompt })
       });
       const raw = await response.json();
       const assistantResponse = typeof raw === 'string' ? raw : raw.response || raw.text || 'Great question!';
 
       const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: assistantResponse,
-        created_at: new Date().toISOString()
+        id: crypto.randomUUID(), role: 'assistant', content: assistantResponse, created_at: new Date().toISOString()
       };
       setChatMessagesMap(prev => ({
-        ...prev,
-        [item.id]: [...(prev[item.id] || []), assistantMsg]
+        ...prev, [item.id]: [...(prev[item.id] || []), assistantMsg]
       }));
 
       await supabase.from('chat_messages').insert({
-        user_id: session.user.id,
-        card_id: item.id,
-        learning_path_id: item.learningPathId,
-        topic: item.topic,
-        message_role: 'assistant',
-        content: assistantResponse
+        user_id: session.user.id, card_id: item.id, learning_path_id: item.learningPathId,
+        topic: item.topic, message_role: 'assistant', content: assistantResponse
       });
     } catch (err) {
       console.error(err);
@@ -405,7 +320,7 @@ export default function Feed() {
       </div>
 
       <p className="text-muted-foreground mb-8">
-        Completion is now saved to the database. Hard refresh should remember your progress.
+        Completion now correctly persists in localStorage using fresh state. Hard refresh will remember your progress.
       </p>
 
       <div className="space-y-12">
@@ -437,16 +352,15 @@ export default function Feed() {
                     </span>
                   </div>
                 </div>
-
                 <div className="flex gap-3">
                   {roundComplete && currentRound < 3 && (
                     <Button onClick={() => advanceToNextRound(topicId)} className="gap-2">
                       Complete Round {currentRound} <ArrowRight className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
+                  <Button
+                    variant="destructive"
+                    size="sm"
                     onClick={() => markTopicComplete(topicId, topicTitle)}
                     className="gap-2"
                   >
