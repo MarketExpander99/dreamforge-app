@@ -221,22 +221,17 @@ export default function DiscoverPage() {
         last_accessed_at: new Date().toISOString(),
       };
 
-      console.log('Attempting progress upsert with payload:', payload);
-
       const { error } = await supabase
         .from('user_progress')
         .upsert(payload, { onConflict: 'user_id,content_id' });
 
       if (error) {
         console.error('Progress save error object:', error);
-        console.error('Progress save error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-        console.error('Error constructor name:', error?.constructor?.name);
-        console.error('Error keys:', Object.keys(error || {}));
       } else {
         console.log('Progress saved successfully for:', contentId);
       }
     } catch (err) {
-      console.error('Progress save failed (catch block):', err);
+      console.error('Progress save failed:', err);
     }
   };
 
@@ -250,6 +245,19 @@ export default function DiscoverPage() {
       }
     }
     return data;
+  };
+
+  // Helper to create specialised/practical content from existing data (no extra Grok call)
+  const createSpecialisedContent = (node: Node): string => {
+    const base = node.deep_details || node.short_description;
+    const componentsText = node.components.length > 0 
+      ? `Key practical elements include: ${node.components.join(', ')}. ` 
+      : '';
+
+    return `${base}\n\nPractical Applications & Specialised Angles:\n` +
+      `${componentsText}This concept appears in real-world manufacturing, engineering, and everyday technology. ` +
+      `Understanding the underlying mechanisms helps explain variations in performance, cost factors, and design choices. ` +
+      `Related areas worth exploring: ${node.self_similar?.slice(0, 4).join(', ') || 'similar systems and technologies'}.`;
   };
 
   const callGrok = async (topic: string, isDeep: boolean = false) => {
@@ -295,8 +303,7 @@ export default function DiscoverPage() {
       setCenterNode(newNode);
       setCredits(prev => prev - 1);
 
-      // Nothing is saved on generation anymore.
-      // Both exploration + progress are only recorded when the user clicks "Add to Learning Path".
+      await saveExploration(newNode);
     } catch (error) {
       console.error(error);
       alert("Failed to generate lesson. Please try again.");
@@ -322,46 +329,88 @@ export default function DiscoverPage() {
   const handleAddToLearningPath = async () => {
     if (!centerNode) return;
     setIsAddingToPath(true);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setIsAddingToPath(false);
       return;
     }
 
-    await saveExploration(centerNode);
-    await saveProgress(centerNode.label, 35, 25);
+    try {
+      // 1. Save main exploration
+      await saveExploration(centerNode);
+      await saveProgress(centerNode.label, 35, 25);
 
-    let modules: LearningModule[] = currentPath?.modules || [];
-    const newModule: LearningModule = {
-      title: centerNode.label,
-      description: centerNode.short_description,
-      estimated_time: '2-4 hours',
-      lessons: [centerNode.main_function, ...centerNode.components.slice(0, 3)],
-    };
+      // 2. Create three progressive cards in user_explorations (for the feed)
+      const progressiveCards = [
+        {
+          label: `${centerNode.label} - Intro`,
+          short_description: centerNode.short_description,
+          focus: "Intro"
+        },
+        {
+          label: `${centerNode.label} - Extended`,
+          short_description: centerNode.deep_details 
+            ? centerNode.deep_details.substring(0, 850) 
+            : centerNode.short_description,
+          focus: "Extended"
+        },
+        {
+          label: `${centerNode.label} - Specialised`,
+          short_description: createSpecialisedContent(centerNode),
+          focus: "Specialised"
+        }
+      ];
 
-    modules = [...modules, newModule];
+      for (const card of progressiveCards) {
+        await supabase.from('user_explorations').insert({
+          user_id: session.user.id,
+          label: card.label,
+          short_description: card.short_description,
+          main_function: centerNode.main_function,
+          components: centerNode.components,
+          self_similar: centerNode.self_similar,
+          deep_details: centerNode.deep_details || null,
+        });
+      }
 
-    const pathTitle = currentPath 
-      ? `${currentPath.title.split(' - ')[0]} - Updated with ${centerNode.label}`
-      : `My Learning Path - ${centerNode.label}`;
+      // 3. Update learning path module (keeps existing functionality)
+      let modules: LearningModule[] = currentPath?.modules || [];
+      const newModule: LearningModule = {
+        title: centerNode.label,
+        description: centerNode.short_description,
+        estimated_time: '2-4 hours',
+        lessons: [centerNode.main_function, ...centerNode.components.slice(0, 3)],
+      };
+      modules = [...modules, newModule];
 
-    const { error } = await supabase
-      .from('learning_paths')
-      .upsert({
-        user_id: session.user.id,
-        title: pathTitle,
-        description: currentPath?.description || `Personalized path including ${centerNode.label}`,
-        modules,
-        generated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+      const pathTitle = currentPath 
+        ? `${currentPath.title.split(' - ')[0]} - Updated with ${centerNode.label}`
+        : `My Learning Path - ${centerNode.label}`;
 
-    if (!error) {
-      await loadCurrentPath(session.user.id);
-      alert("✅ Added to your learning path and progress saved!");
-    } else {
-      alert("Failed to update path – please try again.");
+      const { error: pathError } = await supabase
+        .from('learning_paths')
+        .upsert({
+          user_id: session.user.id,
+          title: pathTitle,
+          description: currentPath?.description || `Personalized path including ${centerNode.label}`,
+          modules,
+          generated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+
+      if (!pathError) {
+        await loadCurrentPath(session.user.id);
+        alert("✅ Added to your learning path with 3 progressive cards!");
+      } else {
+        alert("Added to path, but there was an issue updating modules.");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong while adding to path.");
+    } finally {
+      setIsAddingToPath(false);
     }
-    setIsAddingToPath(false);
   };
 
   const sendChatMessage = async () => {
