@@ -42,7 +42,9 @@ const COMPLETED_STORAGE_KEY = 'skillgain_feed_completed_ids';
 
 export default function Feed() {
   const supabase = createBrowserSupabaseClient();
+
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [topicState, setTopicState] = useState<TopicState>({});
   const [openChatId, setOpenChatId] = useState<string | null>(null);
@@ -50,19 +52,23 @@ export default function Feed() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
 
-  const getCompletedFromStorage = (): Set<string> => {
-    if (typeof window === 'undefined') return new Set();
+  // Load completed IDs from localStorage into state
+  const loadCompletedIds = () => {
+    if (typeof window === 'undefined') return new Set<string>();
     try {
       const stored = localStorage.getItem(COMPLETED_STORAGE_KEY);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
+      const ids = stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+      console.log('[Feed] Loaded completed IDs from localStorage:', Array.from(ids));
+      return ids;
     } catch {
-      return new Set();
+      return new Set<string>();
     }
   };
 
-  const saveCompletedToStorage = (ids: Set<string>) => {
+  const persistCompletedIds = (ids: Set<string>) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(COMPLETED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+    console.log('[Feed] Saved to localStorage:', Array.from(ids));
   };
 
   const loadFeedFromDB = async () => {
@@ -82,7 +88,10 @@ export default function Feed() {
       .limit(8);
 
     const paths = explorations || [];
-    const completedIds = getCompletedFromStorage();
+
+    // Load persisted completed state
+    const loadedCompleted = loadCompletedIds();
+    setCompletedIds(loadedCompleted);
 
     const mapped: FeedItem[] = [];
 
@@ -97,7 +106,7 @@ export default function Feed() {
           description: exp.short_description || `Fundamental idea #${i} of ${topicTitle}.`,
           mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`, mediaType: 'image',
           learningPathId: 'path-default', learningPathTitle: 'Your Path',
-          completed: completedIds.has(id), topic: topicTitle, topicId, round: 1, difficulty: 1,
+          completed: loadedCompleted.has(id), topic: topicTitle, topicId, round: 1, difficulty: 1,
         });
       }
 
@@ -109,7 +118,7 @@ export default function Feed() {
         testQuestion: `What is the main idea behind ${topicTitle}?`,
         testOptions: [`It is the core purpose of ${topicTitle}`, `It has nothing to do with ${topicTitle}`, `It only works in specific conditions`, `It was invented recently`],
         learningPathId: 'path-default', learningPathTitle: 'Your Path',
-        completed: completedIds.has(r1TestId), topic: topicTitle, topicId, round: 1, difficulty: 1,
+        completed: loadedCompleted.has(r1TestId), topic: topicTitle, topicId, round: 1, difficulty: 1,
       });
 
       for (let i = 1; i <= 3; i++) {
@@ -119,7 +128,7 @@ export default function Feed() {
           description: `How ${topicTitle} actually works in practice.`,
           mediaUrl: `https://picsum.photos/id/${340 + topicIndex + i}/800/400`, mediaType: 'image',
           learningPathId: 'path-default', learningPathTitle: 'Your Path',
-          completed: completedIds.has(id), topic: topicTitle, topicId, round: 2, difficulty: 2,
+          completed: loadedCompleted.has(id), topic: topicTitle, topicId, round: 2, difficulty: 2,
         });
       }
 
@@ -131,7 +140,7 @@ export default function Feed() {
         testQuestion: `How would you apply ${topicTitle} in a real situation?`,
         testOptions: [`By using the core principles directly`, `By ignoring the fundamentals`, `Only in theoretical scenarios`, `It cannot be applied practically`],
         learningPathId: 'path-default', learningPathTitle: 'Your Path',
-        completed: completedIds.has(r2TestId), topic: topicTitle, topicId, round: 2, difficulty: 2,
+        completed: loadedCompleted.has(r2TestId), topic: topicTitle, topicId, round: 2, difficulty: 2,
       });
 
       for (let i = 1; i <= 3; i++) {
@@ -141,7 +150,7 @@ export default function Feed() {
           description: `Complex applications and expert-level understanding of ${topicTitle}.`,
           mediaUrl: `https://picsum.photos/id/${380 + topicIndex + i}/800/400`, mediaType: 'image',
           learningPathId: 'path-default', learningPathTitle: 'Your Path',
-          completed: completedIds.has(id), topic: topicTitle, topicId, round: 3, difficulty: 3,
+          completed: loadedCompleted.has(id), topic: topicTitle, topicId, round: 3, difficulty: 3,
         });
       }
 
@@ -153,7 +162,7 @@ export default function Feed() {
         testQuestion: `Design or explain an advanced use of ${topicTitle}.`,
         testOptions: [`Combine multiple advanced techniques`, `Use only basic methods`, `It has no advanced applications`, `Avoid using it in production`],
         learningPathId: 'path-default', learningPathTitle: 'Your Path',
-        completed: completedIds.has(r3TestId), topic: topicTitle, topicId, round: 3, difficulty: 3,
+        completed: loadedCompleted.has(r3TestId), topic: topicTitle, topicId, round: 3, difficulty: 3,
       });
     });
 
@@ -169,6 +178,7 @@ export default function Feed() {
 
     setFeedItems(mapped);
 
+    // Calculate current round based on completed state
     const initialState: TopicState = {};
     mapped.forEach(item => {
       if (!initialState[item.topicId]) {
@@ -201,38 +211,39 @@ export default function Feed() {
     return roundCards.length > 0 && roundCards.every(card => card.completed);
   };
 
-  // FIXED: Use functional setState so we always have fresh data when saving to localStorage
+  // Update both state and localStorage together
+  const updateCompleted = (newIds: Set<string>) => {
+    setCompletedIds(newIds);
+    persistCompletedIds(newIds);
+  };
+
   const markAsComplete = (item: FeedItem) => {
-    setFeedItems(prev => {
-      const updated = prev.map(i =>
-        i.id === item.id ? { ...i, completed: true } : i
-      );
+    const newIds = new Set(completedIds);
+    newIds.add(item.id);
+    updateCompleted(newIds);
 
-      const newCompletedIds = new Set(updated.filter(i => i.completed).map(i => i.id));
-      saveCompletedToStorage(newCompletedIds);
-
-      return updated;
-    });
+    // Also update the visible item immediately
+    setFeedItems(prev =>
+      prev.map(i => (i.id === item.id ? { ...i, completed: true } : i))
+    );
   };
 
   const handleTestSubmit = (item: FeedItem, answer: string) => {
     markAsComplete(item);
   };
 
-  // FIXED: Same pattern for topic-level complete
   const markTopicComplete = (topicId: string, topicTitle: string) => {
     if (!confirm(`Mark entire topic "${topicTitle}" as complete?`)) return;
 
-    setFeedItems(prev => {
-      const remainingCompleted = new Set(
-        prev
-          .filter(item => item.topicId !== topicId && item.completed)
-          .map(item => item.id)
-      );
+    const newIds = new Set(completedIds);
+    feedItems
+      .filter(item => item.topicId === topicId)
+      .forEach(item => newIds.add(item.id));
 
-      saveCompletedToStorage(remainingCompleted);
-      return prev.filter(item => item.topicId !== topicId);
-    });
+    updateCompleted(newIds);
+
+    // Remove topic from view immediately
+    setFeedItems(prev => prev.filter(item => item.topicId !== topicId));
   };
 
   const handleRefreshFeed = () => loadFeedFromDB();
@@ -320,7 +331,7 @@ export default function Feed() {
       </div>
 
       <p className="text-muted-foreground mb-8">
-        Completion now correctly persists in localStorage using fresh state. Hard refresh will remember your progress.
+        Completion is now managed through dedicated state + localStorage. Should survive hard refresh reliably.
       </p>
 
       <div className="space-y-12">
