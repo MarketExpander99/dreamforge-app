@@ -246,7 +246,7 @@ export default function Feed() {
 
   const handleRefreshFeed = () => loadFeedFromDB();
 
-  const readAloud = async (item: FeedItem) => {
+  const readAloud = async (item: FeedItem, voice: 'rex' | 'ava' | 'ara' | 'sal' = 'rex') => {
     setThinkingCardId(item.id);
 
     try {
@@ -276,24 +276,39 @@ Content: ${item.description}`;
         [item.id]: [...(prev[item.id] || []), narrationMsg]
       }));
 
-      // Pure xAI TTS via proxy
+      // === Real Grok Voice (ARA, AVA, REX, SAL) ===
       const ttsResponse = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: spokenScript, voice: 'rex' }) // change to 'ava' if you prefer
+        body: JSON.stringify({ text: spokenScript, voice })
       });
 
       if (ttsResponse.ok) {
         const audioBlob = await ttsResponse.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-        audio.play();
-      } else {
-        throw new Error('TTS failed');
+        await audio.play();
+        return;
       }
+
+      console.warn(`xAI TTS failed with voice "${voice}" — using browser fallback`);
+
+      // Browser fallback (only if xAI fails)
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(spokenScript);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.05;
+        window.speechSynthesis.speak(utterance);
+        return;
+      }
+
+      throw new Error('No TTS available');
     } catch (err) {
       console.error('TTS error:', err);
-      alert("Voice playback issue. Make sure /api/tts/route.ts exists and restart server.");
+      if ('speechSynthesis' in window) {
+        const fallback = new SpeechSynthesisUtterance(item.description);
+        window.speechSynthesis.speak(fallback);
+      }
     } finally {
       setThinkingCardId(null);
     }
@@ -481,11 +496,12 @@ Content: ${item.description}`;
                           {item.title}
 
                           <div className="ml-auto flex items-center gap-2">
+                            {/* Real Grok voices: rex, ava, ara, sal */}
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-60"
-                              onClick={() => readAloud(item)}
+                              onClick={() => readAloud(item, 'rex')}   // ← change to 'ava', 'ara', or 'sal'
                               disabled={thinkingCardId === item.id}
                             >
                               <Volume2 className={`h-4 w-4 ${thinkingCardId === item.id ? 'animate-pulse' : ''}`} />

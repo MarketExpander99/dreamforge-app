@@ -1,53 +1,94 @@
 // app/api/tts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
+interface TTSRequest {
+  text: string;
+  voice?: 'rex' | 'sal' | 'ara' | 'eve' | 'leo';
+  language?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { text, voice = 'rex' } = await request.json();
+    const body: TTSRequest = await request.json();
+    const { text, voice = 'ara', language = 'en' } = body;
 
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+    // Validation
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Text is required and cannot be empty' },
+        { status: 400 }
+      );
     }
 
-    const xaiApiKey = process.env.XAI_API_KEY;
-    if (!xaiApiKey) {
-      console.error('XAI_API_KEY not set in environment');
-      return NextResponse.json({ error: 'TTS service unavailable' }, { status: 500 });
+    if (text.length > 15000) {
+      return NextResponse.json(
+        { error: 'Text exceeds maximum length of 15,000 characters' },
+        { status: 400 }
+      );
     }
 
-    // Official xAI TTS endpoint (server-side only - key never exposed)
+    const supportedVoices = ['rex', 'sal', 'ara', 'eve', 'leo'] as const;
+    const voiceId = (voice || 'ara').toLowerCase() as (typeof supportedVoices)[number];
+
+    if (!supportedVoices.includes(voiceId)) {
+      return NextResponse.json(
+        { error: `Invalid voice. Supported voices: ${supportedVoices.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const apiKey = process.env.XAI_API_KEY;
+    if (!apiKey) {
+      console.error('[TTS] XAI_API_KEY is missing');
+      return NextResponse.json(
+        { error: 'TTS service is not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Call xAI Grok TTS API
     const ttsResponse = await fetch('https://api.x.ai/v1/tts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${xaiApiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        input: text,
-        voice: voice, // 'rex', 'ava', etc. - confirm available voices in xAI docs
-        model: 'grok-tts', // or appropriate model per current xAI API
-        response_format: 'mp3',
+        text: text.trim(),
+        voice_id: voiceId,
+        language,
+        output_format: {
+          codec: 'mp3',
+          sample_rate: 24000,
+          bit_rate: 128000,
+        },
       }),
     });
 
     if (!ttsResponse.ok) {
-      const errorText = await ttsResponse.text();
-      console.error('xAI TTS error:', errorText);
-      return NextResponse.json({ error: 'TTS generation failed' }, { status: ttsResponse.status });
+      const errorText = await ttsResponse.text().catch(() => 'Unknown error');
+      console.error('[TTS] xAI API error:', ttsResponse.status, errorText);
+      return NextResponse.json(
+        { error: 'Failed to generate speech from xAI' },
+        { status: 502 }
+      );
     }
 
     const audioBuffer = await ttsResponse.arrayBuffer();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
 
-    return new NextResponse(audioBlob, {
+    return new NextResponse(audioBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Disposition': 'inline; filename="narration.mp3"',
+        'Content-Length': audioBuffer.byteLength.toString(),
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
     });
   } catch (error) {
-    console.error('TTS route error:', error);
-    return NextResponse.json({ error: 'Internal TTS error' }, { status: 500 });
+    console.error('[TTS] Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error while generating speech' },
+      { status: 500 }
+    );
   }
 }
