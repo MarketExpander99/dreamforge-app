@@ -1,16 +1,14 @@
 // lib/grok-content.ts
-// Grok AI Content Generator Helper - Enhanced with user history, chats, completed items, 3-tier support & continuity
+// Grok AI Content Generator Helper - Safe for both Server and Client usage
 import { ContentItem } from './data'
-import { createClient } from './supabase-server'
 
 interface GrokContentRequest {
   gradeLevel: string
   subject: string
   count?: number
   style?: string
-  // NEW: Personalization
   userId?: string
-  tier?: 1 | 2 | 3 // 1=foundational, 2=intermediate, 3=advanced/synthesis
+  tier?: 1 | 2 | 3
   pathId?: string
 }
 
@@ -18,60 +16,26 @@ interface GrokContentResponse {
   items: ContentItem[]
 }
 
-// JSON Schema for structured Grok output (full original schema preserved)
 const CONTENT_SCHEMA = {
   type: "object",
   properties: {
     items: {
       type: "array",
+      minItems: 3,
+      maxItems: 6,
       items: {
         type: "object",
         properties: {
-          id: {
-            type: "string",
-            description: "Unique identifier for the content item (use format: grok-{subject}-{grade}-{timestamp}-{index})"
-          },
-          title: {
-            type: "string",
-            description: "Engaging, educational title for the content"
-          },
-          content: {
-            type: "string",
-            description: "Rich, educational content with clear explanations and examples"
-          },
-          type: {
-            type: "string",
-            enum: ["text", "text-image", "video", "quiz", "audio"],
-            description: "Content type - prefer 'text' or 'text-image' for educational content"
-          },
-          category_id: {
-            type: "string",
-            description: "Category ID - use appropriate category based on subject (e.g., 'science', 'math', 'history', etc.)"
-          },
-          difficulty: {
-            type: "string",
-            enum: ["beginner", "intermediate", "advanced"],
-            description: "Difficulty level appropriate for the grade level"
-          },
-          tags: {
-            type: "array",
-            items: { type: "string" },
-            description: "Relevant tags including grade level, subject, and key concepts"
-          },
-          read_time: {
-            type: "integer",
-            description: "Estimated reading time in minutes (3-15 range)",
-            minimum: 3,
-            maximum: 15
-          },
-          is_featured: {
-            type: "boolean",
-            description: "Whether this content should be featured (set to false for generated content)"
-          },
-          grade_level: {
-            type: "string",
-            description: "Grade level this content is appropriate for"
-          }
+          id: { type: "string" },
+          title: { type: "string" },
+          content: { type: "string" },
+          type: { type: "string", enum: ["text", "text-image", "video", "quiz", "audio"] },
+          category_id: { type: "string" },
+          difficulty: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+          tags: { type: "array", items: { type: "string" } },
+          read_time: { type: "integer", minimum: 3, maximum: 15 },
+          is_featured: { type: "boolean" },
+          grade_level: { type: "string" }
         },
         required: ["id", "title", "content", "type", "category_id", "difficulty", "tags", "read_time", "is_featured", "grade_level"]
       }
@@ -83,87 +47,61 @@ const CONTENT_SCHEMA = {
 export async function generateContentWithGrok({
   gradeLevel,
   subject,
-  count = 5,
+  count = 4,
   style = "fun-gamified",
   userId,
   tier = 1,
-  pathId
 }: GrokContentRequest): Promise<GrokContentResponse> {
   const apiKey = process.env.XAI_API_KEY
-  if (!apiKey) {
-    throw new Error('XAI_API_KEY environment variable is not set')
-  }
+  if (!apiKey) throw new Error('XAI_API_KEY environment variable is not set')
 
+  // Only attempt history context if we're running on the server
   let historyContext = ''
-  let continuityPrompt = ''
+  if (userId && typeof window === 'undefined') {
+    try {
+      // Dynamic import to avoid bundling server code into client
+      const { createClient } = await import('./supabase-server')
+      const supabase = await createClient()
 
-  // Fetch user history/chats/completed when userId provided (safe, no schema change)
-  if (userId) {
-    const supabase = await createClient()   // ← FIXED: await added
+      const { data: completed } = await supabase
+        .from('user_progress')
+        .select('content_id')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .limit(6)
 
-    const { data: completed } = await supabase
-      .from('user_progress')
-      .select('content_id, status, progress_percentage, completed_at, time_spent')
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
-      .limit(8)
-
-    const { data: recentComments } = await supabase
-      .from('content_comments')
-      .select('comment, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    const completedTopics: string[] = completed?.map((c: any) => c.content_id) || []
-    const avgProgress: number = completed && completed.length > 0
-      ? Math.round(completed.reduce((sum: number, c: any) => sum + (c.progress_percentage || 0), 0) / completed.length)
-      : 0
-
-    const chatInsights = recentComments?.map((c: any) => c.comment).slice(0, 3).join(' | ') || ''
-
-    historyContext = `User has completed ${completedTopics.length} items (avg progress ${avgProgress}%). Recent themes: ${completedTopics.slice(0, 3).join(', ')}.`
-
-    if (chatInsights) {
-      historyContext += ` Recent chat insights: ${chatInsights}.`
+      if (completed && completed.length > 0) {
+        const completedIds = completed.map((c: any) => c.content_id).slice(0, 4)
+        historyContext = `User has previously completed content related to: ${completedIds.join(', ')}. Build on this knowledge.`
+      }
+    } catch (err) {
+      // Fail silently if server client can't be created from client context
+      console.warn('Could not fetch user history for Grok generation:', err)
     }
-
-    const tierDesc = tier === 1
-      ? 'Basic foundational concepts with simple examples and clear explanations.'
-      : tier === 2
-      ? 'Intermediate with practical applications, exercises, and some challenges.'
-      : 'Advanced: edge cases, real-world projects, synthesis across topics, and building directly on user\'s past completions.'
-
-    continuityPrompt = completedTopics.length > 0
-      ? `Build continuity and themes from user's past completed items (${completedTopics.slice(0, 3).join(', ')}). Reference and extend where naturally related. Adjust depth to user's avg progress of ${avgProgress}%. ${tierDesc}`
-      : `Standard introduction suitable for new learners at ${tierDesc}`
-  } else {
-    continuityPrompt = tier === 1
-      ? 'Basic foundational concepts with simple examples.'
-      : tier === 2
-      ? 'Intermediate with practical applications and exercises.'
-      : 'Advanced concepts, edge cases, and synthesis.'
   }
 
-  const prompt = `Generate ${count} educational content items for ${gradeLevel} grade students studying ${subject}.
+  const diversityRules = `
+STRICT DIVERSITY RULES:
+- Generate exactly ${count} DISTINCT cards.
+- Each card must cover a different angle of "${subject}".
+- Card 1: Core concept + simple example
+- Card 2: Practical application or real-world use
+- Card 3+: Deeper insight, misconception, or interesting connection
+- All titles and content must be unique.
+`
 
-Style: ${style} - engaging, fun, gamified with interactive elements, real-world examples, age-appropriate challenges.
+  const prompt = `Generate ${count} unique, engaging educational cards for ${gradeLevel} students about "${subject}".
 
-${historyContext ? historyContext + '\n\n' : ''}
-Personalization requirements:
-- ${continuityPrompt}
-- Each item should be educational and aligned with ${gradeLevel} curriculum standards
-- Include clear learning objectives and key concepts
-- Use age-appropriate language and examples
-- Make content interactive and engaging
-- Include practical applications and real-world connections
-- Add elements of gamification (challenges, achievements, progress tracking)
-- Tier ${tier} depth: ${tier === 1 ? 'foundational' : tier === 2 ? 'applied' : 'advanced/synthesis with past topics'}
+Style: ${style}
+Tier: ${tier}
 
-Generate exactly ${count} diverse content items covering different aspects of ${subject} at the ${gradeLevel} level.
+${historyContext}
 
-Return the content as a JSON array following the specified schema.`
+${diversityRules}
+
+Write rich, article-like explanations. Include real-world connections and light gamification.
+
+Return ONLY valid JSON matching the schema.`
 
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
@@ -176,33 +114,30 @@ Return the content as a JSON array following the specified schema.`
       messages: [{ role: 'user', content: prompt }],
       response_format: {
         type: "json_schema",
-        json_schema: {
-          name: "educational_content",
-          schema: CONTENT_SCHEMA,
-          strict: true
-        }
+        json_schema: { name: "educational_content", schema: CONTENT_SCHEMA, strict: true }
       },
-      temperature: 0.7,
-      max_tokens: 4000
+      temperature: 0.82,
+      max_tokens: 4500
     })
   })
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`Grok API error: ${response.status} ${response.statusText} - ${errorText}`)
+    throw new Error(`Grok API error: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
 
   try {
-    const parsedContent = JSON.parse(data.choices[0].message.content)
+    const parsed = JSON.parse(data.choices[0].message.content)
 
-    if (!parsedContent.items || !Array.isArray(parsedContent.items)) {
-      throw new Error('Invalid response structure from Grok API')
+    if (!parsed?.items || !Array.isArray(parsed.items)) {
+      throw new Error('Invalid response from Grok')
     }
 
-    const items: ContentItem[] = parsedContent.items.map((item: any) => ({
+    const items: ContentItem[] = parsed.items.slice(0, count).map((item: any, index: number) => ({
       ...item,
+      id: item.id || `grok-${subject.toLowerCase().replace(/\s+/g, '')}-${Date.now()}-${index}`,
       likes: 0,
       views: 0,
       is_published: true,
@@ -216,7 +151,7 @@ Return the content as a JSON array following the specified schema.`
 
     return { items }
   } catch (error) {
-    console.error('Error parsing Grok response:', error)
-    throw new Error('Failed to parse content from Grok API')
+    console.error('Failed to parse Grok response:', error)
+    throw new Error('Failed to parse content from Grok')
   }
 }
