@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateContentWithGrok } from '@/lib/grok-content';
 
 interface FeedItem {
   id: string;
@@ -88,62 +87,68 @@ export default function Feed() {
     const loadedCompleted = loadCompletedIds();
     setCompletedIds(loadedCompleted);
 
-    let mapped: FeedItem[] = [];
+    const mapped: FeedItem[] = [];
 
-    for (const exp of paths) {
-      const topicId = exp.id || `topic-${Date.now()}`;
+    paths.forEach((exp: any, topicIndex: number) => {
+      const topicId = exp.id || `topic-${topicIndex}`;
       const topicTitle = exp.label || 'Learning Topic';
       const baseDesc = exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`;
 
-      // Generate rich, varied cards using Grok (dynamic count)
-      try {
-        const grokResult = await generateContentWithGrok({
-          gradeLevel: 'middle',
-          subject: topicTitle,
-          count: 5,
-          style: 'fun-gamified',
-          userId: session.user.id,
-        });
+      // Dynamic number of info cards (between 3-5)
+      const numCards = 3 + (topicIndex % 3); // gives 3, 4 or 5 cards
 
-        grokResult.items?.forEach((item: any, index: number) => {
-          const roundNum = Math.floor(index / 2) + 1; // Dynamic round assignment
-          mapped.push({
-            id: `grok-${topicId}-${index}`,
-            type: item.type === 'quiz' ? 'test' : 'info',
-            title: item.title || `${topicTitle} - Insight ${index + 1}`,
-            description: item.content || baseDesc,
-            mediaUrl: item.image_url || `https://picsum.photos/id/${300 + index}/800/400`,
-            mediaType: 'image',
-            testQuestion: item.quiz?.question,
-            testOptions: item.quiz?.options,
-            learningPathId: 'path-default',
-            learningPathTitle: 'Your Path',
-            completed: loadedCompleted.has(`grok-${topicId}-${index}`),
-            topic: topicTitle,
-            topicId,
-            round: Math.min(roundNum, 3),
-            difficulty: roundNum,
-          });
-        });
-      } catch (e) {
-        // Fallback if Grok fails
+      for (let i = 0; i < numCards; i++) {
+        const id = `card-${topicId}-${i}`;
+        const roundNum = Math.floor(i / 2) + 1;
+
+        let description = baseDesc;
+        if (i === 1) description = `Practical angle: ${baseDesc}`;
+        if (i === 2) description = `Deeper look: How ${baseDesc.toLowerCase().replace(/\.$/, '')} connects to other ideas.`;
+        if (i === 3) description = `Real-world example of ${baseDesc.toLowerCase().replace(/\.$/, '')}.`;
+        if (i >= 4) description = `Advanced insight: ${baseDesc}`;
+
         mapped.push({
-          id: `fallback-${topicId}`,
+          id,
           type: 'info',
-          title: topicTitle,
-          description: baseDesc,
-          mediaUrl: `https://picsum.photos/id/300/800/400`,
+          title: `${topicTitle} - Insight ${i + 1}`,
+          description,
+          mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`,
           mediaType: 'image',
           learningPathId: 'path-default',
           learningPathTitle: 'Your Path',
-          completed: false,
+          completed: loadedCompleted.has(id),
           topic: topicTitle,
           topicId,
-          round: 1,
-          difficulty: 1,
+          round: roundNum,
+          difficulty: roundNum,
         });
       }
-    }
+
+      // One test per topic (simpler)
+      const testId = `test-${topicId}`;
+      mapped.push({
+        id: testId,
+        type: 'test',
+        title: `${topicTitle} - Quick Check`,
+        description: 'Test your understanding.',
+        mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`,
+        mediaType: 'image',
+        testQuestion: `What is a key idea behind ${topicTitle}?`,
+        testOptions: [
+          `It is the core purpose of ${topicTitle}`,
+          `It has nothing to do with ${topicTitle}`,
+          `It only works in specific conditions`,
+          `It was invented recently`
+        ],
+        learningPathId: 'path-default',
+        learningPathTitle: 'Your Path',
+        completed: loadedCompleted.has(testId),
+        topic: topicTitle,
+        topicId,
+        round: 1,
+        difficulty: 1,
+      });
+    });
 
     if (mapped.length === 0) {
       mapped.push({
@@ -163,10 +168,10 @@ export default function Feed() {
       });
     }
 
-    // Strong deduplication
+    // Deduplication
     const seen = new Set<string>();
     const uniqueMapped = mapped.filter(item => {
-      const key = `${item.topicId}-${item.title.substring(0, 70)}`;
+      const key = `${item.topicId}-${item.title.substring(0, 60)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -174,7 +179,6 @@ export default function Feed() {
 
     setFeedItems(uniqueMapped);
 
-    // Initialize topic state
     const initialState: TopicState = {};
     uniqueMapped.forEach(item => {
       if (!initialState[item.topicId]) {
@@ -233,7 +237,7 @@ export default function Feed() {
 
   const handleSendMessage = async (item: FeedItem) => {
     const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
-    const messageText = input?.value.trim();
+    const messageText = (input?.value || '').trim();
     if (!messageText || sendingMessage) return;
 
     setSendingMessage(true);
@@ -333,7 +337,7 @@ export default function Feed() {
       </div>
 
       <p className="text-muted-foreground mb-8">
-        Dynamic lessons. No fixed rounds — content adapts naturally.
+        Dynamic cards generated from your explorations.
       </p>
 
       <div className="space-y-12">
