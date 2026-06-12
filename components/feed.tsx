@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight } from 'lucide-react';
+import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FeedItem {
@@ -94,8 +94,7 @@ export default function Feed() {
       const topicTitle = exp.label || 'Learning Topic';
       const baseDesc = exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`;
 
-      // Dynamic number of info cards (between 3-5)
-      const numCards = 3 + (topicIndex % 3); // gives 3, 4 or 5 cards
+      const numCards = 3 + (topicIndex % 3);
 
       for (let i = 0; i < numCards; i++) {
         const id = `card-${topicId}-${i}`;
@@ -124,7 +123,6 @@ export default function Feed() {
         });
       }
 
-      // One test per topic (simpler)
       const testId = `test-${topicId}`;
       mapped.push({
         id: testId,
@@ -168,7 +166,6 @@ export default function Feed() {
       });
     }
 
-    // Deduplication
     const seen = new Set<string>();
     const uniqueMapped = mapped.filter(item => {
       const key = `${item.topicId}-${item.title.substring(0, 60)}`;
@@ -192,6 +189,20 @@ export default function Feed() {
 
   useEffect(() => {
     loadFeedFromDB();
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        loadFeedFromDB();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
   }, []);
 
   const getCurrentRound = (topicId: string) => topicState[topicId]?.currentRound || 1;
@@ -235,9 +246,62 @@ export default function Feed() {
 
   const handleRefreshFeed = () => loadFeedFromDB();
 
-  const handleSendMessage = async (item: FeedItem) => {
+  const readAloud = async (item: FeedItem) => {
+    setThinkingCardId(item.id);
+
+    try {
+      const scriptPrompt = `You are a warm, encouraging tutor on Skill Gain. Rewrite the following lesson into a natural, conversational spoken script optimized for reading aloud. Use short clear sentences, friendly tone, and natural flow as if speaking directly to a curious student. Avoid markdown, lists, or extra commentary. Just output the clean narration text.
+
+Lesson title: ${item.title}
+Content: ${item.description}`;
+
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: scriptPrompt })
+      });
+
+      const raw = await response.json();
+      const spokenScript = typeof raw === 'string' ? raw : raw.response || raw.text || item.description;
+
+      setOpenChatId(item.id);
+      const narrationMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `🎙️ **Narration:** ${spokenScript}`,
+        created_at: new Date().toISOString()
+      };
+      setChatMessagesMap(prev => ({
+        ...prev,
+        [item.id]: [...(prev[item.id] || []), narrationMsg]
+      }));
+
+      // Pure xAI TTS via proxy
+      const ttsResponse = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: spokenScript, voice: 'rex' }) // change to 'ava' if you prefer
+      });
+
+      if (ttsResponse.ok) {
+        const audioBlob = await ttsResponse.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+      } else {
+        throw new Error('TTS failed');
+      }
+    } catch (err) {
+      console.error('TTS error:', err);
+      alert("Voice playback issue. Make sure /api/tts/route.ts exists and restart server.");
+    } finally {
+      setThinkingCardId(null);
+    }
+  };
+
+  const handleSendMessage = async (item: FeedItem, customMessage?: string) => {
     const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
-    const messageText = (input?.value || '').trim();
+    const messageText = customMessage || (input?.value || '').trim();
     if (!messageText || sendingMessage) return;
 
     setSendingMessage(true);
@@ -261,19 +325,24 @@ export default function Feed() {
       ...prev,
       [item.id]: [...(prev[item.id] || []), userMsg]
     }));
-    input.value = '';
 
-    await supabase.from('chat_messages').insert({
-      user_id: session.user.id,
-      card_id: item.id,
-      learning_path_id: item.learningPathId,
-      topic: item.topic,
-      message_role: 'user',
-      content: messageText
-    });
+    if (!customMessage && input) input.value = '';
 
     try {
-      const chatPrompt = `You are an expert tutor on Skill Gain. The user is studying "${item.title}". Answer helpfully: ${messageText}`;
+      await supabase.from('chat_messages').insert({
+        user_id: session.user.id,
+        card_id: item.id,
+        learning_path_id: item.learningPathId,
+        topic: item.topic,
+        message_role: 'user',
+        content: messageText
+      });
+    } catch (e) {
+      console.warn('chat_messages insert skipped');
+    }
+
+    try {
+      const chatPrompt = `You are an expert tutor on Skill Gain. The user is studying "${item.title}". Answer helpfully and concisely: ${messageText}`;
       const response = await fetch('/api/grok', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -310,6 +379,15 @@ export default function Feed() {
     }
   };
 
+  const quickAsk = (item: FeedItem, prompt: string) => {
+    setOpenChatId(item.id);
+    setTimeout(() => {
+      const input = document.getElementById(`chat-input-${item.id}`) as HTMLInputElement;
+      if (input) input.value = prompt;
+      handleSendMessage(item, prompt);
+    }, 80);
+  };
+
   const toggleChat = (itemId: string) => {
     setOpenChatId(openChatId === itemId ? null : itemId);
   };
@@ -337,7 +415,7 @@ export default function Feed() {
       </div>
 
       <p className="text-muted-foreground mb-8">
-        Dynamic cards generated from your explorations.
+        Dynamic cards generated from your explorations. Speaker uses real Grok voice (Rex/Ava).
       </p>
 
       <div className="space-y-12">
@@ -401,15 +479,56 @@ export default function Feed() {
                         <CardTitle className="flex items-center gap-3">
                           {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
                           {item.title}
+
+                          <div className="ml-auto flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-60"
+                              onClick={() => readAloud(item)}
+                              disabled={thinkingCardId === item.id}
+                            >
+                              <Volume2 className={`h-4 w-4 ${thinkingCardId === item.id ? 'animate-pulse' : ''}`} />
+                            </Button>
+
+                            {thinkingCardId === item.id && (
+                              <span className="text-xs text-amber-600 font-medium animate-pulse whitespace-nowrap">
+                                Grok is rehearsing the perfect voice...
+                              </span>
+                            )}
+                          </div>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <p className="text-lg leading-relaxed">{item.description}</p>
 
                         {item.type === 'info' && !item.completed && (
-                          <Button variant="outline" className="w-full gap-2" onClick={() => toggleChat(item.id)}>
-                            <MessageSquare className="h-4 w-4" /> Ask AI about this
-                          </Button>
+                          <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" className="gap-2" onClick={() => toggleChat(item.id)}>
+                              <MessageSquare className="h-4 w-4" /> Ask AI
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => quickAsk(item, `Extract the key concepts from "${item.title}" and explain them simply and memorably for a student.`)}
+                            >
+                              Key Concepts
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => quickAsk(item, `Break down "${item.title}" into clear, actionable steps or a practical process.`)}
+                            >
+                              Steps
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => quickAsk(item, `Suggest 3 relevant related lessons or topics on Skill Gain that connect to "${item.title}" or the topic "${item.topic}".`)}
+                            >
+                              Related Lessons
+                            </Button>
+                          </div>
                         )}
 
                         {item.type === 'test' && !item.completed && (
@@ -440,10 +559,28 @@ export default function Feed() {
                                     </div>
                                   </div>
                                 ))}
+
+                                {sendingMessage && thinkingCardId === item.id && (
+                                  <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground">
+                                    <div className="flex gap-1">
+                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
+                                    </div>
+                                    <span>Grok is thinking...</span>
+                                  </div>
+                                )}
                               </div>
+
                               <div className="flex gap-2">
-                                <Input id={`chat-input-${item.id}`} placeholder="Ask Grok anything..." onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(item)} />
-                                <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>Send</Button>
+                                <Input 
+                                  id={`chat-input-${item.id}`} 
+                                  placeholder="Ask Grok anything about this lesson..." 
+                                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(item)} 
+                                />
+                                <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>
+                                  Send
+                                </Button>
                               </div>
                             </div>
                           )}
