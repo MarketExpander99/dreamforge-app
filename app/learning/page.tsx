@@ -85,7 +85,6 @@ export default function LearningPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        // Use real data from Grok. Gamification fields can be added later when we persist progress.
         setLearningPath(data.path || [])
         setSuggestedCourses(data.suggestedCourses || [])
       }
@@ -106,12 +105,12 @@ export default function LearningPage() {
     }
   }, [user, authLoading])
 
-  // Auto-generate when we have history
+  // Auto-generate from history (improved)
   useEffect(() => {
-    if (savedQueries.length > 0 && learningPath.length === 0) {
+    if (savedQueries.length > 0 && learningPath.length === 0 && !generatingPath) {
       generateLearningPath()
     }
-  }, [savedQueries])
+  }, [savedQueries.length])
 
   const inProgress = learningPath.filter(t => t.status === 'in_progress')
   const completed = learningPath.filter(t => t.status === 'completed')
@@ -161,7 +160,11 @@ export default function LearningPage() {
                 <Search className="h-5 w-5" />
                 Search &amp; Question History
               </CardTitle>
-              <CardDescription>These drive your personalized recommendations</CardDescription>
+              <CardDescription>
+                {savedQueries.length > 0 
+                  ? `Using your ${savedQueries.length} explorations to build a personalized experience` 
+                  : 'These drive your personalized recommendations'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {savedQueries.length > 0 ? (
@@ -325,7 +328,11 @@ export default function LearningPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {suggestedCourses.length > 0 ? (
+              {generatingPath && suggestedCourses.length === 0 ? (
+                <div className="py-8 text-center text-zinc-500 dark:text-zinc-400">
+                  Generating course recommendations from your history...
+                </div>
+              ) : suggestedCourses.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {suggestedCourses.map((course, index) => (
                     <div 
@@ -363,7 +370,7 @@ export default function LearningPage() {
                 </div>
               )}
               <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-6 text-center">
-                Recommendations generated in real-time by Grok from your saved searches and AI chat history.
+                Recommendations generated in real-time by Grok using your saved searches and AI chat history.
               </p>
             </CardContent>
           </Card>
