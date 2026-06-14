@@ -59,16 +59,20 @@ export default function LearningPage() {
   const [suggestedCourses, setSuggestedCourses] = useState<SuggestedCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [generatingPath, setGeneratingPath] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchSavedQueries = async () => {
+    setFetchError(null)
     try {
       const response = await fetch('/api/learning/saved-queries')
-      if (response.ok) {
-        const data = await response.json()
-        setSavedQueries(data)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`)
       }
+      const data = await response.json()
+      setSavedQueries(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching saved queries:', error)
+      setFetchError('Could not load your history. Please try refreshing.')
     } finally {
       setLoading(false)
     }
@@ -105,7 +109,7 @@ export default function LearningPage() {
     }
   }, [user, authLoading])
 
-  // Auto-generate from history (improved)
+  // Auto-generate once history loads
   useEffect(() => {
     if (savedQueries.length > 0 && learningPath.length === 0 && !generatingPath) {
       generateLearningPath()
@@ -153,7 +157,7 @@ export default function LearningPage() {
             </Button>
           </div>
 
-          {/* Search History */}
+          {/* Search & Question History */}
           <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900 mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
@@ -167,6 +171,9 @@ export default function LearningPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {fetchError && (
+                <p className="text-red-500 mb-4 text-sm">{fetchError}</p>
+              )}
               {savedQueries.length > 0 ? (
                 <div className="space-y-6">
                   {savedQueries.map((query) => (
@@ -181,7 +188,14 @@ export default function LearningPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-zinc-500 dark:text-zinc-400 py-12 text-center">No saved searches yet. Start exploring in Discover.</p>
+                <div className="py-12 text-center">
+                  <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+                    No saved searches yet. Start exploring in Discover.
+                  </p>
+                  <Button onClick={fetchSavedQueries} variant="outline">
+                    Refresh History
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

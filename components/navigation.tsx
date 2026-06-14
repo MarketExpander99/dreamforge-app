@@ -93,7 +93,7 @@ const NavigationComponent = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500 text-center">Powered by Grok • E8 Lattice</p>
+          <p className="text-xs text-zinc-500 text-center">Powered by Grok</p>
         </div>
       </div>
 
