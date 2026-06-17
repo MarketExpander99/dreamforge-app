@@ -1,3 +1,4 @@
+// app/api/learning/generate-path/route.ts
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
@@ -117,7 +118,7 @@ Return ONLY valid JSON matching the required schema. No extra text.`
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'grok-beta',
+        model: 'grok-3',
         messages: [
           {
             role: 'user',
