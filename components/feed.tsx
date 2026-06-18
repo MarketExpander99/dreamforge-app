@@ -419,8 +419,8 @@ Content: ${item.description}`;
   }
 
   return (
-    <div className="mt-12">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <Sparkles className="h-8 w-8 text-amber-500" /> My Feed
         </h2>
@@ -429,11 +429,11 @@ Content: ${item.description}`;
         </Button>
       </div>
 
-      <p className="text-muted-foreground mb-8">
+      <p className="text-muted-foreground mb-7">
         Dynamic cards generated from your explorations. Speaker uses real Grok voice (Rex/Ava).
       </p>
 
-      <div className="space-y-12">
+      <div className="space-y-10">
         {topics.length === 0 && (
           <Card className="p-12 text-center">
             <p className="text-xl text-muted-foreground">No active topics. Add more from Discover!</p>
@@ -453,7 +453,7 @@ Content: ${item.description}`;
           if (allRoundsDone) return null;
 
           return (
-            <div key={topicId} className="space-y-6">
+            <div key={topicId} className="space-y-5">
               <div className="flex items-center justify-between border-b pb-4">
                 <div>
                   <h3 className="text-2xl font-semibold">{topicTitle}</h3>
@@ -482,7 +482,7 @@ Content: ${item.description}`;
                 </div>
               </div>
 
-              <div className="grid gap-6">
+              <div className="grid gap-5">
                 {currentRoundItems.length === 0 && !roundComplete && (
                   <p className="text-muted-foreground">No active cards in this round.</p>
                 )}
@@ -515,8 +515,8 @@ Content: ${item.description}`;
                           </div>
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-6">
-                        <p className="text-lg leading-relaxed">{item.description}</p>
+                      <CardContent className="space-y-5">
+                        <p className="text-[15px] leading-relaxed">{item.description}</p>
 
                         {item.type === 'info' && !item.completed && (
                           <div className="flex flex-wrap gap-2">
@@ -566,11 +566,11 @@ Content: ${item.description}`;
 
                         <AnimatePresence>
                           {openChatId === item.id && (
-                            <div className="mt-4 border rounded-2xl p-4 bg-muted/50">
+                            <div className="mt-4 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
                               <div className="h-64 overflow-y-auto space-y-3 mb-4 pr-2">
                                 {chatMessagesMap[item.id]?.map(msg => (
                                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-background border'}`}>
+                                    <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-[#0078D4] text-white' : 'bg-white dark:bg-zinc-950 border'}`}>
                                       {msg.content}
                                     </div>
                                   </div>
@@ -608,7 +608,7 @@ Content: ${item.description}`;
               </div>
 
               {roundComplete && currentRound < 3 && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6 text-center">
+                <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 text-center">
                   <Trophy className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
                   <h4 className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">Round {currentRound} Complete!</h4>
                   <p className="text-emerald-600 dark:text-emerald-400 mt-1">Great work. Ready to level up?</p>

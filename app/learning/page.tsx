@@ -256,7 +256,7 @@ export default function LearningPage() {
                       <div 
                         key={originalIndex}
                         onClick={() => setExpandedPathIndex(expandedPathIndex === originalIndex ? null : originalIndex)}
-                        className="flex gap-4 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-5 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all active:scale-[0.995]"
+                        className="flex gap-4 border border-zinc-100 dark:border-zinc-800 rounded-xl p-5 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                       >
                         <div className="w-8 h-8 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-semibold text-sm flex-shrink-0 mt-0.5">
                           {originalIndex + 1}
@@ -333,7 +333,7 @@ export default function LearningPage() {
                       <div 
                         key={originalIndex}
                         onClick={() => setExpandedCourseIndex(expandedCourseIndex === originalIndex ? null : originalIndex)}
-                        className="group border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all active:scale-[0.995]"
+                        className="group border border-zinc-100 dark:border-zinc-800 rounded-xl p-5 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 leading-tight pr-2">{course.title}</h3>

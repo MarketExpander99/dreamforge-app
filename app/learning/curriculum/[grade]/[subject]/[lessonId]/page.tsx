@@ -264,10 +264,10 @@ export default function LessonDetailPage() {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-800'
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800'
-      case 'advanced': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'beginner': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300'
+      case 'intermediate': return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+      case 'advanced': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+      default: return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300'
     }
   }
 
@@ -317,11 +317,11 @@ export default function LessonDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 py-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-zinc-200 dark:bg-zinc-800 rounded-xl w-1/3 mb-4"></div>
+          <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl w-1/2 mb-8"></div>
+          <div className="h-64 bg-zinc-200 dark:bg-zinc-800 rounded-xl"></div>
         </div>
       </div>
     )
@@ -329,11 +329,11 @@ export default function LessonDetailPage() {
 
   if (!lessonPlan) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 py-8">
         <div className="text-center">
-          <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Lesson Not Found</h2>
-          <p className="text-gray-600">The lesson you're looking for doesn't exist.</p>
+          <BookOpen className="mx-auto h-12 w-12 text-zinc-400 mb-4" />
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Lesson Not Found</h2>
+          <p className="text-zinc-600 dark:text-zinc-400">The lesson you're looking for doesn't exist.</p>
           <Button
             onClick={() => router.back()}
             className="mt-4"
@@ -353,10 +353,10 @@ export default function LessonDetailPage() {
     : 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-6">
+      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto px-5 md:px-8 py-6">
           <div className="flex items-center justify-between mb-4">
             <Button
               onClick={() => router.back()}
@@ -366,10 +366,10 @@ export default function LessonDetailPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Curriculum
             </Button>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <CircularProgress value={overallProgress} />
               <div className="text-right">
-                <p className="text-sm text-gray-600">Lesson Progress</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">Lesson Progress</p>
                 <p className="text-lg font-semibold">{currentContentIndex + 1} of {lessonContent.length}</p>
               </div>
             </div>
@@ -377,19 +377,19 @@ export default function LessonDetailPage() {
 
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
+              <div className="flex items-center gap-3 mb-2">
                 <span className="text-3xl">{lessonPlan.subjects?.icon}</span>
                 <div>
                   <h1 className="text-2xl font-bold">{lessonPlan.title}</h1>
-                  <p className="text-gray-600">{lessonPlan.subjects?.name} • {lessonPlan.grade_level}</p>
+                  <p className="text-zinc-600 dark:text-zinc-400">{lessonPlan.subjects?.name} • {lessonPlan.grade_level}</p>
                 </div>
               </div>
-              <p className="text-gray-700 mb-4">{lessonPlan.description}</p>
-              <div className="flex items-center space-x-4">
+              <p className="text-zinc-700 dark:text-zinc-300 mb-4">{lessonPlan.description}</p>
+              <div className="flex items-center gap-4">
                 <Badge className={getDifficultyColor(lessonPlan.difficulty)}>
                   {lessonPlan.difficulty}
                 </Badge>
-                <div className="flex items-center space-x-1 text-gray-600">
+                <div className="flex items-center gap-1 text-zinc-600 dark:text-zinc-400">
                   <Clock className="h-4 w-4" />
                   <span>{lessonPlan.duration_minutes} min</span>
                 </div>
@@ -404,7 +404,7 @@ export default function LessonDetailPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
@@ -417,7 +417,7 @@ export default function LessonDetailPage() {
               >
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-3">
                       {getContentIcon(currentContent.content_items.type)}
                       <div>
                         <CardTitle>{currentContent.content_items.title}</CardTitle>
@@ -429,13 +429,13 @@ export default function LessonDetailPage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Content Display */}
-                    <div className="prose max-w-none">
+                    <div className="prose max-w-none dark:prose-invert">
                       <div dangerouslySetInnerHTML={{ __html: currentContent.content_items.content }} />
                     </div>
 
                     {/* Media Content */}
                     {currentContent.content_items.image_url && (
-                      <div className="rounded-lg overflow-hidden">
+                      <div className="rounded-xl overflow-hidden">
                         <img
                           src={currentContent.content_items.image_url}
                           alt={currentContent.content_items.title}
@@ -445,7 +445,7 @@ export default function LessonDetailPage() {
                     )}
 
                     {currentContent.content_items.video_url && (
-                      <div className="aspect-video rounded-lg overflow-hidden">
+                      <div className="aspect-video rounded-xl overflow-hidden">
                         <iframe
                           src={currentContent.content_items.video_url}
                           className="w-full h-full"
@@ -455,7 +455,7 @@ export default function LessonDetailPage() {
                     )}
 
                     {currentContent.content_items.audio_url && (
-                      <div className="bg-gray-100 p-4 rounded-lg">
+                      <div className="bg-zinc-100 dark:bg-zinc-900 p-5 rounded-xl">
                         <audio controls className="w-full">
                           <source src={currentContent.content_items.audio_url} />
                         </audio>
@@ -464,18 +464,18 @@ export default function LessonDetailPage() {
 
                     {/* Quiz Content */}
                     {currentContent.content_items.quiz && (
-                      <div className="bg-blue-50 p-6 rounded-lg">
+                      <div className="bg-blue-50 dark:bg-zinc-900 p-6 rounded-xl border border-blue-100 dark:border-zinc-800">
                         <h3 className="font-semibold mb-4">Knowledge Check</h3>
                         <div className="space-y-4">
                           <p className="font-medium">{currentContent.content_items.quiz.question}</p>
                           <div className="space-y-2">
                             {currentContent.content_items.quiz.options?.map((option: string, index: number) => (
-                              <div key={index} className="flex items-center space-x-2">
+                              <div key={index} className="flex items-center gap-2">
                                 <input
                                   type="radio"
                                   name="quiz-answer"
                                   value={index}
-                                  className="text-blue-600"
+                                  className="text-[#0078D4]"
                                 />
                                 <label>{option}</label>
                               </div>
@@ -486,10 +486,10 @@ export default function LessonDetailPage() {
                     )}
 
                     {/* Completion Button */}
-                    <div className="flex justify-between items-center pt-6 border-t">
-                      <div className="text-sm text-gray-600">
+                    <div className="flex justify-between items-center pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
                         {userProgress?.status === 'completed' ? (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600" />
                             <span>Completed</span>
                           </div>
@@ -561,27 +561,27 @@ export default function LessonDetailPage() {
                   {lessonContent.map((content, index) => (
                     <div
                       key={content.id}
-                      className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
                         index === currentContentIndex
-                          ? 'bg-blue-50 border border-blue-200'
-                          : 'hover:bg-gray-50'
+                          ? 'bg-blue-50 dark:bg-zinc-900 border border-blue-200 dark:border-zinc-700'
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'
                       }`}
                       onClick={() => setCurrentContentIndex(index)}
                     >
                       <div className={`p-1 rounded ${
-                        index <= currentContentIndex ? 'bg-green-100' : 'bg-gray-100'
+                        index <= currentContentIndex ? 'bg-green-100 dark:bg-green-900' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         {index < currentContentIndex ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         ) : index === currentContentIndex ? (
-                          <Play className="h-4 w-4 text-blue-600" />
+                          <Play className="h-4 w-4 text-[#0078D4]" />
                         ) : (
-                          <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                          <div className="h-4 w-4 rounded-full border-2 border-zinc-300 dark:border-zinc-600" />
                         )}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">{content.content_items.title}</p>
-                        <p className="text-xs text-gray-600">{content.content_type}</p>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400">{content.content_type}</p>
                       </div>
                     </div>
                   ))}
@@ -597,11 +597,11 @@ export default function LessonDetailPage() {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm font-medium">Unit</p>
-                  <p className="text-sm text-gray-600">{lessonPlan.unit_title}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{lessonPlan.unit_title}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Duration</p>
-                  <p className="text-sm text-gray-600">{lessonPlan.duration_minutes} minutes</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{lessonPlan.duration_minutes} minutes</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Difficulty</p>
