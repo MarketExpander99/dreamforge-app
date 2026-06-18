@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:e2e": "playwright test",
     "seed": "echo 'To seed the database, make a POST request to /api/seed or visit the application and use the seed endpoint'"
   },
   "dependencies": {
