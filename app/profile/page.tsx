@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, CreditCard, History, Sparkles } from 'lucide-react'
+import { User, Settings, BookOpen, Trophy, Calendar, Edit, Save, Camera, Key, Loader2, Sparkles, Lock, Lightbulb, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -27,6 +27,8 @@ interface UserProfile {
   totalLearningTime: number
   completedModules: number
   currentStreak: number
+  totalXP?: number
+  currentLevel?: number
   achievementsCount: number
   recentActivity: Array<{
     id: string
@@ -36,10 +38,17 @@ interface UserProfile {
   }>
   achievements: Array<{
     id: string
+    type?: string
     title: string
     description: string
     icon: string
     earnedAt: string
+  }>
+  achievementDefinitions?: Array<{
+    type: string
+    title: string
+    description: string
+    icon: string
   }>
   categoryProgress: Array<{
     category: string
@@ -47,6 +56,17 @@ interface UserProfile {
     completed: number
     total: number
   }>
+  activeLearningPath?: {
+    id?: string
+    title: string
+    description?: string
+    steps?: Array<{
+      title: string
+      description?: string
+      estimatedTime?: string
+    }>
+    updatedAt?: string
+  } | null
 }
 
 export default function ProfilePage() {
@@ -74,30 +94,6 @@ export default function ProfilePage() {
     newPassword: '',
     confirmPassword: ''
   })
-
-  // Mock credits data (safe - no schema change)
-  const [creditsData] = useState({
-    freeCreditsRemaining: 5,
-    paidCredits: 42,
-    dailyFreeReset: 'tomorrow'
-  })
-
-  const [purchaseHistory] = useState([
-    {
-      id: '1',
-      date: '2025-05-20',
-      type: 'Paid Credits',
-      amount: 100,
-      price: '$9.99'
-    },
-    {
-      id: '2',
-      date: '2025-05-10',
-      type: 'Free Daily',
-      amount: 10,
-      price: 'Free'
-    }
-  ])
 
   const handleSaveProfile = async () => {
     if (!userProfile) return
@@ -246,9 +242,9 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
         <div className="max-w-5xl mx-auto">
-          {/* Gorgeous Header */}
+          {/* Hero Header — real data, premium calm feel ("I am growing") */}
           <div className="mb-10">
-            <Card className="border-0 shadow-sm overflow-hidden bg-white dark:bg-zinc-900">
+            <Card className="border-0 shadow-sm overflow-hidden bg-white dark:bg-zinc-900 rounded-3xl">
               <CardContent className="p-8">
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
                   {/* Avatar with upload overlay */}
@@ -277,38 +273,64 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
-                          {userProfile.fullName}
-                          <Sparkles className="h-6 w-6 text-amber-500" />
-                        </h1>
-                        <p className="text-muted-foreground">{userProfile.email}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            {userProfile.fullName}
+                          </h1>
+                          {/* Real level from data */}
+                          <Badge variant="secondary" className="text-sm px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-0">
+                            Level {userProfile.currentLevel ?? 1}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground mt-1">{userProfile.email}</p>
+                        {userProfile.gradeLevel && userProfile.gradeLevel !== 'Not specified' && (
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Grade {userProfile.gradeLevel}</p>
+                        )}
                       </div>
                       <Button
                         variant="outline"
                         onClick={() => setIsEditing(!isEditing)}
-                        className="gap-2"
+                        className="gap-2 shrink-0"
                       >
                         <Edit className="h-4 w-4" />
                         {isEditing ? 'Cancel' : 'Edit Profile'}
                       </Button>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-3 gap-6 mt-8">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-emerald-600">{userProfile.currentStreak}</div>
-                        <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+                    {/* XP progress indicator (derived from real activity) */}
+                    {(userProfile.totalXP ?? 0) > 0 && (
+                      <div className="mt-3 flex items-center gap-2 text-sm">
+                        <span className="text-amber-600 dark:text-amber-400 font-medium tabular-nums">{userProfile.totalXP} XP</span>
+                        <span className="text-xs text-muted-foreground">• Growing steadily</span>
                       </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-amber-600">{userProfile.completedModules}</div>
-                        <p className="text-xs text-muted-foreground">Modules Completed</p>
+                    )}
+
+                    {/* Quick Stats — all real data, elegant presentation */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                      <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-center border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-2xl font-semibold text-emerald-600 tabular-nums">{userProfile.currentStreak}</div>
+                        <p className="text-[10px] uppercase tracking-[1px] text-muted-foreground mt-0.5">Day Streak</p>
                       </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-purple-600">{userProfile.achievementsCount}</div>
-                        <p className="text-xs text-muted-foreground">Achievements</p>
+                      <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-center border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-2xl font-semibold text-blue-600 tabular-nums">
+                          {Math.floor(userProfile.totalLearningTime / 60)}
+                          <span className="text-base align-super text-blue-500">h</span>
+                          {userProfile.totalLearningTime % 60 > 0 && (
+                            <span className="text-lg align-super text-blue-500/70"> {userProfile.totalLearningTime % 60}m</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] uppercase tracking-[1px] text-muted-foreground mt-0.5">Time Invested</p>
+                      </div>
+                      <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-center border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-2xl font-semibold text-amber-600 tabular-nums">{userProfile.completedModules}</div>
+                        <p className="text-[10px] uppercase tracking-[1px] text-muted-foreground mt-0.5">Modules Completed</p>
+                      </div>
+                      <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-center border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-2xl font-semibold text-purple-600 tabular-nums">{userProfile.achievementsCount}</div>
+                        <p className="text-[10px] uppercase tracking-[1px] text-muted-foreground mt-0.5">Achievements</p>
                       </div>
                     </div>
                   </div>
@@ -318,7 +340,7 @@ export default function ProfilePage() {
           </div>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-zinc-900 border-0 shadow-sm">
+            <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-zinc-900 border-0 shadow-sm">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
                 Overview
@@ -330,10 +352,6 @@ export default function ProfilePage() {
               <TabsTrigger value="achievements" className="flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
                 Achievements
-              </TabsTrigger>
-              <TabsTrigger value="credits" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Credits
               </TabsTrigger>
             </TabsList>
 
@@ -359,6 +377,91 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Active Learning Path Snapshot (Phase 3) — real data from learning_paths + clear CTA to /learning */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+                      <Lightbulb className="h-5 w-5" />
+                      Active Learning Path
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push('/learning')}
+                      className="gap-1.5"
+                    >
+                      View Full <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Your current personalized path. Continue where you left off.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {userProfile.activeLearningPath ? (
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          {userProfile.activeLearningPath.title}
+                        </h4>
+                        {userProfile.activeLearningPath.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {userProfile.activeLearningPath.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Snapshot of first steps — matches clean card style from Learning page */}
+                      {userProfile.activeLearningPath.steps && userProfile.activeLearningPath.steps.length > 0 ? (
+                        <div className="space-y-2 pt-1">
+                          {userProfile.activeLearningPath.steps.map((step, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-3 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-3.5 transition-all hover:border-zinc-200 dark:hover:border-zinc-700"
+                            >
+                              <div className="w-7 h-7 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-semibold text-xs flex-shrink-0 mt-0.5">
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100 leading-tight">
+                                  {step.title}
+                                </div>
+                                {step.estimatedTime && (
+                                  <Badge variant="outline" className="text-[10px] mt-1.5 px-1.5 py-0 h-4">
+                                    {step.estimatedTime}
+                                  </Badge>
+                                )}
+                                {step.description && (
+                                  <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{step.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Path details available in your Learning area.</p>
+                      )}
+
+                      {userProfile.activeLearningPath.updatedAt && (
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+                          Updated {new Date(userProfile.activeLearningPath.updatedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        No active path yet. Explore topics in Discover to generate a personalized learning path.
+                      </p>
+                      <Button variant="outline" size="sm" onClick={() => router.push('/learning')}>
+                        Go to Learning
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -439,62 +542,150 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            {/* Achievements Tab */}
+            {/* Achievements Tab — beautiful rewarding wall from real user_achievements + definitions */}
             <TabsContent value="achievements" className="mt-8">
-              <div className="grid gap-6 md:grid-cols-2">
-                {userProfile.achievements.map((ach) => (
-                  <Card key={ach.id} className="border-0 shadow-sm">
-                    <CardContent className="p-6 flex gap-4">
-                      <Trophy className="h-10 w-10 text-amber-500 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-semibold">{ach.title}</h4>
-                        <p className="text-sm text-muted-foreground">{ach.description}</p>
-                        <p className="text-xs mt-2 text-emerald-600">Earned {ach.earnedAt}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
+              {(() => {
+                const definitions = userProfile.achievementDefinitions || []
+                const earnedList = userProfile.achievements || []
 
-            {/* Credits Tab */}
-            <TabsContent value="credits" className="mt-8">
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Credits &amp; History
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-8 mb-8">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Free Credits Remaining</p>
-                      <p className="text-5xl font-bold text-emerald-600">{creditsData.freeCreditsRemaining}</p>
-                      <p className="text-xs">Resets {creditsData.dailyFreeReset}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Paid Credits</p>
-                      <p className="text-5xl font-bold">{creditsData.paidCredits}</p>
-                    </div>
-                  </div>
-                  <h4 className="font-medium mb-4 flex items-center gap-2"><History className="h-4 w-4" />Purchase History</h4>
-                  <div className="space-y-4">
-                    {purchaseHistory.map(item => (
-                      <div key={item.id} className="flex justify-between border-b pb-4">
-                        <div>
-                          <p className="font-medium">{item.type}</p>
-                          <p className="text-xs text-muted-foreground">{item.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">+{item.amount}</p>
-                          <p className="text-xs text-muted-foreground">{item.price}</p>
-                        </div>
+                // Build earned map for quick lookup (prefer type, fallback to title for legacy data)
+                const earnedMap = new Map<string, { earnedAt: string; icon?: string }>()
+                earnedList.forEach((ach) => {
+                  const key = ach.type || ach.title
+                  if (key) earnedMap.set(key, { earnedAt: ach.earnedAt, icon: ach.icon })
+                })
+
+                const total = definitions.length || earnedList.length
+                const earnedCount = earnedList.length
+
+                if (definitions.length === 0 && earnedList.length === 0) {
+                  return (
+                    <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900">
+                      <CardContent className="py-12 text-center text-zinc-500 dark:text-zinc-400">
+                        Complete lessons and challenges to unlock achievements. Your wall will grow here.
+                      </CardContent>
+                    </Card>
+                  )
+                }
+
+                const allItems = definitions.length > 0
+                  ? definitions.map((def) => {
+                      const earned = earnedMap.get(def.type) || earnedMap.get(def.title)
+                      return {
+                        ...def,
+                        isEarned: !!earned,
+                        earnedAt: earned?.earnedAt,
+                        displayIcon: earned?.icon || def.icon,
+                      }
+                    })
+                  : earnedList.map((ach) => ({
+                      type: ach.type || ach.title,
+                      title: ach.title,
+                      description: ach.description,
+                      icon: ach.icon,
+                      isEarned: true,
+                      earnedAt: ach.earnedAt,
+                      displayIcon: ach.icon,
+                    }))
+
+                // Sort: earned first, then locked (maintain definition order otherwise)
+                const sortedItems = [...allItems].sort((a, b) => {
+                  if (a.isEarned && !b.isEarned) return -1
+                  if (!a.isEarned && b.isEarned) return 1
+                  return 0
+                })
+
+                return (
+                  <>
+                    {/* Wall header with progress */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Achievements Wall</h3>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {earnedCount} of {total} unlocked • Real milestones from your journey
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="hidden sm:block">
+                        <Badge variant="secondary" className="text-xs px-3 py-1">
+                          {earnedCount}/{total}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Beautiful grid with subtle motion */}
+                    <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {sortedItems.map((item, idx) => {
+                        const key = item.type || item.title || idx
+                        const isEarned = item.isEarned
+
+                        return (
+                          <div
+                            key={key}
+                            className={[
+                              'group rounded-3xl border p-5 transition-all',
+                              isEarned
+                                ? 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-amber-200 dark:hover:border-amber-900/50 hover:shadow-sm'
+                                : 'border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/60 hover:border-zinc-200 dark:hover:border-zinc-700',
+                            ].join(' ')}
+                          >
+                            <div className="flex items-start gap-4">
+                              {/* Icon area — emoji for personality or fallback */}
+                              <div
+                                className={[
+                                  'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl text-3xl transition-transform group-hover:scale-105',
+                                  isEarned
+                                    ? 'bg-amber-100/70 dark:bg-amber-950/60'
+                                    : 'bg-zinc-200/60 dark:bg-zinc-800/60 grayscale-[0.6]',
+                                ].join(' ')}
+                              >
+                                {item.displayIcon || (isEarned ? '🏆' : '🔒')}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className={['font-semibold truncate', isEarned ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400'].join(' ')}>
+                                    {item.title}
+                                  </h4>
+                                  {isEarned ? (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-px bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-0">
+                                      Earned
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-px text-zinc-500 border-zinc-300 dark:border-zinc-700">
+                                      <Lock className="h-3 w-3 mr-1" /> Locked
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                <p className={['text-sm mt-1 leading-snug', isEarned ? 'text-muted-foreground' : 'text-muted-foreground/70'].join(' ')}>
+                                  {item.description}
+                                </p>
+
+                                {isEarned && item.earnedAt && (
+                                  <p className="text-xs mt-2 text-emerald-600 dark:text-emerald-500 font-medium">
+                                    Earned {item.earnedAt}
+                                  </p>
+                                )}
+                                {!isEarned && (
+                                  <p className="text-xs mt-2 text-zinc-400 dark:text-zinc-500 italic">
+                                    Keep learning to unlock
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {earnedCount === 0 && (
+                      <p className="text-center text-xs text-zinc-400 dark:text-zinc-500 mt-6">
+                        Start completing modules in the Learning section to earn your first achievement.
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
             </TabsContent>
           </Tabs>
         </div>
