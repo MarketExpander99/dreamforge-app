@@ -146,6 +146,12 @@ export default function LearningPage() {
           <div className="flex items-center gap-3 mb-1">
             <GraduationCap className="h-7 w-7 text-zinc-700 dark:text-zinc-300" />
             <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Your Learning Journey</h1>
+            <span 
+              className="ml-1 text-amber-500 text-2xl leading-none select-none" 
+              title="Infused with golden-ratio (φ ≈ 1.618) + Fibonacci harmony — our Da Vinci touch for the polish"
+            >
+              φ
+            </span>
           </div>
           <p className="text-muted-foreground mb-8 max-w-2xl">Personalized path + recommendations from your discoveries and chats.</p>
 
