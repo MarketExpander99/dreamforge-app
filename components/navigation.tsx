@@ -65,14 +65,14 @@ const NavigationComponent = () => {
     <>
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex flex-col w-64 bg-zinc-900 border-r border-zinc-800 h-screen fixed left-0 top-0 p-6">
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <div className="mb-8 px-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
             Skill Gain
           </h1>
-          <p className="text-xs text-zinc-500 mt-1">Discover the lattice</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Discover the lattice</p>
         </div>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-1.5">
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -80,11 +80,11 @@ const NavigationComponent = () => {
                 <Button
                   variant={item.isActive ? 'default' : 'ghost'}
                   className={cn(
-                    'w-full justify-start gap-3 text-base h-12',
-                    item.isActive && 'bg-purple-600 hover:bg-purple-600'
+                    'w-full justify-start gap-2.5 text-[15px] h-11',
+                    item.isActive && 'bg-[#0078D4] hover:bg-[#006CB8]'
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                   {item.label}
                 </Button>
               </Link>
@@ -92,14 +92,14 @@ const NavigationComponent = () => {
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500 text-center">Powered by Grok</p>
+        <div className="mt-auto pt-5 border-t border-zinc-800">
+          <p className="text-[10px] text-zinc-500 text-center">Powered by Grok</p>
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation — calm Win10 style */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 z-50">
-        <div className="flex items-center justify-around py-2">
+        <div className="flex items-center justify-around py-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -107,11 +107,11 @@ const NavigationComponent = () => {
                 <Button
                   variant="ghost"
                   className={cn(
-                    'w-full flex flex-col items-center gap-1 py-3 text-xs',
-                    item.isActive && 'text-purple-400'
+                    'w-full flex flex-col items-center gap-0.5 py-2 text-[10px]',
+                    item.isActive && 'text-[#0078D4]'
                   )}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-5 w-5" />
                   {item.label}
                 </Button>
               </Link>

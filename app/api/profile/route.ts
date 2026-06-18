@@ -111,35 +111,53 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching achievements count:', achievementsError)
     }
 
-    // Get recent activity (last 5 progress entries)
-    const { data: recentActivity, error: activityError } = await supabase
-      .from('user_progress')
-      .select(`
-        id,
-        status,
-        progress_percentage,
-        time_spent,
-        last_accessed_at,
-        content_items (
-          id,
-          title
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('last_accessed_at', { ascending: false })
-      .limit(5)
+    // Get recent activity safely without relying on FK relationship (avoids PGRST200 "no relationship" error)
+    // We fetch progress first, then titles separately. Works even if schema cache/FK is not registered.
+    let recentActivity: any[] = []
+    try {
+      const { data: progressRows, error: progressErr } = await supabase
+        .from('user_progress')
+        .select('id, status, progress_percentage, time_spent, last_accessed_at, content_id')
+        .eq('user_id', user.id)
+        .order('last_accessed_at', { ascending: false })
+        .limit(5)
 
-    if (activityError) {
-      console.error('Error fetching recent activity:', activityError)
+      if (progressErr) {
+        console.error('Error fetching recent progress rows:', progressErr)
+      } else if (progressRows && progressRows.length > 0) {
+        const contentIds = Array.from(new Set(progressRows.map((r: any) => r.content_id).filter(Boolean))) as string[]
+
+        let titlesMap: Record<string, string> = {}
+        if (contentIds.length > 0) {
+          const { data: contents } = await supabase
+            .from('content_items')
+            .select('id, title')
+            .in('id', contentIds)
+          if (contents) {
+            titlesMap = Object.fromEntries(contents.map((c: any) => [c.id, c.title || 'Untitled']))
+          }
+        }
+
+        recentActivity = progressRows.map((activity: any) => ({
+          id: activity.id,
+          status: activity.status,
+          progress_percentage: activity.progress_percentage,
+          time_spent: activity.time_spent,
+          last_accessed_at: activity.last_accessed_at,
+          content_items: activity.content_id ? { title: titlesMap[activity.content_id] || null } : null
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching recent activity:', err)
     }
 
     // Format recent activity
-    const formattedActivity = recentActivity?.map(activity => ({
+    const formattedActivity = recentActivity.map(activity => ({
       id: activity.id,
       action: activity.status === 'completed' ? 'Completed' : activity.status === 'in_progress' ? 'Started' : 'Viewed',
       title: (activity.content_items as any)?.title || 'Unknown Content',
       timestamp: activity.last_accessed_at ? new Date(activity.last_accessed_at).toLocaleDateString() : 'Recently'
-    })) || []
+    }))
 
     // Get achievements
     const { data: achievements, error: achievementsListError } = await supabase

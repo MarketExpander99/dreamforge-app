@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/lib/user-context'
-import { Navigation } from '@/components/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +19,6 @@ import {
 } from '@/components/ui/select'
 import { Recommendations } from '@/components/recommendations'
 import { cn } from '@/lib/utils'
-import { useSidebar } from '@/components/navigation'
 import { BookOpen, Target, Clock, Star, ChevronRight, Play, ChevronDown, CheckCircle, Lock, MapPin, Route } from 'lucide-react'
 import { getNextBestLesson, LearningPath, NextBestLesson } from '@/lib/data'
 import { useCurriculumCache } from '@/lib/curriculum-cache'
@@ -82,8 +80,6 @@ export default function CurriculumPage() {
   const [isOffline, setIsOffline] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
-
-  const { sidebarCollapsed } = useSidebar()
 
   useEffect(() => {
     if (profile?.role === 'parent') {
@@ -394,329 +390,448 @@ export default function CurriculumPage() {
   }
 
   return (
-    <>
-      <Navigation />
-      <div className={cn("mobile-container py-6 sm:py-8 transition-all duration-300", sidebarCollapsed ? "md:ml-20" : "md:ml-64")}>
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-mobile-heading mb-2">CAPS Curriculum Browser</h1>
-        <p className="text-mobile-body text-muted-secondary">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
-        {isParent && children.length > 0 && (
-          <div className="mt-4">
-            <Select value={selectedUserId || ''} onValueChange={(value) => setSelectedUserId(value)}>
-              <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
-                <SelectValue placeholder="Select child" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={user?.id || ''}>My Progress</SelectItem>
-                {children.map((child) => (
-                  <SelectItem key={child.id} value={child.id}>
-                    {child.full_name} ({child.grade_level || 'No grade'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      <ProminentTabs defaultValue="curriculum" className="space-y-4 sm:space-y-6">
-      <ProminentTabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
-        <ProminentTabsTrigger value="curriculum">Curriculum Browser</ProminentTabsTrigger>
-        <ProminentTabsTrigger value="path">My Path</ProminentTabsTrigger>
-        <ProminentTabsTrigger value="lessons">Lesson Plans</ProminentTabsTrigger>
-        <ProminentTabsTrigger value="progress">My Progress</ProminentTabsTrigger>
-      </ProminentTabsList>
-
-        <ProminentTabsContent value="curriculum" className="space-y-6">
-          {/* Curriculum Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Curriculum</CardTitle>
-              <CardDescription>Choose the curriculum framework for your learning journey</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {curriculums.map((curriculum) => (
-                  <Card
-                    key={curriculum.id}
-                    className={`cursor-pointer transition-all ${
-                      selectedCurriculum === curriculum.name
-                        ? 'ring-2 ring-blue-500 bg-blue-50'
-                        : 'hover:shadow-md'
-                    }`}
-                    onClick={() => setSelectedCurriculum(curriculum.name)}
-                  >
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2">{curriculum.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{curriculum.country}</p>
-                      <p className="text-sm">{curriculum.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {curriculum.grade_levels.slice(0, 4).map((grade) => (
-                          <Badge key={grade} variant="secondary" className="text-xs">
-                            {grade}
-                          </Badge>
-                        ))}
-                        {curriculum.grade_levels.length > 4 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{curriculum.grade_levels.length - 4} more
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Grade Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Grade Level</CardTitle>
-              <CardDescription>Choose the appropriate grade for lesson planning</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {curriculums
-                  .find(c => c.name === selectedCurriculum)
-                  ?.grade_levels.map((grade) => (
-                    <Button
-                      key={grade}
-                      variant={selectedGrade === grade ? 'default' : 'outline'}
-                      onClick={() => setSelectedGrade(grade)}
-                    >
-                      {grade}
-                    </Button>
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 py-8">
+        <div className="mb-7">
+          <h1 className="text-4xl font-bold tracking-tight">CAPS Curriculum Browser</h1>
+          <p className="text-muted-foreground mt-1">Structured Grade 1-12 learning paths aligned with South African CAPS</p>
+          {isParent && children.length > 0 && (
+            <div className="mt-4">
+              <Select value={selectedUserId || ''} onValueChange={(value) => setSelectedUserId(value)}>
+                <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
+                  <SelectValue placeholder="Select child" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={user?.id || ''}>My Progress</SelectItem>
+                  {children.map((child) => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {child.full_name} ({child.grade_level || 'No grade'})
+                    </SelectItem>
                   ))}
-              </div>
-            </CardContent>
-          </Card>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
 
-          {/* Subjects with Lessons Accordion */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Subject Curriculum</CardTitle>
-              <CardDescription>Explore structured learning paths for {selectedGrade} in {selectedCurriculum}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {subjects
-                  .filter(subject => subject.grade_levels.includes(selectedGrade))
-                  .map((subject) => {
-                    const isExpanded = expandedSubjects.has(subject.id)
-                    const subjectProgress = getSubjectProgress(subject.id)
-                    const lessons = subjectLessons[subject.id] || []
+        <ProminentTabs defaultValue="curriculum" className="space-y-6">
+          <ProminentTabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
+            <ProminentTabsTrigger value="curriculum">Curriculum Browser</ProminentTabsTrigger>
+            <ProminentTabsTrigger value="path">My Path</ProminentTabsTrigger>
+            <ProminentTabsTrigger value="lessons">Lesson Plans</ProminentTabsTrigger>
+            <ProminentTabsTrigger value="progress">My Progress</ProminentTabsTrigger>
+          </ProminentTabsList>
 
-                    return (
-                      <div key={subject.id} className="border rounded-lg overflow-hidden">
-                        {/* Subject Header */}
-                        <div
-                          className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
-                          onClick={() => toggleSubjectExpansion(subject.id)}
-                        >
-                          <div className="flex items-center space-x-4">
-                            <span className="text-2xl">{subject.icon}</span>
-                            <div>
-                              <h3 className="font-semibold text-lg">{subject.name}</h3>
-                              <p className="text-sm text-gray-600">{subject.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <div className="text-center">
-                              <CircularProgress value={subjectProgress} />
-                              <p className="text-xs text-gray-600 mt-1">Progress</p>
-                            </div>
-                            <motion.div
-                              animate={{ rotate: isExpanded ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronDown className="h-5 w-5 text-gray-500" />
-                            </motion.div>
-                          </div>
+          <ProminentTabsContent value="curriculum" className="space-y-6">
+            {/* Curriculum Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Curriculum</CardTitle>
+                <CardDescription>Choose the curriculum framework for your learning journey</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {curriculums.map((curriculum) => (
+                    <Card
+                      key={curriculum.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedCurriculum === curriculum.name
+                          ? 'ring-2 ring-[#0078D4] bg-blue-50 dark:bg-zinc-900'
+                          : 'hover:border-zinc-300 dark:hover:border-zinc-700'
+                      }`}
+                      onClick={() => setSelectedCurriculum(curriculum.name)}
+                    >
+                      <CardContent className="p-5">
+                        <h3 className="font-semibold mb-2">{curriculum.name}</h3>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">{curriculum.country}</p>
+                        <p className="text-sm">{curriculum.description}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {curriculum.grade_levels.slice(0, 4).map((grade) => (
+                            <Badge key={grade} variant="secondary" className="text-xs">
+                              {grade}
+                            </Badge>
+                          ))}
+                          {curriculum.grade_levels.length > 4 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{curriculum.grade_levels.length - 4} more
+                            </Badge>
+                          )}
                         </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-                        {/* Expandable Lessons */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="border-t bg-white"
-                            >
-                              <div className="p-4">
-                                {lessons.length === 0 ? (
-                                  <div className="text-center py-8">
-                                    <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                                    <p className="text-sm text-gray-600">Loading lessons...</p>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {lessons.map((lesson, index) => (
-                                      <motion.div
-                                        key={lesson.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                      >
-                                        <div className="flex items-center space-x-3">
-                                          <div className="flex items-center space-x-2">
-                                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                              <span className="text-xs font-semibold text-blue-600">
-                                                {index + 1}
-                                              </span>
-                                            </div>
-                                            <div className="text-sm">
-                                              <p className="font-medium">{lesson.title}</p>
-                                              <div className="flex items-center space-x-2 text-xs text-gray-600">
-                                                <Clock className="h-3 w-3" />
-                                                <span>{lesson.duration_minutes} min</span>
-                                                <Badge
-                                                  variant="outline"
-                                                  className="text-xs"
-                                                  style={{
-                                                    borderColor: subject.color,
-                                                    color: subject.color
-                                                  }}
-                                                >
-                                                  {lesson.difficulty}
-                                                </Badge>
+            {/* Grade Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Grade Level</CardTitle>
+                <CardDescription>Choose the appropriate grade for lesson planning</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {curriculums
+                    .find(c => c.name === selectedCurriculum)
+                    ?.grade_levels.map((grade) => (
+                      <Button
+                        key={grade}
+                        variant={selectedGrade === grade ? 'default' : 'outline'}
+                        onClick={() => setSelectedGrade(grade)}
+                      >
+                        {grade}
+                      </Button>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Subjects with Lessons Accordion */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Subject Curriculum</CardTitle>
+                <CardDescription>Explore structured learning paths for {selectedGrade} in {selectedCurriculum}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  {subjects
+                    .filter(subject => subject.grade_levels.includes(selectedGrade))
+                    .map((subject) => {
+                      const isExpanded = expandedSubjects.has(subject.id)
+                      const subjectProgress = getSubjectProgress(subject.id)
+                      const lessons = subjectLessons[subject.id] || []
+
+                      return (
+                        <div key={subject.id} className="border rounded-xl overflow-hidden">
+                          {/* Subject Header */}
+                          <div
+                            className="flex items-center justify-between p-5 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+                            onClick={() => toggleSubjectExpansion(subject.id)}
+                          >
+                            <div className="flex items-center gap-4">
+                              <span className="text-2xl">{subject.icon}</span>
+                              <div>
+                                <h3 className="font-semibold text-lg">{subject.name}</h3>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">{subject.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-center">
+                                <CircularProgress value={subjectProgress} />
+                                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">Progress</p>
+                              </div>
+                              <motion.div
+                                animate={{ rotate: isExpanded ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ChevronDown className="h-5 w-5 text-zinc-500" />
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Expandable Lessons */}
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="border-t bg-white dark:bg-zinc-950"
+                              >
+                                <div className="p-5">
+                                  {lessons.length === 0 ? (
+                                    <div className="text-center py-8">
+                                      <BookOpen className="mx-auto h-8 w-8 text-zinc-400 mb-2" />
+                                      <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading lessons...</p>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-3">
+                                      {lessons.map((lesson, index) => (
+                                        <motion.div
+                                          key={lesson.id}
+                                          initial={{ opacity: 0, x: -20 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{ delay: index * 0.1 }}
+                                          className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                                  {index + 1}
+                                                </span>
+                                              </div>
+                                              <div className="text-sm">
+                                                <p className="font-medium">{lesson.title}</p>
+                                                <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                                                  <Clock className="h-3 w-3" />
+                                                  <span>{lesson.duration_minutes} min</span>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs"
+                                                    style={{
+                                                      borderColor: subject.color,
+                                                      color: subject.color
+                                                    }}
+                                                  >
+                                                    {lesson.difficulty}
+                                                  </Badge>
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
-                                        </div>
-                                        <Button
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            startLessonPlan(lesson.id)
-                                          }}
-                                          className="shrink-0"
-                                        >
-                                          <Play className="h-3 w-3 mr-1" />
-                                          Start
-                                        </Button>
-                                      </motion.div>
-                                    ))}
-                                  </div>
+                                          <Button
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              startLessonPlan(lesson.id)
+                                            }}
+                                            className="shrink-0"
+                                          >
+                                            <Play className="h-3 w-3 mr-1" />
+                                            Start
+                                          </Button>
+                                        </motion.div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )
+                    })}
+                </div>
+
+                {subjects.filter(subject => subject.grade_levels.includes(selectedGrade)).length === 0 && (
+                  <div className="text-center py-8">
+                    <BookOpen className="mx-auto h-12 w-12 text-zinc-400 mb-4" />
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">No subjects available</h3>
+                    <p className="text-zinc-600 dark:text-zinc-400">Subjects for this grade will be added soon.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </ProminentTabsContent>
+
+          <ProminentTabsContent value="path" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Route className="h-5 w-5 text-blue-600" />
+                  Your Personalized Learning Path
+                </CardTitle>
+                <CardDescription>AI-powered recommendations based on your assessment and progress</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Next Best Lesson */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-green-600" />
+                    Next Best Lesson
+                  </h3>
+
+                  {nextBestLesson ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="border-2 border-green-200 dark:border-green-900 rounded-xl p-6 bg-gradient-to-r from-green-50 to-blue-50 dark:from-zinc-900 dark:to-zinc-950"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="text-2xl">
+                              {subjects.find(s => s.name === nextBestLesson.subject)?.icon || '📚'}
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-semibold">{nextBestLesson.title}</h4>
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400">{nextBestLesson.subject} • {nextBestLesson.grade}</p>
+                            </div>
+                          </div>
+                          <p className="text-zinc-700 dark:text-zinc-300 mb-4">{nextBestLesson.reason}</p>
+                          <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                            <Badge variant="outline" className="capitalize">
+                              {nextBestLesson.estimatedDifficulty}
+                            </Badge>
+                            <span>Priority: {nextBestLesson.priority}/10</span>
+                          </div>
+                        </div>
+                        <Button
+                          size="lg"
+                          className="ml-6"
+                          onClick={() => {
+                            const subjectSlug = nextBestLesson.subject.toLowerCase().replace(/\s+/g, '-')
+                            router.push(`/learning/curriculum/${nextBestLesson.grade.toLowerCase().replace(' ', '-')}/${subjectSlug}/${nextBestLesson.lessonId}`)
+                          }}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Start This Lesson
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <Card className="border-dashed">
+                      <CardContent className="p-8 text-center">
+                        <Target className="mx-auto h-12 w-12 text-zinc-400 mb-4" />
+                        <h4 className="font-semibold mb-2">No recommendations available</h4>
+                        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                          Complete your grade assessment or start some lessons to get personalized recommendations.
+                        </p>
+                        <Button
+                          onClick={() => router.push('/learning/curriculum/assessment')}
+                          className="mr-2"
+                        >
+                          Take Assessment
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => router.push('/learning/curriculum')}
+                        >
+                          Browse Lessons
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Learning Path Overview */}
+                {learningPaths.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Your Active Learning Paths</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {learningPaths.map((path) => (
+                        <Card key={path.id}>
+                          <CardContent className="p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="text-xl">{path.subjects?.icon}</span>
+                              <div>
+                                <h4 className="font-semibold">{path.subjects?.name}</h4>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">{path.current_grade}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress</span>
+                                <span>{path.progress_percentage}%</span>
+                              </div>
+                              <Progress value={path.progress_percentage} className="w-full" />
+                            </div>
+                            <Badge
+                              variant={path.status === 'active' ? 'default' : 'secondary'}
+                              className="mt-2"
+                            >
+                              {path.status}
+                            </Badge>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Recommended Content</h3>
+                  <Recommendations
+                    title=""
+                    subtitle="Based on your learning path and interests"
+                    limit={3}
+                    showScrollButtons={false}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </ProminentTabsContent>
+
+          <ProminentTabsContent value="lessons" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Lesson Plans for {selectedGrade}</CardTitle>
+                <CardDescription>Structured learning sequences with clear objectives</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {lessonPlans.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="mx-auto h-12 w-12 text-zinc-400 mb-4" />
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">No lesson plans available</h3>
+                    <p className="text-zinc-600 dark:text-zinc-400">Lesson plans for this grade will be added soon.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {lessonPlans.map((lesson) => (
+                      <Card key={lesson.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-xl">{lesson.subjects?.icon}</span>
+                                <h3 className="text-lg font-semibold">{lesson.title}</h3>
+                                <Badge variant="outline">{lesson.difficulty}</Badge>
+                              </div>
+                              <p className="text-zinc-600 dark:text-zinc-400 mb-3">{lesson.description}</p>
+                              <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{lesson.duration_minutes} min</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Target className="h-4 w-4" />
+                                  <span>{lesson.unit_title}</span>
+                                </div>
+                                {lesson.term && (
+                                  <Badge variant="secondary">{lesson.term} Week {lesson.week}</Badge>
                                 )}
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )
-                  })}
-              </div>
-
-              {subjects.filter(subject => subject.grade_levels.includes(selectedGrade)).length === 0 && (
-                <div className="text-center py-8">
-                  <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No subjects available</h3>
-                  <p className="text-gray-600">Subjects for this grade will be added soon.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </ProminentTabsContent>
-
-        <ProminentTabsContent value="path" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Route className="h-5 w-5 text-blue-600" />
-                Your Personalized Learning Path
-              </CardTitle>
-              <CardDescription>AI-powered recommendations based on your assessment and progress</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Next Best Lesson */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-green-600" />
-                  Next Best Lesson
-                </h3>
-
-                {nextBestLesson ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border-2 border-green-200 rounded-lg p-6 bg-gradient-to-r from-green-50 to-blue-50"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="text-2xl">
-                            {subjects.find(s => s.name === nextBestLesson.subject)?.icon || '📚'}
+                            </div>
+                            <Button
+                              onClick={() => startLessonPlan(lesson.id)}
+                              className="ml-4"
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Start Lesson
+                            </Button>
                           </div>
-                          <div>
-                            <h4 className="text-xl font-semibold">{nextBestLesson.title}</h4>
-                            <p className="text-sm text-gray-600">{nextBestLesson.subject} • {nextBestLesson.grade}</p>
-                          </div>
-                        </div>
-                        <p className="text-gray-700 mb-4">{nextBestLesson.reason}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <Badge variant="outline" className="capitalize">
-                            {nextBestLesson.estimatedDifficulty}
-                          </Badge>
-                          <span>Priority: {nextBestLesson.priority}/10</span>
-                        </div>
-                      </div>
-                      <Button
-                        size="lg"
-                        className="ml-6"
-                        onClick={() => {
-                          // Navigate to the lesson
-                          const subjectSlug = nextBestLesson.subject.toLowerCase().replace(/\s+/g, '-')
-                          router.push(`/learning/curriculum/${nextBestLesson.grade.toLowerCase().replace(' ', '-')}/${subjectSlug}/${nextBestLesson.lessonId}`)
-                        }}
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        Start This Lesson
-                      </Button>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="p-8 text-center">
-                      <Target className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                      <h4 className="font-semibold mb-2">No recommendations available</h4>
-                      <p className="text-gray-600 mb-4">
-                        Complete your grade assessment or start some lessons to get personalized recommendations.
-                      </p>
-                       <Button
-                         onClick={() => router.push('/learning/curriculum/assessment')}
-                         className="mr-2"
-                       >
-                         Take Assessment
-                       </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => router.push('/learning/curriculum')}
-                      >
-                        Browse Lessons
-                      </Button>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 )}
-              </div>
+              </CardContent>
+            </Card>
+          </ProminentTabsContent>
 
-              {/* Learning Path Overview */}
-              {learningPaths.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Your Active Learning Paths</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProminentTabsContent value="progress" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Learning Progress</CardTitle>
+                <CardDescription>Track your progress across different subjects</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {learningPaths.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="mx-auto h-12 w-12 text-zinc-400 mb-4" />
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">No active learning paths</h3>
+                    <p className="text-zinc-600 dark:text-zinc-400">Start a lesson plan to begin tracking your progress.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
                     {learningPaths.map((path) => (
                       <Card key={path.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <span className="text-xl">{path.subjects?.icon}</span>
-                            <div>
-                              <h4 className="font-semibold">{path.subjects?.name}</h4>
-                              <p className="text-sm text-gray-600">{path.current_grade}</p>
+                        <CardContent className="p-5">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xl">{path.subjects?.icon}</span>
+                              <div>
+                                <h3 className="font-semibold">{path.subjects?.name}</h3>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">{path.current_grade}</p>
+                              </div>
                             </div>
+                            <Badge variant={path.status === 'active' ? 'default' : 'secondary'}>
+                              {path.status}
+                            </Badge>
                           </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
@@ -725,137 +840,16 @@ export default function CurriculumPage() {
                             </div>
                             <Progress value={path.progress_percentage} className="w-full" />
                           </div>
-                          <Badge
-                            variant={path.status === 'active' ? 'default' : 'secondary'}
-                            className="mt-2"
-                          >
-                            {path.status}
-                          </Badge>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Recommendations */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Recommended Content</h3>
-                <Recommendations
-                  title=""
-                  subtitle="Based on your learning path and interests"
-                  limit={3}
-                  showScrollButtons={false}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </ProminentTabsContent>
-
-        <ProminentTabsContent value="lessons" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lesson Plans for {selectedGrade}</CardTitle>
-              <CardDescription>Structured learning sequences with clear objectives</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {lessonPlans.length === 0 ? (
-                <div className="text-center py-8">
-                  <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No lesson plans available</h3>
-                  <p className="text-gray-600">Lesson plans for this grade will be added soon.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {lessonPlans.map((lesson) => (
-                    <Card key={lesson.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <span className="text-xl">{lesson.subjects?.icon}</span>
-                              <h3 className="text-lg font-semibold">{lesson.title}</h3>
-                              <Badge variant="outline">{lesson.difficulty}</Badge>
-                            </div>
-                            <p className="text-gray-600 mb-3">{lesson.description}</p>
-                            <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{lesson.duration_minutes} min</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Target className="h-4 w-4" />
-                                <span>{lesson.unit_title}</span>
-                              </div>
-                              {lesson.term && (
-                                <Badge variant="secondary">{lesson.term} Week {lesson.week}</Badge>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => startLessonPlan(lesson.id)}
-                            className="ml-4"
-                          >
-                            <Play className="h-4 w-4 mr-2" />
-                            Start Lesson
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </ProminentTabsContent>
-
-        <ProminentTabsContent value="progress" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Learning Progress</CardTitle>
-              <CardDescription>Track your progress across different subjects</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {learningPaths.length === 0 ? (
-                <div className="text-center py-8">
-                  <Star className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No active learning paths</h3>
-                  <p className="text-gray-600">Start a lesson plan to begin tracking your progress.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {learningPaths.map((path) => (
-                    <Card key={path.id}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-xl">{path.subjects?.icon}</span>
-                            <div>
-                              <h3 className="font-semibold">{path.subjects?.name}</h3>
-                              <p className="text-sm text-gray-600">{path.current_grade}</p>
-                            </div>
-                          </div>
-                          <Badge variant={path.status === 'active' ? 'default' : 'secondary'}>
-                            {path.status}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Progress</span>
-                            <span>{path.progress_percentage}%</span>
-                          </div>
-                          <Progress value={path.progress_percentage} className="w-full" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </ProminentTabsContent>
-      </ProminentTabs>
+                )}
+              </CardContent>
+            </Card>
+          </ProminentTabsContent>
+        </ProminentTabs>
+      </div>
     </div>
-  </>
-)
+  )
 }

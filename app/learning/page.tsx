@@ -141,16 +141,16 @@ export default function LearningPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+      <main className="py-8 px-5 md:px-8 pb-20 md:pb-8">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <GraduationCap className="h-8 w-8 text-zinc-700 dark:text-zinc-300" />
+          <div className="flex items-center gap-3 mb-1">
+            <GraduationCap className="h-7 w-7 text-zinc-700 dark:text-zinc-300" />
             <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Your Learning Journey</h1>
           </div>
-          <p className="text-muted-foreground mb-10 max-w-2xl">Personalized path + formal course recommendations built from your discovery searches, questions, and AI chat history.</p>
+          <p className="text-muted-foreground mb-8 max-w-2xl">Personalized path + recommendations from your discoveries and chats.</p>
 
-          {/* Search & Question History — now titles + drill-down + pagination */}
-          <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900 mb-8">
+          {/* Search & Question History */}
+          <Card className="border-0 shadow-sm bg-white dark:bg-zinc-900 mb-7">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
                 <Search className="h-5 w-5" />
@@ -158,18 +158,18 @@ export default function LearningPage() {
               </CardTitle>
               <CardDescription>
                 {savedQueries.length > 0 
-                  ? `Using your ${savedQueries.length} explorations to build a personalized experience • Click any title to drill down` 
-                  : 'These drive your personalized recommendations (powered by your discovery data and chatlogs)'}
+                  ? `Using your ${savedQueries.length} explorations • Click titles to expand` 
+                  : 'Start exploring in Discover — your questions build this path.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {savedQueries.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {paginatedHistory.map((query) => (
                     <div 
                       key={query.id}
                       onClick={() => setExpandedHistoryId(expandedHistoryId === query.id ? null : query.id)}
-                      className="border border-zinc-100 dark:border-zinc-800 rounded-3xl p-5 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all active:scale-[0.995]"
+                      className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -180,9 +180,9 @@ export default function LearningPage() {
                       </div>
 
                       {expandedHistoryId === query.id && (
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                          <p className="text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Full question</p>
-                          <p className="font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">{query.fullQuestion}</p>
+                        <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                          <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">FULL QUESTION</p>
+                          <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">{query.fullQuestion}</p>
                         </div>
                       )}
                     </div>

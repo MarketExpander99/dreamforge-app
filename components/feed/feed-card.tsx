@@ -54,13 +54,13 @@ export default function FeedCard({ id, title, type, description }: FeedCardProps
   };
 
   return (
-    <Card className="w-full border border-zinc-200 dark:border-zinc-700 hover:shadow-md transition-all">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-lg flex justify-between">
+        <CardTitle className="text-base flex justify-between items-center">
           {title}
-          <span className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">{type}</span>
+          <span className="text-[10px] px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-full font-medium">{type}</span>
         </CardTitle>
-        <p className="text-sm text-zinc-500">{description}</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{description}</p>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
         <Button 
@@ -69,23 +69,23 @@ export default function FeedCard({ id, title, type, description }: FeedCardProps
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700"
         >
-          ✅ Mark as Complete + Save
+          ✅ Mark as Complete
         </Button>
 
         {type === 'quiz' && (
           <>
             <Button variant="outline" size="sm" onClick={() => handleTestAnswer(true)} disabled={loading}>
-              ✅ Right Answer
+              ✅ Right
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleTestAnswer(false)} disabled={loading}>
-              ❌ Wrong Answer
+              ❌ Wrong
             </Button>
           </>
         )}
 
         {type === 'ai-chat' && (
           <Button variant="secondary" size="sm" onClick={handleAIChatDone} disabled={loading}>
-            💬 Finish AI Chat Session
+            💬 Finish Chat
           </Button>
         )}
 
@@ -94,10 +94,10 @@ export default function FeedCard({ id, title, type, description }: FeedCardProps
           size="sm"
           onClick={() => window.alert('Opened in full learning view (placeholder)')}
         >
-          View Full
+          View
         </Button>
       </CardContent>
-      <p className="px-6 pb-4 text-[10px] text-zinc-400">Progress now writes live • Check Supabase user_progress</p>
+      <p className="px-5 pb-4 text-[10px] text-zinc-400">Progress saved to Supabase</p>
     </Card>
   );
 }

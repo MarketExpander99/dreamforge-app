@@ -3,15 +3,18 @@
 
 @layer base {
   :root {
-    /* High contrast light theme - WCAG AA compliant */
+    /* Windows 10 inspired professional calm palette */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+
+    /* Win10 blue accent (close to #0078D4) */
+    --primary: 207 90% 42%;
+    --primary-foreground: 0 0% 100%;
+
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
@@ -22,11 +25,11 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --ring: 207 90% 42%;
+    --radius: 0.375rem; /* Win10 style, slightly tighter */
 
-    /* Educational color palette */
-    --educational-blue: 221.2 83.2% 53.3%;
+    /* Educational accent palette (kept harmonious) */
+    --educational-blue: 207 90% 42%;
     --educational-green: 142.1 76.2% 36.3%;
     --educational-purple: 262.1 83.3% 57.8%;
     --educational-orange: 25.7 95% 53.1%;
@@ -35,18 +38,28 @@
     --font-primary: 'Inter', system-ui, sans-serif;
     --font-heading: 'Space Grotesk', var(--font-primary);
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* 8px grid + Fibonacci / Golden-ratio inspired spacing scale */
+    --space-8: 0.5rem;     /* 8px base */
+    --space-13: 0.8125rem; /* ~13px */
+    --space-21: 1.3125rem; /* ~21px */
+    --space-34: 2.125rem;  /* ~34px */
+    --space-55: 3.4375rem; /* ~55px */
   }
 
   .dark {
-    /* High contrast dark theme */
-    --background: 222.2 84% 4.9%;
+    /* Calm professional dark (Windows 10 style) - zinc dominant for cohesion with layout */
+    --background: 222 13% 8%;   /* near zinc-950 */
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222 13% 11%;        /* zinc-900-ish */
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 13% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+
+    /* Win10 blue for dark mode accent */
+    --primary: 207 90% 52%;
+    --primary-foreground: 0 0% 100%;
+
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -57,20 +70,20 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 207 90% 52%;
   }
 }
 
 @layer base {
   * {
-    @apply border-gray-200 dark:border-gray-800;
+    @apply border-gray-200 dark:border-zinc-800;
   }
 
   body {
     font-family: var(--font-primary);
     font-feature-settings: "kern" 1, "liga" 1;
     line-height: 1.65;
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    @apply bg-white dark:bg-zinc-950 text-gray-900 dark:text-zinc-100;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -84,17 +97,27 @@
   h3 { @apply text-2xl sm:text-3xl; }
 }
 
-/* Enhanced Cards & Components */
+/* Windows 10 calm card system + golden-ratio friendly rhythm */
 @layer components {
   .card {
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+  }
+
+  .dark .card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
   }
 
   .card:hover {
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
-    transform: translateY(-2px);
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.06), 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.12);
+  }
+
+  .dark .card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -110,5 +133,12 @@
 
   .text-body-lg {
     @apply text-lg leading-relaxed;
+  }
+}
+
+/* Golden-ratio & 8px-grid helpers (use via class when possible) */
+@layer utilities {
+  .space-fib {
+    gap: var(--space-21);
   }
 }

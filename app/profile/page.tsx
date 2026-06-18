@@ -220,19 +220,19 @@ export default function ProfilePage() {
   const hasRecentActivity = userProfile.recentActivity && userProfile.recentActivity.length > 0
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <main className="py-8 px-5 md:px-8 pb-20 md:pb-8">
         <div className="max-w-5xl mx-auto">
 
           {/* Hero Header */}
-          <div className="mb-10">
-            <Card className="border-0 shadow-sm overflow-hidden bg-white dark:bg-zinc-900 rounded-3xl">
-              <CardContent className="p-8">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div className="mb-8">
+            <Card className="border-0 shadow-sm overflow-hidden bg-white dark:bg-zinc-900 rounded-2xl">
+              <CardContent className="p-6 md:p-7">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8">
                   <div className="relative group">
-                    <Avatar className="h-32 w-32 border-4 border-white dark:border-zinc-800 shadow-xl">
+                    <Avatar className="h-28 w-28 border-[3px] border-white dark:border-zinc-800 shadow">
                       <AvatarImage src={userProfile.avatar} alt={userProfile.fullName} />
-                      <AvatarFallback className="text-4xl bg-gradient-to-br from-amber-400 to-emerald-500 text-white">
+                      <AvatarFallback className="text-3xl bg-gradient-to-br from-amber-400 to-emerald-500 text-white">
                         {userProfile.fullName?.[0] || '👤'}
                       </AvatarFallback>
                     </Avatar>

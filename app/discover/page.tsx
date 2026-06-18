@@ -7,7 +7,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
-import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -453,7 +452,6 @@ export default function DiscoverPage() {
   if (isCheckingAuth || !isSessionReady) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
-        <Navigation />
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -461,30 +459,29 @@ export default function DiscoverPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <Navigation />
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 w-full">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 py-8 w-full">
+        <div className="flex items-center justify-between mb-7">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Discover</h1>
-            <p className="text-muted-foreground">Personalized lessons • Adapted to your level • Earn XP as you learn</p>
+            <p className="text-muted-foreground mt-1">Personalized lessons • Adapted to your level</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-muted px-5 py-3 rounded-3xl">
-              <CreditCard className="h-5 w-5 text-emerald-600" />
-              <span className="font-semibold text-2xl">{credits}</span>
-              <span className="text-sm text-muted-foreground">credits</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-xl text-sm">
+              <CreditCard className="h-4 w-4 text-emerald-600" />
+              <span className="font-semibold tabular-nums">{credits}</span>
+              <span className="text-xs text-muted-foreground">credits</span>
             </div>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <Crown className="h-4 w-4" /> Buy Credits
             </Button>
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-4 mb-10">
-          <Input ref={searchInputRef} placeholder="Search anything... (bees, starship heat shield, fractions...)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()} className="py-7 text-lg w-full" />
+        <div className="max-w-2xl mx-auto space-y-3 mb-8">
+          <Input ref={searchInputRef} placeholder="Search anything... (bees, starship heat shield, fractions...)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()} className="py-5 text-base w-full" />
           <div className="flex gap-3">
             <Button onClick={exploreNormal} disabled={isLoading} className="flex-1">
-              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Get Lesson'}
+              {isLoading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Get Lesson'}
             </Button>
             <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1">Deep Lesson</Button>
           </div>
@@ -512,21 +509,29 @@ export default function DiscoverPage() {
           </div>
         ) : centerNode ? (
           <Card className="w-full">
-            <CardHeader><CardTitle className="text-3xl">{centerNode.label}</CardTitle></CardHeader>
-            <CardContent className="space-y-8 p-8">
-              <div><h4 className="font-semibold mb-2">Lesson Introduction</h4><p className="text-lg leading-relaxed break-words">{centerNode.short_description}</p></div>
-              <div><h4 className="font-semibold mb-2">Learning Objective</h4><p className="text-lg break-words">{centerNode.main_function}</p></div>
+            <CardHeader>
+              <CardTitle className="text-2xl">{centerNode.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-5">
+              <div>
+                <h4 className="font-semibold mb-1.5 text-sm tracking-wide text-zinc-500 dark:text-zinc-400">LESSON INTRODUCTION</h4>
+                <p className="text-[15px] leading-relaxed break-words">{centerNode.short_description}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1.5 text-sm tracking-wide text-zinc-500 dark:text-zinc-400">LEARNING OBJECTIVE</h4>
+                <p className="text-[15px] break-words">{centerNode.main_function}</p>
+              </div>
 
               {centerNode.deep_details && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 p-6 rounded-2xl">
-                  <h4 className="font-semibold mb-3 text-emerald-700 dark:text-emerald-300">Full Lesson Content</h4>
-                  <div className="text-emerald-800 dark:text-emerald-200 whitespace-pre-wrap prose dark:prose-invert">{centerNode.deep_details}</div>
+                <div className="bg-emerald-50/70 dark:bg-emerald-950/60 p-5 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                  <h4 className="font-semibold mb-2 text-sm text-emerald-700 dark:text-emerald-300">FULL LESSON</h4>
+                  <div className="text-emerald-900 dark:text-emerald-100 whitespace-pre-wrap text-[15px] leading-relaxed">{centerNode.deep_details}</div>
                 </div>
               )}
 
               {centerNode.self_similar?.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3">Related Lessons</h4>
+                  <h4 className="font-semibold mb-2 text-sm tracking-wide text-zinc-500 dark:text-zinc-400">RELATED LESSONS</h4>
                   <div className="flex flex-wrap gap-2">
                     {centerNode.self_similar.map((item, i) => (
                       <Button key={i} variant="outline" size="sm" onClick={() => { setSearchQuery(item); callGrok(item, false); }}>{item}</Button>
@@ -536,7 +541,7 @@ export default function DiscoverPage() {
               )}
 
               <div>
-                <h4 className="font-semibold mb-3">Key Concepts &amp; Steps</h4>
+                <h4 className="font-semibold mb-2 text-sm tracking-wide text-zinc-500 dark:text-zinc-400">KEY CONCEPTS</h4>
                 <div className="flex flex-wrap gap-2">
                   {centerNode.components.map((comp, i) => (
                     <Button key={i} variant="outline" size="sm" onClick={() => handleComponentClick(comp)}>{comp}</Button>
@@ -544,32 +549,32 @@ export default function DiscoverPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-6 border-t">
+              <div className="flex gap-3 pt-5 border-t border-zinc-200 dark:border-zinc-800">
                 <Button variant="outline" className="gap-2 flex-1" onClick={viewDiveDeeper}>
                   <BookOpen className="h-4 w-4" /> Dive Deeper
                 </Button>
                 <Button variant="outline" className="gap-2 flex-1" onClick={handleAddToLearningPath} disabled={isAddingToPath}>
-                  {isAddingToPath ? <><Loader2 className="h-4 w-4 animate-spin" /> Building...</> : <><Plus className="h-4 w-4" /> Add to Learning Path</>}
+                  {isAddingToPath ? <><Loader2 className="h-4 w-4 animate-spin" /> Building...</> : <><Plus className="h-4 w-4" /> Add to Path</>}
                 </Button>
               </div>
 
-              <div className="pt-8 border-t">
-                <div className="flex items-center gap-3 mb-6">
-                  <h3 className="text-3xl font-semibold tracking-tight">Ask Grok</h3>
+              <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-xl font-semibold tracking-tight">Ask Grok</h3>
                 </div>
-                <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 max-h-72 overflow-y-auto mb-4 space-y-3">
-                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-4">Ask anything about this lesson...</p>}
+                <div className="bg-zinc-50 dark:bg-zinc-950 rounded-xl p-4 max-h-64 overflow-y-auto mb-3 space-y-2 text-sm">
+                  {chatMessages.length === 0 && <p className="text-muted-foreground text-center py-3">Ask anything about this lesson...</p>}
                   {chatMessages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white dark:bg-zinc-800 border'}`}>
+                      <div className={`max-w-[82%] px-3.5 py-2 rounded-xl ${msg.role === 'user' ? 'bg-[#0078D4] text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'}`}>
                         {msg.content}
                       </div>
                     </div>
                   ))}
-                  {isChatLoading && <div className="flex justify-start"><div className="px-4 py-3 bg-white dark:bg-zinc-800 border rounded-2xl flex items-center gap-3"><Loader2 className="h-4 w-4 animate-spin" /> Thinking...</div></div>}
+                  {isChatLoading && <div className="flex justify-start"><div className="px-3.5 py-2 bg-white dark:bg-zinc-900 border rounded-xl flex items-center gap-2 text-sm"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking...</div></div>}
                 </div>
                 <div className="flex gap-2">
-                  <Input placeholder="Ask anything about this lesson..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()} disabled={isChatLoading} />
+                  <Input placeholder="Ask anything..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isChatLoading && sendChatMessage()} disabled={isChatLoading} />
                   <Button onClick={sendChatMessage} disabled={isChatLoading}>Send</Button>
                 </div>
               </div>

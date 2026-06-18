@@ -14,8 +14,8 @@ const ProminentTabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "flex h-12 items-stretch p-1 rounded-xl bg-gray-100 dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700",
-      // Mobile: allow horizontal scrolling, Desktop: flex-nowrap
+      // Calm Win10 style prominent tabs — 8px grid foundation
+      "flex h-11 items-stretch p-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800",
       "sm:flex-nowrap",
       className
     )}
@@ -31,8 +31,8 @@ const ProminentTabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "box-border flex flex-1 items-center justify-center min-w-[140px] whitespace-nowrap rounded-lg px-6 py-3.5 text-base font-bold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=active]:shadow-xl data-[state=active]:border-2 data-[state=active]:border-current data-[state=active]:ring-2 data-[state=active]:ring-current/30 data-[state=active]:ring-offset-2 data-[state=active]:ring-offset-background hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] touch-manipulation",
-      // Mobile: ensure touch targets are adequate
+      // Fib-friendly padding + no aggressive scale. Clean active state.
+      "box-border flex flex-1 items-center justify-center min-w-[140px] whitespace-nowrap rounded-md px-5 py-2 text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0078D4] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-[#0078D4] data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-[#006CB8] hover:bg-zinc-200 dark:hover:bg-zinc-800 active:scale-[0.985] touch-manipulation",
       className
     )}
     {...props}
@@ -47,7 +47,7 @@ const ProminentTabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2",
+      "mt-5 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0078D4] focus-visible:ring-offset-2",
       className
     )}
     {...props}

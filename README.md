@@ -166,7 +166,8 @@ npm run lint     # Run ESLint
 - **[TESTING_INSTRUCTIONS_SPRINT2.md](./TESTING_INSTRUCTIONS_SPRINT2.md)** - Comprehensive testing guide
 - **[BUTTON_AUDIT_RESULTS.md](./BUTTON_AUDIT_RESULTS.md)** - QA audit results and test coverage
 - **[supabase-schema.sql](./supabase-schema.sql)** - Complete database schema
-- **[AGENTS.md](./AGENTS.md)** - Development guidelines and rules
+- **[.clinerules/](./.clinerules/)** - **Authoritative agent & developer rules** (01-project-rules through 07-build-enforcement). This is the compass for all work.
+- **[AGENTS.md](./AGENTS.md)** - Development guidelines and entry point (points to .clinerules)
 
 ## 🎯 Project Goals
 
@@ -179,7 +180,16 @@ Skill Gain aims to provide an engaging, personalized learning experience that:
 
 ## 🤝 Contributing
 
-This project follows standard Next.js and TypeScript development practices. See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for current development guidelines and next steps.
+This project is built following the strict workflow defined in the **[.clinerules/](./.clinerules/)** folder:
+
+- Scan relevant files first
+- Deliver complete files only
+- Always run `npm run build` + relevant tests after changes
+- Stay strictly in scope
+- Start responses with `✅ Repo scanned` (for agents)
+- Never modify database schema without explicit approval
+
+See [AGENTS.md](./AGENTS.md) and the `.clinerules/` files for the full rules. See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for task history and current guidelines.
 
 ## 📄 License
 

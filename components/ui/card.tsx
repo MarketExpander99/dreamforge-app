@@ -9,12 +9,10 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Base card styling - consistent across all cards
-      "rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100",
-      // Border and shadow - consistent design system
-      "border-gray-200 dark:border-gray-700 shadow-sm",
-      // Hover effects - subtle and consistent
-      "transition-shadow duration-200 hover:shadow-md",
+      // Calm Windows 10 style card — 8px grid + subtle depth
+      "rounded-xl border bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100",
+      "border-zinc-200 dark:border-zinc-800 shadow-sm",
+      "transition-all duration-150",
       className
     )}
     {...props}
@@ -28,7 +26,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-1.5 p-5", className)}
     {...props}
   />
 ))
@@ -41,7 +39,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-xl font-semibold leading-none tracking-tight",
       className
     )}
     {...props}
@@ -65,7 +63,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-5 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -75,7 +73,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    className={cn("flex items-center p-5 pt-0", className)}
     {...props}
   />
 ))

@@ -5,37 +5,40 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0078D4] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.985]",
   {
     variants: {
       variant: {
-        // Primary Action Buttons (Save, Create, Submit, Approve)
-        default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md",
-        primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md", // Alias for default
+        // Primary — Windows 10 blue (#0078D4 inspired), calm & trustworthy
+        default: "bg-[#0078D4] text-white hover:bg-[#006CB8] shadow-sm active:bg-[#005A9E]",
+        primary: "bg-[#0078D4] text-white hover:bg-[#006CB8] shadow-sm active:bg-[#005A9E]",
 
-        // Success Actions
-        success: "bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md",
+        // Success
+        success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
 
-        // Secondary Actions
-        secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 shadow-sm hover:shadow-md",
+        // Secondary calm
+        secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 shadow-sm",
 
-        // Outline/Secondary Actions
-        outline: "border border-gray-300 bg-white hover:bg-gray-50 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 shadow-sm hover:shadow-md",
+        // Outline — crisp Win10 feel
+        outline: "border border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-100 shadow-sm",
 
-        // Cancel/Close/Delete/Reject Actions
-        ghost: "hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100",
-        danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md", // Alias for danger
+        // Ghost — minimal
+        ghost: "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
 
-        // Special cases
-        link: "text-blue-600 underline-offset-4 hover:underline p-0 h-auto",
+        // Danger
+        danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+
+        // Link
+        link: "text-[#0078D4] underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        default: "h-11 px-4 py-2 min-h-[44px]", // Enhanced for mobile touch targets
-        sm: "h-10 rounded-md px-3 text-sm min-h-[40px]",
-        lg: "h-12 rounded-lg px-8 text-base min-h-[48px]",
-        xl: "h-14 rounded-lg px-10 text-lg min-h-[52px]",
-        icon: "h-11 w-11 min-h-[44px] min-w-[44px]", // Square touch targets
+        // 8px grid + touch friendly. Default uses Fibonacci-friendly 40px height
+        default: "h-10 px-5 py-2 min-h-[40px]",
+        sm: "h-9 rounded-md px-3.5 text-sm min-h-[36px]",
+        lg: "h-11 rounded-md px-6 text-base min-h-[44px]",
+        xl: "h-12 rounded-md px-8 text-base min-h-[48px]",
+        icon: "h-10 w-10 min-h-[40px] min-w-[40px]",
       },
     },
     defaultVariants: {
