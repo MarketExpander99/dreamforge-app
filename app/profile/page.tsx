@@ -380,13 +380,47 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Active Learning Path Snapshot (Phase 3) — real data from learning_paths + clear CTA to /learning */}
+              {/* Recent Activity — real data from user_progress (previously defined in type + API but never rendered) */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Recent Activity
+                  </CardTitle>
+                  <CardDescription>Latest learning actions pulled directly from your progress records.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {userProfile.recentActivity && userProfile.recentActivity.length > 0 ? (
+                    <div className="space-y-3">
+                      {userProfile.recentActivity.map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="flex items-center justify-between border border-zinc-100 dark:border-zinc-800 rounded-2xl px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">{activity.action} · {activity.title}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground shrink-0 tabular-nums ml-3">
+                            {activity.timestamp}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4">
+                      No recent activity yet. Start exploring or completing lessons to see your history here.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Learning Path Snapshot — strictly real data from learning_paths table or clean placeholder */}
               <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
                       <Lightbulb className="h-5 w-5" />
-                      Active Learning Path
+                      Learning Path
                     </CardTitle>
                     <Button
                       variant="outline"
@@ -398,11 +432,11 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                   <CardDescription>
-                    Your current personalized path. Continue where you left off.
+                    Your current personalized path from Discover activity. Real data only.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {userProfile.activeLearningPath ? (
+                  {userProfile.activeLearningPath && userProfile.activeLearningPath.title ? (
                     <div className="space-y-3">
                       <div>
                         <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -415,7 +449,6 @@ export default function ProfilePage() {
                         )}
                       </div>
 
-                      {/* Snapshot of first steps — matches clean card style from Learning page */}
                       {userProfile.activeLearningPath.steps && userProfile.activeLearningPath.steps.length > 0 ? (
                         <div className="space-y-2 pt-1">
                           {userProfile.activeLearningPath.steps.map((step, index) => (
@@ -443,7 +476,7 @@ export default function ProfilePage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Path details available in your Learning area.</p>
+                        <p className="text-sm text-muted-foreground">Path steps will appear here when generated.</p>
                       )}
 
                       {userProfile.activeLearningPath.updatedAt && (
@@ -455,7 +488,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="py-6 text-center">
                       <p className="text-sm text-muted-foreground mb-3">
-                        No active path yet. Explore topics in Discover to generate a personalized learning path.
+                        No learning path yet. Generate one from your saved searches on the Learning page.
                       </p>
                       <Button variant="outline" size="sm" onClick={() => router.push('/learning')}>
                         Go to Learning
@@ -465,22 +498,28 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Category Progress */}
+              {/* Subject / Category Progress — real from RPC on user_progress + content. Guarded for empty. */}
               <Card className="border-0 shadow-sm">
                 <CardHeader>
                   <CardTitle>Subject Progress</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {userProfile.categoryProgress.map((cat, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>{cat.category}</span>
-                        <span className="font-medium">{cat.progress}%</span>
+                  {userProfile.categoryProgress && userProfile.categoryProgress.length > 0 ? (
+                    userProfile.categoryProgress.map((cat, i) => (
+                      <div key={i}>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>{cat.category}</span>
+                          <span className="font-medium">{cat.progress}%</span>
+                        </div>
+                        <Progress value={cat.progress} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1">{cat.completed}/{cat.total} completed</p>
                       </div>
-                      <Progress value={cat.progress} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">{cat.completed}/{cat.total} completed</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">
+                      Subject progress will appear here as you complete lessons across categories.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -542,7 +581,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            {/* Achievements Tab — beautiful rewarding wall from real user_achievements + definitions */}
+            {/* Achievements Tab — real earned records from user_achievements joined with definitions for full wall view (locked shown as coming goals) */}
             <TabsContent value="achievements" className="mt-8">
               {(() => {
                 const definitions = userProfile.achievementDefinitions || []

@@ -22,25 +22,26 @@ function calculateCurrentStreak(progressRows: any[]): number {
 
   const sortedDays = Array.from(dayKeys).sort((a, b) => b.localeCompare(a)) // newest first
 
+  const mostRecentKey = sortedDays[0]
+  const mostRecentDate = new Date(mostRecentKey + 'T00:00:00')
+
   const today = new Date()
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayDate = new Date(todayKey + 'T00:00:00')
 
-  // If most recent activity is more than 1 day old (not today or yesterday), streak is 0
-  const mostRecentKey = sortedDays[0]
-  const mostRecentDate = new Date(mostRecentKey)
-  const todayDate = new Date(todayKey)
   const diffDays = Math.floor((todayDate.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24))
+  // Allow today (0) or yesterday (1). Anything older = streak broken.
   if (diffDays > 1) return 0
 
-  // Walk backwards counting consecutive days
-  let streak = 0
-  let cursor = new Date(todayDate)
+  // Count consecutive days starting from the most recent activity day (fixes streak=0 when last activity = yesterday)
+  let streak = 1
+  let cursor = new Date(mostRecentDate)
 
-  for (let i = 0; i < sortedDays.length; i++) {
+  for (let i = 1; i < sortedDays.length; i++) {
+    cursor.setDate(cursor.getDate() - 1)
     const expectedKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
     if (sortedDays[i] === expectedKey) {
       streak += 1
-      cursor.setDate(cursor.getDate() - 1)
     } else {
       break
     }
