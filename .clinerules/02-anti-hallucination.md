@@ -1,10 +1,12 @@
-# Anti-Hallucination & Verification Rules
+# Verification & Accuracy Rules
 
-You MUST verify every change. Never guess.
+Every change must be properly verified before marking a task as complete. This protects the project and ensures your work earns Creative Freedom.
 
-- Before saying a task is done, you must have run `npm run build` and confirmed it succeeds.
-- For any UI/component change, also run the relevant Playwright test(s).
-- Always include the exact terminal output of the build/test in your response.
-- If any error appears (syntax, TypeScript, build, console), you have NOT finished — continue fixing until zero errors.
-- Never say “it works” or “complete” unless you have verified it yourself.
-- If you cannot run a test because of missing env vars, tell me exactly what is needed instead of pretending.
+Requirements:
+- Always run `npm run build` after changes and include the output.
+- For UI or component changes, also run the relevant Playwright tests.
+- If errors appear, continue fixing until the build is clean and tests pass.
+- Only say a task is complete once you have personally verified it with a successful build and passing tests.
+- If you cannot run tests due to missing environment variables, clearly state what is needed.
+
+Verification is how we keep quality high and how you earn the right to creative time afterward.

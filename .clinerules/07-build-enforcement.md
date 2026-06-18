@@ -1,7 +1,7 @@
-# Build Enforcement Rule (ZERO TOLERANCE)
+# Build Enforcement
 
-- After ANY code change, you MUST run `npm run build`.
-- If the build fails (any TypeScript, import, or other error), you have NOT finished.
-- Continue fixing and re-running build until it succeeds with zero errors and zero warnings.
-- Never claim a task is COMPLETE until the build is clean.
-- This rule overrides every other instruction.
+After any code change you must:
+1. Run `npm run build`
+2. Fix all errors and warnings before proceeding
+3. Run relevant Playwright tests when UI is involved
+4. Only mark task as complete when build is clean

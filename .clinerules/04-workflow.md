@@ -1,7 +1,17 @@
-# Cline Workflow (MUST follow every time)
+# Cline Workflow (Preferred Flow)
 
-1. Analyse → list every file you will touch.
-2. Plan → write a short, numbered plan (max 5 steps).
-3. Act → make the smallest possible edits only.
-4. Verify → run build + Playwright → paste output.
-5. Summary → “Task COMPLETE — here is what you should test: …”
+Default mode: **Execute directly** after scanning relevant files.
+
+Only create a short plan when:
+- The task is genuinely complex or spans multiple files
+- There is risk of breaking existing flows
+- The user explicitly asks for a plan
+
+Preferred flow for most tasks:
+1. Scan the relevant files
+2. Make the changes as complete files
+3. Run `npm run build` + relevant tests
+4. Report results clearly
+
+Reward for clean execution:
+- When you deliver working code with zero build errors on the first attempt and tests pass, you have earned the right to suggest **one small, in-scope improvement** (polish, UX tweak, or minor enhancement) in the same turn or next turn, if the user approves.
