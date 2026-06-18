@@ -32,6 +32,30 @@ Return ONLY a valid JSON array with this exact structure:
   }
 ]`;
 
+// Exact prompt from Skill Gain Q&A spec (Phase 1)
+// Used to generate topic-true micro-quizzes. NEVER meta.
+export const MICRO_QUIZ_PROMPT = (topic: string, content_summary: string) => `You are an expert micro-quiz creator for high-school and early-college learners.
+
+Topic: ${topic}
+Lesson content summary: ${content_summary}
+
+Create ONE clear, specific question that tests whether the learner understood a KEY concept or fact from the content above.
+Rules:
+- The question must be DIRECTLY about the educational topic.
+- NEVER ask about the card itself, the UI, "the purpose of this card", or anything meta.
+- Use precise, age-appropriate language.
+- Prefer 4-option multiple choice when natural. Otherwise make it short-answer.
+- Also provide the correct answer, a 1-2 sentence explanation, and difficulty.
+
+Output ONLY valid minified JSON (no markdown, no extra text):
+{
+  "question": "string",
+  "options": ["A) ...", "B) ...", "C) ...", "D) ..."] | null,
+  "correctAnswer": "string or letter",
+  "explanation": "string",
+  "difficulty": "easy" | "medium" | "hard"
+}`;
+
 export const NEXT_CARD_PROMPT = (completedTitle: string, topic: string, difficulty: number) => 
 `The student just completed: "${completedTitle}" (difficulty ${difficulty}).
 

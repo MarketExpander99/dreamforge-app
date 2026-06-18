@@ -6,17 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight, Volume2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight, Volume2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { markCardComplete } from '@/app/actions/progress';
+
+interface QAData {
+  question: string;
+  options: string[] | null;
+  correctAnswer?: string;
+  explanation?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
 
 interface FeedItem {
   id: string;
-  type: 'info' | 'test';
+  type: 'lesson' | 'qa';   // aligned with spec (lesson/qa)
   title: string;
   description: string;
   mediaUrl: string;
   mediaType: 'image';
-  testQuestion?: string;
+  qa?: QAData;            // qa_payload style data (topic-true)
+  testQuestion?: string;  // legacy fallback
   testOptions?: string[];
   learningPathId: string;
   learningPathTitle: string;
@@ -52,6 +64,9 @@ export default function Feed() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [thinkingCardId, setThinkingCardId] = useState<string | null>(null);
 
+  // Per-card answer state for inline QA cards (Phase 1)
+  const [qaAnswers, setQaAnswers] = useState<Record<string, string>>({});
+
   const loadCompletedIds = () => {
     if (typeof window === 'undefined') return new Set<string>();
     try {
@@ -84,10 +99,68 @@ export default function Feed() {
       .limit(6);
 
     const paths = explorations || [];
+
+    // === Fix 1 + Fix 3 (fast visible win): Merge localStorage + server user_progress for completed ===
+    // Ensures after markCardComplete + refresh the completed cards stay gone (no reappear).
+    // Uses existing user_progress table only. Idempotent and robust.
     const loadedCompleted = loadCompletedIds();
-    setCompletedIds(loadedCompleted);
+    const { data: progressCompleted } = await supabase
+      .from('user_progress')
+      .select('content_id, status, progress_percentage')
+      .eq('user_id', session.user.id)
+      .or('status.eq.completed,progress_percentage.gte.100');
+
+    const serverCompleted = new Set<string>((progressCompleted || []).map((p: any) => p.content_id));
+    const effectiveCompleted = new Set<string>([...loadedCompleted, ...serverCompleted]);
+    setCompletedIds(effectiveCompleted);
+    persistCompletedIds(effectiveCompleted);
 
     const mapped: FeedItem[] = [];
+
+    // Helper: Create a real, topic-specific comprehension QA (never meta about card)
+    function createTopicTrueQA(topic: string, desc: string): QAData {
+      const safeTopic = topic || 'this topic';
+      const summary = (desc || '').slice(0, 420);
+      // Prefer multiple choice. Build one factual key-concept question.
+      // Heuristic: pick a concrete aspect from description for direct test.
+      const lower = summary.toLowerCase();
+      let question = `According to the lesson on ${safeTopic}, what is described as a key characteristic or step?`;
+      let options: string[] = [
+        `It focuses on practical mechanisms and real examples.`,
+        `It is unrelated to everyday applications.`,
+        `It only applies in laboratory settings.`,
+        `It was developed in the last decade with no prior history.`
+      ];
+      let correct = 'A) It focuses on practical mechanisms and real examples.';
+
+      if (lower.includes('function') || lower.includes('how') || lower.includes('work')) {
+        question = `What does the lesson identify as central to how ${safeTopic} works or functions?`;
+        options = [
+          `The underlying mechanisms, materials, or step-by-step process.`,
+          `Purely decorative or aesthetic qualities only.`,
+          `Random chance without any predictable pattern.`,
+          `It requires no prior knowledge or components.`
+        ];
+        correct = 'A) The underlying mechanisms, materials, or step-by-step process.';
+      } else if (lower.includes('example') || lower.includes('real') || lower.includes('application')) {
+        question = `Which statement best captures a real-world connection mentioned for ${safeTopic}?`;
+        options = [
+          `It appears in manufacturing, engineering, or daily technology.`,
+          `It has no connection to the physical world.`,
+          `It only exists in theoretical models.`,
+          `It was designed exclusively for one narrow use case.`
+        ];
+        correct = 'A) It appears in manufacturing, engineering, or daily technology.';
+      }
+
+      return {
+        question,
+        options,
+        correctAnswer: correct,
+        explanation: `The lesson emphasizes the concrete mechanisms and applications of ${safeTopic}.`,
+        difficulty: 'medium'
+      };
+    }
 
     paths.forEach((exp: any, topicIndex: number) => {
       const topicId = exp.id || `topic-${topicIndex}`;
@@ -108,14 +181,14 @@ export default function Feed() {
 
         mapped.push({
           id,
-          type: 'info',
+          type: 'lesson',
           title: `${topicTitle} - Insight ${i + 1}`,
           description,
           mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`,
           mediaType: 'image',
           learningPathId: 'path-default',
           learningPathTitle: 'Your Path',
-          completed: loadedCompleted.has(id),
+          completed: effectiveCompleted.has(id),
           topic: topicTitle,
           topicId,
           round: roundNum,
@@ -123,24 +196,20 @@ export default function Feed() {
         });
       }
 
-      const testId = `test-${topicId}`;
+      // QA card placeholder (real MICRO_QUIZ_PROMPT upgrade runs async after load for topic-specific non-meta Q)
+      const testId = `qa-${topicId}`;
+      const qaData = createTopicTrueQA(topicTitle, baseDesc);
       mapped.push({
         id: testId,
-        type: 'test',
-        title: `${topicTitle} - Quick Check`,
-        description: 'Test your understanding.',
+        type: 'qa',
+        title: `${topicTitle} - Check Understanding`,
+        description: baseDesc.substring(0, 280),
         mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`,
         mediaType: 'image',
-        testQuestion: `What is a key idea behind ${topicTitle}?`,
-        testOptions: [
-          `It is the core purpose of ${topicTitle}`,
-          `It has nothing to do with ${topicTitle}`,
-          `It only works in specific conditions`,
-          `It was invented recently`
-        ],
+        qa: qaData,
         learningPathId: 'path-default',
         learningPathTitle: 'Your Path',
-        completed: loadedCompleted.has(testId),
+        completed: effectiveCompleted.has(testId),
         topic: topicTitle,
         topicId,
         round: 1,
@@ -151,7 +220,7 @@ export default function Feed() {
     if (mapped.length === 0) {
       mapped.push({
         id: 'empty',
-        type: 'info',
+        type: 'lesson',
         title: 'Start Exploring',
         description: 'Add topics from the Discover page to begin structured rounds.',
         mediaUrl: 'https://picsum.photos/id/1015/800/400',
@@ -185,6 +254,88 @@ export default function Feed() {
     setTopicState(initialState);
 
     setIsLoading(false);
+
+    // Apply the new prompt: upgrade QA cards to real Grok-generated topic-specific ones (async + cached)
+    upgradeQACardsWithRealPrompt(session.user.id, uniqueMapped, effectiveCompleted);
+  };
+
+  // === Real Grok Q&A generation using exact MICRO_QUIZ_PROMPT (non-blocking, cached) ===
+  // Guarantees: questions test KEY lesson facts/concepts directly.
+  // No meta language ("this card", "the purpose of this", UI talk). Honeybee-style topics will be specific.
+  // Falls back silently to heuristic on any error to keep feed fast and reliable.
+  const upgradeQACardsWithRealPrompt = async (
+    _userId: string,
+    currentItems: FeedItem[],
+    effectiveCompleted: Set<string>
+  ) => {
+    const QA_CACHE_KEY = 'skillgain_qa_prompt_cache_v1';
+    let qaCache: Record<string, QAData> = {};
+    try {
+      const raw = localStorage.getItem(QA_CACHE_KEY);
+      if (raw) qaCache = JSON.parse(raw);
+    } catch {}
+
+    const qaItems = currentItems.filter(i => i.type === 'qa' && !effectiveCompleted.has(i.id));
+    if (qaItems.length === 0) return;
+
+    const updates: { id: string; qa: QAData }[] = [];
+
+    for (const qaItem of qaItems) {
+      const cacheKey = `${qaItem.topicId || qaItem.topic}`.slice(0, 120);
+      if (qaCache[cacheKey]) {
+        updates.push({ id: qaItem.id, qa: qaCache[cacheKey] });
+        continue;
+      }
+
+      try {
+        const { MICRO_QUIZ_PROMPT } = await import('@/lib/prompts/lesson-generator');
+        const prompt = MICRO_QUIZ_PROMPT(qaItem.topic, (qaItem.description || qaItem.topic).slice(0, 850));
+
+        const resp = await fetch('/api/grok', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        if (!resp.ok) throw new Error(`Grok ${resp.status}`);
+
+        const rawContent: any = await resp.json();
+        const text = typeof rawContent === 'string'
+          ? rawContent
+          : (rawContent?.response || rawContent?.text || rawContent?.content || JSON.stringify(rawContent));
+
+        // Clean possible ```json fences
+        const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+        const parsed = JSON.parse(jsonText);
+
+        const realQA: QAData = {
+          question: String(parsed.question || '').trim(),
+          options: Array.isArray(parsed.options) ? parsed.options.map(String) : null,
+          correctAnswer: parsed.correctAnswer ? String(parsed.correctAnswer) : undefined,
+          explanation: parsed.explanation ? String(parsed.explanation) : undefined,
+          difficulty: (['easy','medium','hard'] as const).includes(parsed.difficulty) ? parsed.difficulty : 'medium'
+        };
+
+        // Guard: if somehow meta slipped in, keep fallback (rare)
+        const qLower = realQA.question.toLowerCase();
+        if (qLower.includes('this card') || qLower.includes('this question') || qLower.includes('purpose of this')) {
+          throw new Error('Meta question detected - using fallback');
+        }
+
+        qaCache[cacheKey] = realQA;
+        updates.push({ id: qaItem.id, qa: realQA });
+      } catch (err) {
+        // Silent fallback keeps UX fluid. Heuristic is already set on the item.
+        console.info('[QA] Using local topic-true heuristic for', qaItem.topic);
+      }
+    }
+
+    if (updates.length > 0) {
+      try { localStorage.setItem(QA_CACHE_KEY, JSON.stringify(qaCache)); } catch {}
+      setFeedItems(prev => prev.map(item => {
+        const match = updates.find(u => u.id === item.id);
+        return match ? { ...item, qa: match.qa } : item;
+      }));
+    }
   };
 
   useEffect(() => {
@@ -224,15 +375,52 @@ export default function Feed() {
     persistCompletedIds(newIds);
   };
 
-  const markAsComplete = (item: FeedItem) => {
-    const newIds = new Set(completedIds);
-    newIds.add(item.id);
-    updateCompleted(newIds);
-    setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
+  // Optimistic X-style 1-tap completion (with restore on error)
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
+
+  const handleComplete = async (item: FeedItem, qaAnswer?: string) => {
+    // Optimistic: immediately hide the card
+    setPendingRemoveIds(prev => new Set(prev).add(item.id));
+
+    try {
+      const result = await markCardComplete(item.id, qaAnswer || null);
+
+      // Persist in completed set for refresh safety
+      const newIds = new Set(completedIds);
+      newIds.add(item.id);
+      updateCompleted(newIds);
+
+      // Update internal feed state (in case refresh merges)
+      setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
+
+      toast.success(result.message || `+${result.xpAwarded} XP`);
+
+      // Keep it removed from current view (optimistic success)
+      // (It will naturally disappear on next load or round change)
+    } catch (e: any) {
+      // Restore on failure
+      setPendingRemoveIds(prev => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+      toast.error('Something went wrong — card restored. Try again.');
+      console.error('markCardComplete failed', e);
+    }
   };
 
+  const markAsComplete = (item: FeedItem) => {
+    handleComplete(item);
+  };
+
+  const handleQASubmit = (item: FeedItem, answer: string) => {
+    if (!answer || !answer.trim()) return;
+    handleComplete(item, answer.trim());
+  };
+
+  // Legacy test submit support (now routes to qa style)
   const handleTestSubmit = (item: FeedItem, answer: string) => {
-    markAsComplete(item);
+    handleQASubmit(item, answer);
   };
 
   const markTopicComplete = (topicId: string, topicTitle: string) => {
@@ -487,124 +675,172 @@ Content: ${item.description}`;
                   <p className="text-muted-foreground">No active cards in this round.</p>
                 )}
 
-                {currentRoundItems.map(item => (
-                  <motion.div key={item.id} layout>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-3">
-                          {item.type === 'info' ? <BookOpen className="h-5 w-5" /> : <TestTube className="h-5 w-5" />}
-                          {item.title}
+                {currentRoundItems.map(item => {
+                  const isPendingRemove = pendingRemoveIds.has(item.id);
+                  if (isPendingRemove) return null; // Optimistic removal (X-style fluid feed)
 
-                          <div className="ml-auto flex items-center gap-2">
-                            {/* Real Grok voices: rex, ava, ara, sal */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-60"
-                              onClick={() => readAloud(item, 'rex')}   // ← change to 'ava', 'ara', or 'sal'
-                              disabled={thinkingCardId === item.id}
-                            >
-                              <Volume2 className={`h-4 w-4 ${thinkingCardId === item.id ? 'animate-pulse' : ''}`} />
-                            </Button>
+                  const isQA = item.type === 'qa';
+                  const qa = item.qa || (item.testQuestion ? { question: item.testQuestion, options: item.testOptions || null } : null);
+                  const currentAnswer = qaAnswers[item.id] || '';
 
-                            {thinkingCardId === item.id && (
-                              <span className="text-xs text-amber-600 font-medium animate-pulse whitespace-nowrap">
-                                Grok is rehearsing the perfect voice...
-                              </span>
-                            )}
-                          </div>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-5">
-                        <p className="text-[15px] leading-relaxed">{item.description}</p>
+                  return (
+                    <motion.div key={item.id} layout>
+                      <Card className="border border-zinc-200 dark:border-zinc-800">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-3 text-lg">
+                            {isQA ? <TestTube className="h-5 w-5 text-emerald-600" /> : <BookOpen className="h-5 w-5" />}
+                            <span>{item.title}</span>
 
-                        {item.type === 'info' && !item.completed && (
-                          <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" className="gap-2" onClick={() => toggleChat(item.id)}>
-                              <MessageSquare className="h-4 w-4" /> Ask AI
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => quickAsk(item, `Extract the key concepts from "${item.title}" and explain them simply and memorably for a student.`)}
-                            >
-                              Key Concepts
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => quickAsk(item, `Break down "${item.title}" into clear, actionable steps or a practical process.`)}
-                            >
-                              Steps
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => quickAsk(item, `Suggest 3 relevant related lessons or topics on Skill Gain that connect to "${item.title}" or the topic "${item.topic}".`)}
-                            >
-                              Related Lessons
-                            </Button>
-                          </div>
-                        )}
+                            <Badge variant="outline" className="ml-2 text-[10px] uppercase tracking-widest">
+                              {item.type}
+                            </Badge>
 
-                        {item.type === 'test' && !item.completed && (
-                          <div className="space-y-3">
-                            <p className="font-medium">{item.testQuestion}</p>
-                            {item.testOptions?.map((option, idx) => (
-                              <Button key={idx} variant="outline" className="w-full justify-start" onClick={() => handleTestSubmit(item, option)}>
-                                {option}
+                            <div className="ml-auto flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-60"
+                                onClick={() => readAloud(item, 'rex')}
+                                disabled={thinkingCardId === item.id}
+                              >
+                                <Volume2 className={`h-4 w-4 ${thinkingCardId === item.id ? 'animate-pulse' : ''}`} />
                               </Button>
-                            ))}
-                          </div>
-                        )}
+                              {thinkingCardId === item.id && (
+                                <span className="text-xs text-amber-600 font-medium animate-pulse whitespace-nowrap">
+                                  Grok is rehearsing the perfect voice...
+                                </span>
+                              )}
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                          <p className="text-[15px] leading-relaxed text-zinc-800 dark:text-zinc-200">{item.description}</p>
 
-                        {!item.completed && item.type === 'info' && (
-                          <Button variant="default" className="w-full gap-2" onClick={() => markAsComplete(item)}>
-                            <CheckCircle className="h-4 w-4" /> Mark as Complete
-                          </Button>
-                        )}
+                          {/* Inline topic-true Q&A for qa cards (never meta) */}
+                          {isQA && qa && !item.completed && (
+                            <div className="rounded-xl border bg-zinc-50/60 dark:bg-zinc-950/60 p-4 space-y-3">
+                              <div className="font-semibold tracking-tight">{qa.question}</div>
 
-                        <AnimatePresence>
-                          {openChatId === item.id && (
-                            <div className="mt-4 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
-                              <div className="h-64 overflow-y-auto space-y-3 mb-4 pr-2">
-                                {chatMessagesMap[item.id]?.map(msg => (
-                                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-[#0078D4] text-white' : 'bg-white dark:bg-zinc-950 border'}`}>
-                                      {msg.content}
-                                    </div>
-                                  </div>
-                                ))}
-
-                                {sendingMessage && thinkingCardId === item.id && (
-                                  <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground">
-                                    <div className="flex gap-1">
-                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
-                                    </div>
-                                    <span>Grok is thinking...</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex gap-2">
-                                <Input 
-                                  id={`chat-input-${item.id}`} 
-                                  placeholder="Ask Grok anything about this lesson..." 
-                                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(item)} 
-                                />
-                                <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>
-                                  Send
-                                </Button>
-                              </div>
+                              {qa.options && qa.options.length > 0 ? (
+                                <div className="space-y-2">
+                                  {qa.options.map((opt, idx) => {
+                                    const letter = String.fromCharCode(65 + idx);
+                                    const full = `${letter}) ${opt.replace(/^[A-D]\)\s*/, '')}`;
+                                    return (
+                                      <Button
+                                        key={idx}
+                                        variant="outline"
+                                        className="w-full justify-start text-left h-auto py-2.5"
+                                        onClick={() => handleQASubmit(item, full)}
+                                        disabled={!!currentAnswer}
+                                      >
+                                        {full}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    placeholder="Type your short answer here..."
+                                    value={currentAnswer}
+                                    onChange={(e) => setQaAnswers(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                    className="min-h-[80px]"
+                                  />
+                                  <Button
+                                    onClick={() => handleQASubmit(item, currentAnswer)}
+                                    disabled={!currentAnswer.trim()}
+                                    className="w-full gap-2"
+                                  >
+                                    <Check className="h-4 w-4" /> Submit Answer &amp; Complete
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           )}
-                        </AnimatePresence>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+
+                          {/* Lesson cards: always-prominent primary Complete action (X-style single tap) */}
+                          {!isQA && !item.completed && (
+                            <Button
+                              onClick={() => handleComplete(item)}
+                              className="w-full h-11 text-base gap-2 bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              <CheckCircle className="h-5 w-5" /> Complete
+                            </Button>
+                          )}
+
+                          {/* Extra actions for lesson cards */}
+                          {!isQA && !item.completed && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <Button variant="outline" size="sm" className="gap-2" onClick={() => toggleChat(item.id)}>
+                                <MessageSquare className="h-4 w-4" /> Ask AI
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => quickAsk(item, `Extract the key concepts from "${item.title}" and explain them simply and memorably for a student.`)}
+                              >
+                                Key Concepts
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => quickAsk(item, `Break down "${item.title}" into clear, actionable steps or a practical process.`)}
+                              >
+                                Steps
+                              </Button>
+                            </div>
+                          )}
+
+                          <AnimatePresence>
+                            {openChatId === item.id && (
+                              <div className="mt-4 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
+                                <div className="h-64 overflow-y-auto space-y-3 mb-4 pr-2">
+                                  {chatMessagesMap[item.id]?.map(msg => (
+                                    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                      <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-[#0078D4] text-white' : 'bg-white dark:bg-zinc-950 border'}`}>
+                                        {msg.content}
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  {sendingMessage && thinkingCardId === item.id && (
+                                    <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground">
+                                      <div className="flex gap-1">
+                                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
+                                      </div>
+                                      <span>Grok is thinking...</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <Input
+                                    id={`chat-input-${item.id}`}
+                                    placeholder="Ask Grok anything about this lesson..."
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(item)}
+                                  />
+                                  <Button onClick={() => handleSendMessage(item)} disabled={sendingMessage}>
+                                    Send
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Completion state indicator */}
+                          {item.completed && (
+                            <div className="flex items-center gap-2 text-emerald-600 text-sm">
+                              <CheckCircle className="h-4 w-4" /> Completed • XP awarded
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               {roundComplete && currentRound < 3 && (

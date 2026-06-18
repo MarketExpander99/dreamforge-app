@@ -9,7 +9,7 @@ import { useState } from 'react';
 interface FeedCardProps {
   id: string;
   title: string;
-  type: 'lesson' | 'quiz' | 'ai-chat';
+  type: 'lesson' | 'qa' | 'quiz' | 'ai-chat';
   description: string;
 }
 

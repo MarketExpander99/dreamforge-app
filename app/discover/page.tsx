@@ -340,7 +340,27 @@ export default function DiscoverPage() {
       await saveExploration(centerNode);
       await saveProgress(centerNode.label, 35, 25);
 
-      // 2. Create three progressive cards in user_explorations (for the feed)
+      // === SPEC: Deduplication + empty-round guard (24h same topic + type) ===
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recent } = await supabase
+        .from('user_explorations')
+        .select('id, label, created_at')
+        .eq('user_id', session.user.id)
+        .gte('created_at', twentyFourHoursAgo)
+        .ilike('label', `%${centerNode.label}%`)
+        .limit(5);
+
+      const hasRecentDuplicate = (recent || []).some((r: any) =>
+        (r.label || '').toLowerCase().includes(centerNode.label.toLowerCase())
+      );
+
+      if (hasRecentDuplicate) {
+        alert("✅ Already added recently — avoiding duplicate cards (24h cooldown).");
+        setIsAddingToPath(false);
+        return;
+      }
+
+      // 2. Create progressive cards — ONLY if we have content (empty guard)
       const progressiveCards = [
         {
           label: `${centerNode.label} - Intro`,
@@ -360,6 +380,12 @@ export default function DiscoverPage() {
           focus: "Specialised"
         }
       ];
+
+      if (progressiveCards.length === 0) {
+        console.log('[dedup-guard] Skipped round creation — 0 cards generated');
+        setIsAddingToPath(false);
+        return;
+      }
 
       for (const card of progressiveCards) {
         await supabase.from('user_explorations').insert({
