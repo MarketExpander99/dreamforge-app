@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -32,7 +33,7 @@ export default function SignupPage() {
       
       if (session) {
         console.log('User already signed in → redirecting')
-        router.replace('/discover')   // or '/dashboard' if you prefer
+        router.replace('/discover')
         return
       }
       
@@ -42,25 +43,19 @@ export default function SignupPage() {
     checkSession()
   }, [router, supabase])
 
-  const validateEmail = (email: string): boolean => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return re.test(email)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccess('')
     setSubmitting(true)
 
-    if (!validateEmail(formData.email)) {
-      setError('Please enter a valid email address')
-      setSubmitting(false)
-      return
-    }
+    // Email format validation removed for beta/dev testing.
+    // Dummy addresses like a@a.com, abc@mail.com, abc@abc.com are now allowed.
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+      const msg = 'Password must be at least 6 characters long'
+      setError(msg)
+      toast.error(msg)
       setSubmitting(false)
       return
     }
@@ -78,6 +73,8 @@ export default function SignupPage() {
     }
 
     try {
+      // Beta mode: Email confirmation is disabled in Supabase.
+      // We can re-enable + add beautiful branded emails later.
       const { error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -89,26 +86,16 @@ export default function SignupPage() {
             grade: '1',
             learning_goal: formData.learningGoal.trim(),
             interests: formData.interests.trim()
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          }
+          // emailRedirectTo removed for beta
         }
       })
 
       if (signupError) throw signupError
 
-      // Branded confirmation attempt (non-blocking)
-      try {
-        const confirmationUrl = `${window.location.origin}/auth/confirm?email=${encodeURIComponent(formData.email)}`
-        await fetch('/api/auth/send-confirmation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.email, confirmationUrl }),
-        })
-      } catch (emailError) {
-        console.warn('Branded confirmation email failed (non-blocking):', emailError)
-      }
-
-      setSuccess('Account created successfully! Please check your email for the confirmation link.')
+      const successMsg = 'Account created successfully! You can log in now.'
+      setSuccess(successMsg)
+      toast.success(successMsg)
       
       setFormData({ email: '', password: '', fullName: '', learningGoal: '', interests: '' })
 
@@ -119,15 +106,19 @@ export default function SignupPage() {
     } catch (error: any) {
       console.error('Signup error:', error)
 
-      let message = 'Signup failed. Please try again.'
+      let message = error?.message || 'Signup failed. Please try again.'
 
-      if (error.message?.includes('invalid') || error.message?.includes('Unable to validate email')) {
-        message = 'Please use a valid, deliverable email address (Gmail, Outlook, etc.).'
-      } else if (error.message?.includes('User already registered') || error.message?.includes('already exists')) {
+      // Friendly overrides for common cases (keep for good UX)
+      if (error?.message?.toLowerCase().includes('rate limit')) {
+        message = 'Email rate limit exceeded. Please wait a minute before trying again.'
+        toast.error(message)
+      } else if (error?.message?.includes('User already registered') || error?.message?.includes('already exists')) {
         message = 'An account with this email already exists. Please login instead.'
-      } else if (error.message?.includes('Password should be at least')) {
+      } else if (error?.message?.includes('Password should be at least')) {
         message = 'Password must be at least 6 characters long.'
       }
+      // For other errors (including Supabase "email is invalid" for test addresses),
+      // we now surface the real message so you can debug during beta.
 
       setError(message)
     } finally {

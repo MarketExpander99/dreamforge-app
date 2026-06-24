@@ -41,3 +41,4 @@ You have earned **Creative Freedom**. You may then propose one thing of your cho
 - Never drop or change existing database columns without explicit approval.
 - Stay within the scope of the requested task.
 - Never mark a task as complete before full verification with build + tests.
+- Feed / progress changes: any modification touching feed rendering, load logic, or user_progress writes MUST verify via the authoritative getPersonalizedUncompletedFeed + manual refresh test that completed items stay excluded. (See FEED_STABILIZATION_SPEC.md)

@@ -2,10 +2,11 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Search, User, BookOpen } from 'lucide-react';
+import { Search, User, BookOpen, LogIn, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/user-context';
 
 // Full context for maximum compatibility with existing code in the repo
 type SidebarContextType = {
@@ -39,6 +40,8 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
 
 const NavigationComponent = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, profile, authLoading: loading, signOut } = useAuth();
 
   const menuItems = [
     {
@@ -60,6 +63,18 @@ const NavigationComponent = () => {
       isActive: pathname === '/profile',
     },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  const displayEmail = user?.email || '';
 
   return (
     <>
@@ -92,8 +107,63 @@ const NavigationComponent = () => {
           })}
         </nav>
 
-        <div className="mt-auto pt-5 border-t border-zinc-800">
-          <p className="text-[10px] text-zinc-500 text-center">Powered by Grok</p>
+        {/* Login / Logout Section */}
+        <div className="mt-auto pt-4 border-t border-zinc-800">
+          {!loading && (
+            user ? (
+              <div className="px-1 space-y-2">
+                {/* User info */}
+                <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-zinc-800/50">
+                  <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-200 flex-shrink-0">
+                    {displayName[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-zinc-200 truncate">
+                      {displayName}
+                    </div>
+                    {displayEmail && (
+                      <div className="text-[10px] text-zinc-500 truncate">
+                        {displayEmail}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="w-full justify-start gap-2 text-sm h-9 text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </Button>
+              </div>
+            ) : (
+              <div className="px-1 space-y-1">
+                <Link href="/auth/login">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-2 text-sm h-9"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Log in
+                  </Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-sm h-9 text-zinc-400 hover:text-zinc-200"
+                  >
+                    Sign up
+                  </Button>
+                </Link>
+              </div>
+            )
+          )}
+
+          <p className="text-[10px] text-zinc-500 text-center pt-4">
+            Powered by Grok
+          </p>
         </div>
       </div>
 
@@ -117,6 +187,29 @@ const NavigationComponent = () => {
               </Link>
             );
           })}
+
+          {/* Mobile Auth Action */}
+          {!loading && (
+            user ? (
+              <button
+                onClick={handleLogout}
+                className="flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] text-zinc-400 active:text-red-400"
+              >
+                <LogOut className="h-5 w-5" />
+                Logout
+              </button>
+            ) : (
+              <Link href="/auth/login" className="flex-1">
+                <Button
+                  variant="ghost"
+                  className="w-full flex flex-col items-center gap-0.5 py-2 text-[10px]"
+                >
+                  <LogIn className="h-5 w-5" />
+                  Log in
+                </Button>
+              </Link>
+            )
+          )}
         </div>
       </div>
     </>

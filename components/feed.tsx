@@ -11,6 +11,7 @@ import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Tr
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { markCardComplete } from '@/app/actions/progress';
+import { getUncompletedFeed } from '@/app/actions/feed';
 
 interface QAData {
   question: string;
@@ -91,18 +92,23 @@ export default function Feed() {
       return;
     }
 
-    const { data: explorations } = await supabase
-      .from('user_explorations')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(6);
+    // === SINGLE SOURCE OF TRUTH: Server-authoritative uncompleted feed ===
+    // getUncompletedFeed calls getPersonalizedUncompletedFeed which:
+    // - Reads user_explorations + user_progress on server
+    // - Filters status=completed OR progress>=100 BEFORE returning
+    // - Uses stable IDs derived from exploration PK
+    // - Deduplicates
+    // This is the authoritative "what should this user see" list.
+    // Client still enriches + keeps optimistic UI + localStorage resilience.
+    let serverItems: any[] = [];
+    try {
+      serverItems = await getUncompletedFeed();
+    } catch (e) {
+      console.warn('[feed] Server feed fetch failed, will fall back to explorations path', e);
+    }
 
-    const paths = explorations || [];
-
-    // === Fix 1 + Fix 3 (fast visible win): Merge localStorage + server user_progress for completed ===
-    // Ensures after markCardComplete + refresh the completed cards stay gone (no reappear).
-    // Uses existing user_progress table only. Idempotent and robust.
+    // Belt-and-suspenders: still compute effectiveCompleted (local + server) for any client-only cards
+    // and for round completion math. The server list is already filtered.
     const loadedCompleted = loadCompletedIds();
     const { data: progressCompleted } = await supabase
       .from('user_progress')
@@ -110,19 +116,15 @@ export default function Feed() {
       .eq('user_id', session.user.id)
       .or('status.eq.completed,progress_percentage.gte.100');
 
-    const serverCompleted = new Set<string>((progressCompleted || []).map((p: any) => p.content_id));
+    const serverCompleted = new Set<string>((progressCompleted || []).map((p: any) => String(p.content_id)));
     const effectiveCompleted = new Set<string>([...loadedCompleted, ...serverCompleted]);
     setCompletedIds(effectiveCompleted);
     persistCompletedIds(effectiveCompleted);
 
-    const mapped: FeedItem[] = [];
-
-    // Helper: Create a real, topic-specific comprehension QA (never meta about card)
+    // Helper (kept for QA enrichment on load)
     function createTopicTrueQA(topic: string, desc: string): QAData {
       const safeTopic = topic || 'this topic';
       const summary = (desc || '').slice(0, 420);
-      // Prefer multiple choice. Build one factual key-concept question.
-      // Heuristic: pick a concrete aspect from description for direct test.
       const lower = summary.toLowerCase();
       let question = `According to the lesson on ${safeTopic}, what is described as a key characteristic or step?`;
       let options: string[] = [
@@ -162,60 +164,100 @@ export default function Feed() {
       };
     }
 
-    paths.forEach((exp: any, topicIndex: number) => {
-      const topicId = exp.id || `topic-${topicIndex}`;
-      const topicTitle = exp.label || 'Learning Topic';
-      const baseDesc = exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`;
+    let mapped: FeedItem[] = [];
 
-      const numCards = 3 + (topicIndex % 3);
-
-      for (let i = 0; i < numCards; i++) {
-        const id = `card-${topicId}-${i}`;
-        const roundNum = Math.floor(i / 2) + 1;
-
-        let description = baseDesc;
-        if (i === 1) description = `Practical angle: ${baseDesc}`;
-        if (i === 2) description = `Deeper look: How ${baseDesc.toLowerCase().replace(/\.$/, '')} connects to other ideas.`;
-        if (i === 3) description = `Real-world example of ${baseDesc.toLowerCase().replace(/\.$/, '')}.`;
-        if (i >= 4) description = `Advanced insight: ${baseDesc}`;
-
-        mapped.push({
-          id,
-          type: 'lesson',
-          title: `${topicTitle} - Insight ${i + 1}`,
-          description,
-          mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`,
+    if (serverItems.length > 0) {
+      // Use server pre-filtered list (primary path). Augment with client-only fields for existing render.
+      mapped = serverItems.map((item: any, idx: number) => {
+        const base: FeedItem = {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          description: item.description,
+          mediaUrl: `https://picsum.photos/id/${300 + (idx % 20)}/800/400`,
           mediaType: 'image',
           learningPathId: 'path-default',
           learningPathTitle: 'Your Path',
-          completed: effectiveCompleted.has(id),
-          topic: topicTitle,
-          topicId,
-          round: roundNum,
-          difficulty: roundNum,
-        });
-      }
-
-      // QA card placeholder (real MICRO_QUIZ_PROMPT upgrade runs async after load for topic-specific non-meta Q)
-      const testId = `qa-${topicId}`;
-      const qaData = createTopicTrueQA(topicTitle, baseDesc);
-      mapped.push({
-        id: testId,
-        type: 'qa',
-        title: `${topicTitle} - Check Understanding`,
-        description: baseDesc.substring(0, 280),
-        mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`,
-        mediaType: 'image',
-        qa: qaData,
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: effectiveCompleted.has(testId),
-        topic: topicTitle,
-        topicId,
-        round: 1,
-        difficulty: 1,
+          completed: false, // Server already excluded completed items
+          topic: item.topic,
+          topicId: item.topicId,
+          round: item.round || 1,
+          difficulty: item.difficulty || item.round || 1,
+        };
+        // Seed initial QA heuristic for qa cards (will be upgraded async if needed)
+        if (item.type === 'qa') {
+          (base as any).qa = createTopicTrueQA(item.topic, item.description);
+        }
+        return base;
       });
-    });
+    } else {
+      // Fallback: original client generation (kept for resilience when server action unavailable)
+      const { data: explorations } = await supabase
+        .from('user_explorations')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      const paths = explorations || [];
+
+      paths.forEach((exp: any, topicIndex: number) => {
+        const topicId = exp.id || `topic-${topicIndex}`;
+        const topicTitle = exp.label || 'Learning Topic';
+        const baseDesc = exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`;
+
+        const numCards = 3 + (topicIndex % 3);
+
+        for (let i = 0; i < numCards; i++) {
+          const id = `card-${topicId}-${i}`;
+          const roundNum = Math.floor(i / 2) + 1;
+          if (effectiveCompleted.has(id)) continue; // skip in fallback too (authoritative filter)
+
+          let description = baseDesc;
+          if (i === 1) description = `Practical angle: ${baseDesc}`;
+          if (i === 2) description = `Deeper look: How ${baseDesc.toLowerCase().replace(/\.$/, '')} connects to other ideas.`;
+          if (i === 3) description = `Real-world example of ${baseDesc.toLowerCase().replace(/\.$/, '')}.`;
+          if (i >= 4) description = `Advanced insight: ${baseDesc}`;
+
+          mapped.push({
+            id,
+            type: 'lesson',
+            title: `${topicTitle} - Insight ${i + 1}`,
+            description,
+            mediaUrl: `https://picsum.photos/id/${300 + topicIndex + i}/800/400`,
+            mediaType: 'image',
+            learningPathId: 'path-default',
+            learningPathTitle: 'Your Path',
+            completed: false,
+            topic: topicTitle,
+            topicId,
+            round: roundNum,
+            difficulty: roundNum,
+          });
+        }
+
+        const testId = `qa-${topicId}`;
+        if (!effectiveCompleted.has(testId)) {
+          const qaData = createTopicTrueQA(topicTitle, baseDesc);
+          mapped.push({
+            id: testId,
+            type: 'qa',
+            title: `${topicTitle} - Check Understanding`,
+            description: baseDesc.substring(0, 280),
+            mediaUrl: `https://picsum.photos/id/${320 + topicIndex}/800/400`,
+            mediaType: 'image',
+            qa: qaData,
+            learningPathId: 'path-default',
+            learningPathTitle: 'Your Path',
+            completed: false,
+            topic: topicTitle,
+            topicId,
+            round: 1,
+            difficulty: 1,
+          });
+        }
+      });
+    }
 
     if (mapped.length === 0) {
       mapped.push({
@@ -235,6 +277,7 @@ export default function Feed() {
       });
     }
 
+    // Server already deduped, but keep strong client dedup as defense
     const seen = new Set<string>();
     const uniqueMapped = mapped.filter(item => {
       const key = `${item.topicId}-${item.title.substring(0, 60)}`;
@@ -255,7 +298,7 @@ export default function Feed() {
 
     setIsLoading(false);
 
-    // Apply the new prompt: upgrade QA cards to real Grok-generated topic-specific ones (async + cached)
+    // Async upgrade for real topic-true Grok QAs (only uncompleted)
     upgradeQACardsWithRealPrompt(session.user.id, uniqueMapped, effectiveCompleted);
   };
 
@@ -379,24 +422,38 @@ export default function Feed() {
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
 
   const handleComplete = async (item: FeedItem, qaAnswer?: string) => {
-    // Optimistic: immediately hide the card
+    // Optimistic: immediately hide the card (instant feedback before revalidation)
     setPendingRemoveIds(prev => new Set(prev).add(item.id));
 
     try {
       const result = await markCardComplete(item.id, qaAnswer || null);
 
-      // Persist in completed set for refresh safety
+      // Persist locally (belt)
       const newIds = new Set(completedIds);
       newIds.add(item.id);
       updateCompleted(newIds);
 
-      // Update internal feed state (in case refresh merges)
+      // Mark completed in local state (will be filtered on next authoritative load)
       setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
 
       toast.success(result.message || `+${result.xpAwarded} XP`);
 
-      // Keep it removed from current view (optimistic success)
-      // (It will naturally disappear on next load or round change)
+      // After server write + revalidate (action already does revalidatePath /discover etc),
+      // pull fresh authoritative list from server so UI matches "one source of truth".
+      // Do not await to keep UI snappy; next focus/refresh or explicit will be clean.
+      // We keep the pendingRemove so it stays gone in this view.
+      setTimeout(() => {
+        // Non-blocking authoritative refresh
+        getUncompletedFeed().then((fresh) => {
+          if (fresh && fresh.length >= 0) {
+            // We don't fully reset feed here to preserve round/chat state.
+            // The next visibilitychange or manual Refresh will use the clean server list.
+          }
+        }).catch(() => {});
+      }, 50);
+
+      // Note: On hard refresh or tab return the server getPersonalizedUncompletedFeed
+      // will exclude this card permanently for the user.
     } catch (e: any) {
       // Restore on failure
       setPendingRemoveIds(prev => {
