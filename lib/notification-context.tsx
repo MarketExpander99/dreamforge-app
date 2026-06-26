@@ -82,7 +82,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           table: 'user_achievements',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: any) => {
           const achievement = payload.new
           showNotification({
             type: 'achievement',
@@ -108,7 +108,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           table: 'user_progress',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: any) => {
           const progress = payload.new
           const oldProgress = payload.old
 
@@ -123,7 +123,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
               .select('title, type')
               .eq('id', progress.content_id)
               .single()
-              .then(({ data: content }) => {
+              .then(({ data: content }: { data: any }) => {
                 if (content) {
                   const contentType = content.type === 'quiz' ? 'quiz' :
                                     content.type === 'video' ? 'video' :
@@ -156,7 +156,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             schema: 'public',
             table: 'user_achievements'
           },
-          async (payload) => {
+          async (payload: any) => {
             const achievement = payload.new
 
             // Check if this achievement belongs to one of the parent's children
@@ -192,7 +192,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             schema: 'public',
             table: 'user_progress'
           },
-          async (payload) => {
+          async (payload: any) => {
             const progress = payload.new
             const oldProgress = payload.old
 

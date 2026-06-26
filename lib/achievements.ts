@@ -54,7 +54,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     icon: '🎯',
     condition: async (userId: string) => {
       const progress = await getUserProgress(userId)
-      return progress.some(p => p.status === 'completed')
+      return progress.some((p: any) => p.status === 'completed')
     }
   },
   {
@@ -64,7 +64,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     icon: '🔬',
     condition: async (userId: string) => {
       const progress = await getUserProgress(userId)
-      const scienceCompleted = progress.filter(p =>
+      const scienceCompleted = progress.filter((p: any) =>
         p.status === 'completed' && p.content?.category?.name === 'Science'
       ).length
       return scienceCompleted >= 3
@@ -77,7 +77,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     icon: '🧮',
     condition: async (userId: string) => {
       const progress = await getUserProgress(userId)
-      return progress.some(p =>
+      return progress.some((p: any) =>
         p.status === 'completed' && p.content_id === 'multiplication-basics'
       )
     }
@@ -89,7 +89,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     icon: '🏆',
     condition: async (userId: string) => {
       const progress = await getUserProgress(userId)
-      const perfectQuizzes = progress.filter(p =>
+      const perfectQuizzes = progress.filter((p: any) =>
         p.status === 'completed' &&
         p.content?.type === 'quiz' &&
         p.progress_percentage === 100
@@ -104,7 +104,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     icon: '📚',
     condition: async (userId: string) => {
       const progress = await getUserProgress(userId)
-      const uniqueTopics = new Set(progress.map(p => p.content_id))
+      const uniqueTopics = new Set(progress.map((p: any) => p.content_id))
       return uniqueTopics.size >= 10
     }
   },
@@ -132,7 +132,7 @@ export const achievementUtils = {
 
       // Get current user achievements
       const currentAchievements = await getUserAchievements(userId)
-      const earnedTypes = new Set(currentAchievements.map(a => a.achievement_type))
+      const earnedTypes = new Set(currentAchievements.map((a: any) => a.achievement_type))
 
       const newAchievements = []
 

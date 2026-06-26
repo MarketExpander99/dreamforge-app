@@ -4,9 +4,10 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase-client';
+import { useAuth } from '@/lib/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,7 +74,8 @@ interface LearningPath {
 
 export default function DiscoverPage() {
   const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
+  const { user, authLoading } = useAuth();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [centerNode, setCenterNode] = useState<Node | null>(null);
@@ -84,8 +86,6 @@ export default function DiscoverPage() {
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
 
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isSessionReady, setIsSessionReady] = useState(false);
   const [userProfile, setUserProfile] = useState<{ grade_level?: string; interests?: string[] } | null>(null);
   const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [chatUsedForNode, setChatUsedForNode] = useState(false);
@@ -93,10 +93,10 @@ export default function DiscoverPage() {
   const [loadProgress, setLoadProgress] = useState(0);
 
   useEffect(() => {
-    if (isSessionReady) {
+    if (!authLoading && user) {
       searchInputRef.current?.focus();
     }
-  }, [isSessionReady]);
+  }, [authLoading, user]);
 
   // Animate progress bar while Grok builds the lesson
   useEffect(() => {
@@ -119,59 +119,26 @@ export default function DiscoverPage() {
     };
   }, [isLoading]);
 
+  // Redirect to login if not authenticated (after context settles)
   useEffect(() => {
-    let mounted = true;
-    const initializeSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && mounted) {
-        setIsSessionReady(true);
-        setIsCheckingAuth(false);
-        await loadCurrentPath(session.user.id);
-        return;
-      }
+    if (!authLoading && !user) {
+      router.push('/auth/login');
+    }
+  }, [user, authLoading, router]);
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if ((event === 'SIGNED_IN' || session) && mounted) {
-          setIsSessionReady(true);
-          setIsCheckingAuth(false);
-          if (session) loadCurrentPath(session.user.id);
-          subscription.unsubscribe();
-        }
-      });
-
-      setTimeout(async () => {
-        if (!isSessionReady && mounted) {
-          const { data: { session: latestSession } } = await supabase.auth.getSession();
-          if (!latestSession) router.push('/auth/login');
-          else {
-            setIsSessionReady(true);
-            setIsCheckingAuth(false);
-            loadCurrentPath(latestSession.user.id);
-          }
-        }
-      }, 800);
-
-      return () => subscription.unsubscribe();
-    };
-
-    initializeSession();
-    return () => { mounted = false; };
-  }, [supabase, router]);
-
+  // Fetch minimal profile info needed for prompts (once user is available)
   useEffect(() => {
-    if (!isSessionReady) return;
+    if (authLoading || !user) return;
     const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
       const { data: profile } = await supabase
         .from('profiles')
         .select('grade_level, interests')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
       if (profile) setUserProfile(profile);
     };
     fetchProfile();
-  }, [isSessionReady, supabase]);
+  }, [authLoading, user, supabase]);
 
   const loadCurrentPath = async (userId: string) => {
     const { data: path } = await supabase
@@ -475,7 +442,7 @@ export default function DiscoverPage() {
     }
   };
 
-  if (isCheckingAuth || !isSessionReady) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

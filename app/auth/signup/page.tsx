@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
+// During beta we sometimes need to manually confirm users in the Supabase Dashboard
+// (Authentication → Users → ⋯ → Confirm user) if they were created while
+// "Enable email confirmation" was still turned ON in the Supabase project settings.
+// New signups after it is OFF should auto-login immediately.
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -24,7 +28,9 @@ export default function SignupPage() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
-  const supabase = createBrowserSupabaseClient()
+  // ONE stable Supabase client for the whole component lifetime.
+  // This prevents the classic "new client every render" auth bugs.
+  const supabase = useMemo(() => createBrowserSupabaseClient(), [])
 
   // Check if user is already signed in → redirect
   useEffect(() => {
@@ -51,8 +57,10 @@ export default function SignupPage() {
 
     // Email format validation removed for beta/dev testing.
     // Dummy addresses like a@a.com, abc@mail.com, abc@abc.com are now allowed.
+    const email = formData.email.trim()
+    const password = formData.password
 
-    if (formData.password.length < 6) {
+    if (password.length < 6) {
       const msg = 'Password must be at least 6 characters long'
       setError(msg)
       toast.error(msg)
@@ -73,11 +81,14 @@ export default function SignupPage() {
     }
 
     try {
-      // Beta mode: Email confirmation is disabled in Supabase.
-      // We can re-enable + add beautiful branded emails later.
-      const { error: signupError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
+      // Beta mode: We auto sign-in the user right after signup.
+      // This only works reliably because email confirmation is turned OFF in Supabase.
+      // After signUp we check for an immediate session. If not present we do an
+      // explicit signInWithPassword (works when confirmation disabled).
+      // Goal: User is logged in + on /discover within 1-2 seconds. No extra login page step.
+      const { data: signUpData, error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
           data: {
             full_name: formData.fullName.trim(),
@@ -93,18 +104,34 @@ export default function SignupPage() {
 
       if (signupError) throw signupError
 
-      const successMsg = 'Account created successfully! You can log in now.'
-      setSuccess(successMsg)
-      toast.success(successMsg)
-      
-      setFormData({ email: '', password: '', fullName: '', learningGoal: '', interests: '' })
+      // If signUp gave us a session (common when email confirmation is disabled), use it immediately.
+      if (signUpData?.session) {
+        toast.success('Account created and you are now logged in!')
+        router.push('/discover')
+        return
+      }
 
-      setTimeout(() => {
-        router.push('/auth/login')
-      }, 2500)
+      // Fallback: explicitly sign in (this path is the key for beta without confirmation)
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (signInError) {
+        const msg = `Account created successfully, but sign-in failed with: ${signInError.message}. Please go to /auth/login and try the exact same credentials you just used (copy-pasted from the form).`
+        setError(msg)
+        toast.error('Signup ok, but login test failed – see details and console.')
+        setFormData({ email: '', password: '', fullName: '', learningGoal: '', interests: '' })
+        setTimeout(() => router.push('/auth/login'), 3000)
+        return
+      }
+
+      // Fully successful – user is now authenticated
+      toast.success('Account created and you are now logged in!')
+      router.push('/discover')
 
     } catch (error: any) {
-      console.error('Signup error:', error)
+      console.error('Signup error (raw from Supabase):', error)
 
       let message = error?.message || 'Signup failed. Please try again.'
 
@@ -116,9 +143,22 @@ export default function SignupPage() {
         message = 'An account with this email already exists. Please login instead.'
       } else if (error?.message?.includes('Password should be at least')) {
         message = 'Password must be at least 6 characters long.'
+      } else if (error?.message?.toLowerCase().includes('is invalid') || error?.message?.includes('Unable to validate email')) {
+        // Special handling for Supabase rejecting the email (common with custom domains like @skillgain.dev that lack MX records)
+        message = `Supabase rejected "${formData.email}" as invalid.
+
+This usually means:
+• The domain (skillgain.dev) has no MX records set up for email delivery, or
+• Supabase's deliverability check is failing for this address.
+
+For dev/testing, use a real address from Gmail, Outlook, ProtonMail, etc.
+
+Raw Supabase error: ${error?.message}`
+        toast.error('Email address rejected by Supabase. See the error box for details.')
+      } else {
+        // Surface raw error for all other cases so we can debug easily in beta
+        toast.error(`Signup failed: ${error?.message || 'Unknown error'}`)
       }
-      // For other errors (including Supabase "email is invalid" for test addresses),
-      // we now surface the real message so you can debug during beta.
 
       setError(message)
     } finally {

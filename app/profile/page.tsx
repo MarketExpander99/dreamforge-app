@@ -135,14 +135,13 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-      fetchProfile()
+    if (authLoading) return
+    if (!user) {
+      router.push('/auth/login')
+      return
     }
-  }, [user, authLoading])
+    fetchProfile()
+  }, [user, authLoading, router])
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

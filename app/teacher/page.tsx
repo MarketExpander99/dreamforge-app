@@ -96,7 +96,7 @@ export default function TeacherDashboard() {
 
         // Load student counts for each class
         const classesWithCounts = await Promise.all(
-          (classes || []).map(async (classItem) => {
+          (classes || []).map(async (classItem: any) => {
             const { count: studentCount } = await supabase
               .from('class_students')
               .select('*', { count: 'exact', head: true })

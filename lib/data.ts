@@ -751,9 +751,9 @@ export async function getUserStats(userId: string): Promise<{
       }
     }
 
-    const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+    const totalCompleted = progressData?.filter((p: any) => p.status === 'completed').length || 0
     const totalStarted = progressData?.length || 0
-    const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+    const totalTime = progressData?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
 
     // For now, return mock streak - in real implementation, calculate from progress history
     const currentStreak = 5
@@ -966,8 +966,8 @@ export async function getUserAnalytics(userId: string): Promise<UserAnalytics> {
     const { currentStreak, longestStreak } = calculateStreaks(progressData || [])
 
     // Calculate totals
-    const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-    const totalTimeSpent = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+    const totalCompleted = progressData?.filter((p: any) => p.status === 'completed').length || 0
+    const totalTimeSpent = progressData?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
     const totalItems = progressData?.length || 0
     const completionRate = totalItems > 0 ? (totalCompleted / totalItems) * 100 : 0
 
@@ -1076,7 +1076,7 @@ function calculateStreaks(progressData: any[]): { currentStreak: number; longest
 
   // Sort by completion date
   const completedItems = progressData
-    .filter(p => p.status === 'completed' && p.completed_at)
+    .filter((p: any) => p.status === 'completed' && p.completed_at)
     .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
 
   if (!completedItems.length) return { currentStreak: 0, longestStreak: 0 }
@@ -1139,13 +1139,13 @@ function calculateLearningVelocity(progressData: any[]): LearningVelocity {
   const lastWeekStart = new Date(thisWeekStart)
   lastWeekStart.setDate(lastWeekStart.getDate() - 7)
 
-  const thisWeek = progressData.filter(p => {
+  const thisWeek = progressData.filter((p: any) => {
     if (!p.completed_at) return false
     const completedDate = new Date(p.completed_at)
     return completedDate >= thisWeekStart && completedDate < new Date()
   }).length
 
-  const lastWeek = progressData.filter(p => {
+  const lastWeek = progressData.filter((p: any) => {
     if (!p.completed_at) return false
     const completedDate = new Date(p.completed_at)
     return completedDate >= lastWeekStart && completedDate < thisWeekStart
@@ -1307,12 +1307,12 @@ export async function checkAndUnlockAchievements(userId: string): Promise<string
       .select('achievement_type')
       .eq('user_id', userId)
 
-    const existingAchievements = achievements?.map(a => a.achievement_type) || []
+    const existingAchievements = achievements?.map((a: any) => a.achievement_type) || []
     const newAchievements: string[] = []
 
     // Calculate stats
-    const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
-    const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+    const totalCompleted = progressData?.filter((p: any) => p.status === 'completed').length || 0
+    const totalTime = progressData?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
 
     // Calculate current streak
     const { currentStreak } = await getCurrentStreak(userId)
@@ -1388,8 +1388,8 @@ export async function checkAndUnlockAchievements(userId: string): Promise<string
             .select('status, time_spent')
             .eq('user_id', child.id)
 
-          totalFamilyCompleted += childProgress?.filter(p => p.status === 'completed').length || 0
-          totalFamilyTime += childProgress?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
+          totalFamilyCompleted += childProgress?.filter((p: any) => p.status === 'completed').length || 0
+          totalFamilyTime += childProgress?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
         }
 
         if (totalFamilyCompleted >= 20 && !existingAchievements.includes('parents_pride')) {
@@ -1602,7 +1602,7 @@ async function generateSubjectLearningPath(
     }
 
     // Filter lessons for appropriate grade level
-    const relevantLessons = lessonPlans.filter(lesson =>
+    const relevantLessons = lessonPlans.filter((lesson: any) =>
       lesson.grade_level === startingGrade ||
       lesson.grade_level === getLowerGrade(startingGrade) // Include easier grade as backup
     )
@@ -1712,7 +1712,7 @@ export async function getNextBestLesson(userId: string): Promise<NextBestLesson 
             .eq('is_active', true)
             .limit(2)
 
-          easierLessons?.forEach(lesson => {
+          easierLessons?.forEach((lesson: any) => {
             recommendations.push({
               lessonId: lesson.id,
               title: lesson.title,
@@ -1862,14 +1862,14 @@ export async function getLeaderboard(limit: number = 10): Promise<any[]> {
 
     // Calculate stats for each user
     const leaderboardData = await Promise.all(
-      (users || []).map(async (user) => {
+      (users || []).map(async (user: any) => {
         const { data: progressData } = await supabase
           .from('user_progress')
           .select('time_spent, status')
           .eq('user_id', user.id)
 
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+        const totalTime = progressData?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter((p: any) => p.status === 'completed').length || 0
 
         return {
           user_id: user.id,
@@ -1912,14 +1912,14 @@ export async function getFamilyLeaderboard(parentId: string, limit: number = 10)
 
     // Calculate stats for each family member
     const leaderboardData = await Promise.all(
-      (familyMembers || []).map(async (member) => {
+      (familyMembers || []).map(async (member: any) => {
         const { data: progressData } = await supabase
           .from('user_progress')
           .select('time_spent, status')
           .eq('user_id', member.id)
 
-        const totalTime = progressData?.reduce((sum, p) => sum + (p.time_spent || 0), 0) || 0
-        const totalCompleted = progressData?.filter(p => p.status === 'completed').length || 0
+        const totalTime = progressData?.reduce((sum: number, p: any) => sum + (p.time_spent || 0), 0) || 0
+        const totalCompleted = progressData?.filter((p: any) => p.status === 'completed').length || 0
 
         return {
           user_id: member.id,
@@ -1978,10 +1978,10 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     if (progressError) throw progressError
 
     // Analyze completed content to understand preferences
-    const completedContent = progressData?.filter(p => p.status === 'completed') || []
-    const completedCategories = completedContent.map(p => p.content?.[0]?.category_id).filter(Boolean)
-    const completedTags = completedContent.flatMap(p => p.content?.[0]?.tags || []).filter(Boolean) as string[]
-    const completedDifficulties = completedContent.map(p => p.content?.[0]?.difficulty).filter(Boolean) as string[]
+    const completedContent = progressData?.filter((p: any) => p.status === 'completed') || []
+    const completedCategories = completedContent.map((p: any) => p.content?.[0]?.category_id).filter(Boolean)
+    const completedTags = completedContent.flatMap((p: any) => p.content?.[0]?.tags || []).filter(Boolean) as string[]
+    const completedDifficulties = completedContent.map((p: any) => p.content?.[0]?.difficulty).filter(Boolean) as string[]
 
     // Get all available content, filtered by grade level if available
     let contentQuery = supabase
@@ -2002,11 +2002,11 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     if (contentError) throw contentError
 
     // Filter out already completed content
-    const completedIds = completedContent.map(p => p.content_id)
-    let availableContent = allContent?.filter(item => !completedIds.includes(item.id)) || []
+    const completedIds = completedContent.map((p: any) => p.content_id)
+    let availableContent = allContent?.filter((item: any) => !completedIds.includes(item.id)) || []
 
     // Score content based on various factors
-    const scoredContent = availableContent.map(content => {
+    const scoredContent = availableContent.map((content: any) => {
       let score = 0
 
       // Grade level match (high priority)
@@ -2057,7 +2057,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
     // Sort by score and return top recommendations
     return scoredContent
-      .sort((a, b) => b.recommendationScore - a.recommendationScore)
+      .sort((a: any, b: any) => b.recommendationScore - a.recommendationScore)
       .slice(0, limit)
 
   } catch (error) {

@@ -62,7 +62,7 @@ export default function TeacherAnalyticsPage() {
           .select('id')
           .eq('teacher_id', user.id)
 
-        const classIds = classes?.map(c => c.id) || []
+        const classIds = classes?.map((c: any) => c.id) || []
 
         // Get student count
         const { count: totalStudents } = await supabase
@@ -91,7 +91,7 @@ export default function TeacherAnalyticsPage() {
           `)
           .in('content.teacher_id', [user.id])
 
-        const completedItems = progressData?.filter(p => p.status === 'completed').length || 0
+        const completedItems = progressData?.filter((p: any) => p.status === 'completed').length || 0
         const totalItems = progressData?.length || 0
         const averageCompletion = totalItems > 0 ? (completedItems / totalItems) * 100 : 0
 

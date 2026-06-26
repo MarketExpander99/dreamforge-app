@@ -60,15 +60,15 @@ export default function TeacherClassesPage() {
 
       if (classError) throw classError
 
-      const classesWithStudents = (classData || []).map(cls => ({
+      const classesWithStudents = (classData || []).map((cls: any) => ({
         ...cls,
-        students: (cls.class_students || []).map(student => ({
+        students: (cls.class_students || []).map((student: any) => ({
           id: student.profiles.id,
           full_name: student.profiles.full_name,
           email: student.profiles.email,
           avatar_url: student.profiles.avatar_url,
           joined_at: student.created_at
-        })).sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
+        })).sort((a: any, b: any) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
       }))
 
       setClasses(classesWithStudents)

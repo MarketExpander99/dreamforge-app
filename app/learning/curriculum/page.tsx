@@ -170,7 +170,7 @@ export default function CurriculumPage() {
 
       setCurriculums(curriculumData || [])
 
-      const capsCurriculum = curriculumData?.find(c => c.name === 'CAPS')
+      const capsCurriculum = curriculumData?.find((c: Curriculum) => c.name === 'CAPS')
       const capsId = capsCurriculum?.id
 
       // Load subjects for CAPS
@@ -203,7 +203,7 @@ export default function CurriculumPage() {
       if (navigator.onLine && lessonData) {
         try {
           // Get content items for these lessons
-          const lessonIds = lessonData.map(lesson => lesson.id)
+          const lessonIds = lessonData.map((lesson: any) => lesson.id)
           const { data: contentItems } = await supabase
             .from('content_items')
             .select('*')

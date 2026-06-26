@@ -96,14 +96,13 @@ export default function LearningPage() {
   }
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-      fetchSavedQueries()
+    if (authLoading) return
+    if (!user) {
+      router.push('/auth/login')
+      return
     }
-  }, [user, authLoading])
+    fetchSavedQueries()
+  }, [user, authLoading, router])
 
   // Auto-generate personalized path + courses from history
   useEffect(() => {

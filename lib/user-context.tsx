@@ -1,8 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo, useRef } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
-import { User, Session } from '@supabase/supabase-js'
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 
 interface UserProfile {
   id: string
@@ -39,9 +39,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
 
-  const supabase = createBrowserSupabaseClient()
+  // Stable Supabase client via memoized singleton. NEVER recreate per-render.
+  const supabase = useMemo(() => createBrowserSupabaseClient(), [])
+
+  // One-time init guard (ref prevents re-init loops on re-renders or tab switches)
+  const initializedRef = useRef(false)
+  const mountedRef = useRef(true)
 
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
@@ -63,7 +67,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [supabase])
 
   const initializeAuth = useCallback(async () => {
-    if (isInitialized) return
+    if (initializedRef.current) return
+    initializedRef.current = true
 
     try {
       setLoading(true)
@@ -72,26 +77,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data: { session: initialSession }, error } = await supabase.auth.getSession()
       if (error) throw error
 
+      if (!mountedRef.current) return
+
       setSession(initialSession)
       setUser(initialSession?.user ?? null)
 
       if (initialSession?.user) {
         const userProfile = await fetchUserProfile(initialSession.user.id)
-        setProfile(userProfile)
+        if (mountedRef.current) setProfile(userProfile)
       } else {
         setProfile(null)
       }
     } catch (err) {
       console.error('Error initializing auth:', err)
-      setError(err instanceof Error ? err.message : 'Authentication failed')
-      setUser(null)
-      setSession(null)
-      setProfile(null)
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Authentication failed')
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+      }
     } finally {
-      setLoading(false)
-      setIsInitialized(true)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
-  }, [supabase, fetchUserProfile, isInitialized])
+  }, [supabase, fetchUserProfile])
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -101,23 +111,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data: { session: refreshedSession }, error } = await supabase.auth.getSession()
       if (error) throw error
 
+      if (!mountedRef.current) return
+
       setSession(refreshedSession)
       setUser(refreshedSession?.user ?? null)
 
       if (refreshedSession?.user) {
         const userProfile = await fetchUserProfile(refreshedSession.user.id)
-        setProfile(userProfile)
+        if (mountedRef.current) setProfile(userProfile)
       } else {
         setProfile(null)
       }
     } catch (err) {
       console.error('Error refreshing auth:', err)
-      setError(err instanceof Error ? err.message : 'Failed to refresh authentication')
-      setUser(null)
-      setSession(null)
-      setProfile(null)
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to refresh authentication')
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+      }
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }, [supabase, fetchUserProfile])
 
@@ -127,31 +141,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
 
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-      setError(null)
+      if (mountedRef.current) {
+        setUser(null)
+        setSession(null)
+        setProfile(null)
+        setError(null)
+      }
     } catch (err) {
       console.error('Error signing out:', err)
-      setError(err instanceof Error ? err.message : 'Failed to sign out')
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to sign out')
+      }
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }, [supabase])
 
-  // Initialize once + listen for auth changes (clean, no double-subscription issues)
+  // Initialize once + listen for auth changes.
+  // Key fix: stable deps only + ref guard to prevent re-subscription thrashing on navigation.
   useEffect(() => {
+    mountedRef.current = true
+
     initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (event: AuthChangeEvent, newSession: Session | null) => {
+        if (!mountedRef.current) return
+
         console.log('Auth state changed:', event)
         setSession(newSession)
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
           const userProfile = await fetchUserProfile(newSession.user.id)
-          setProfile(userProfile)
+          if (mountedRef.current) setProfile(userProfile)
         } else {
           setProfile(null)
         }
@@ -162,9 +185,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     )
 
     return () => {
+      mountedRef.current = false
       subscription.unsubscribe()
     }
-  }, [initializeAuth, supabase, fetchUserProfile])
+  }, [initializeAuth])
 
   const value: AuthContextType = {
     user,

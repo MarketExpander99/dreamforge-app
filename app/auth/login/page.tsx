@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -18,12 +19,17 @@ import {
   DialogOverlay,
 } from '@/components/ui/dialog'
 
+// During beta we sometimes need to manually confirm users in the Supabase Dashboard
+// (Authentication → Users → ⋯ → Confirm user) if they were created while
+// "Enable email confirmation" was still turned ON in the Supabase project settings.
+// New signups after it is OFF should not hit this.
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalConfig, setModalConfig] = useState<{
     title: string
@@ -32,10 +38,14 @@ export default function LoginPage() {
   } | null>(null)
   const router = useRouter()
 
+  // ONE stable Supabase client for the component (from the singleton helper).
+  // Prevents multiple client instances breaking the session.
+  const supabase = useMemo(() => createBrowserSupabaseClient(), [])
+
   const showPasswordResetModal = () => {
     setModalConfig({
       title: 'Reset Password',
-      description: 'Invalid email or password. Would you like to reset your password?',
+      description: 'Invalid email or password. Would you like us to reset your password?',
       onConfirm: async () => {
         try {
           const response = await fetch('/api/auth/send-password-reset', {
@@ -57,11 +67,11 @@ export default function LoginPage() {
             throw new Error(result.error || 'Failed to send password reset email')
           }
 
-          alert('Password reset email sent! Please check your inbox.')
+          toast.success('Password reset email sent! Please check your inbox.')
           setShowModal(false)
         } catch (error: unknown) {
           console.error('Password reset error:', error)
-          alert('Failed to send password reset email. Please try again later.')
+          toast.error('Failed to send password reset email. Please try again later.')
         }
       }
     })
@@ -71,12 +81,15 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
+
+    const email = formData.email.trim()
+    const password = formData.password
 
     try {
-      const supabase = createBrowserSupabaseClient()
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
+        email,
+        password
       })
 
       if (error) throw error
@@ -86,15 +99,18 @@ export default function LoginPage() {
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error('Login error (full from Supabase):', error)
+
+      let displayError = 'Login failed. Please try again.'
 
       if (errorMessage.includes('Email not confirmed')) {
+        // Clear guidance instead of generic "Invalid login credentials"
         const resendConfirmation = confirm(
           'Your email address has not been confirmed yet. Would you like us to resend the confirmation email?'
         )
 
         if (resendConfirmation) {
           try {
-            const supabase = createBrowserSupabaseClient()
             const { error: resendError } = await supabase.auth.resend({
               type: 'signup',
               email: formData.email
@@ -102,20 +118,34 @@ export default function LoginPage() {
 
             if (resendError) throw resendError
 
-            alert('Confirmation email has been resent. Please check your inbox and spam folder.')
+            toast.success('Confirmation email has been resent. Please check your inbox and spam folder.')
           } catch (resendError: unknown) {
-            alert('Failed to resend confirmation email. Please try again later.')
+            toast.error('Failed to resend confirmation email. Please try again later.')
           }
         }
+        displayError = errorMessage
       } else if (errorMessage.includes('Supabase environment variables not configured')) {
-        alert('Authentication is not configured yet. Please set up Supabase environment variables first.')
+        displayError = 'Authentication is not configured yet. Please set up Supabase environment variables first.'
+        toast.error(displayError)
       } else if (errorMessage.includes('Invalid login credentials')) {
+        // This can mean wrong password OR the user was created while email confirmation was ON.
+        // During beta we keep confirmation OFF so this should mostly be "bad password".
+        // We keep the existing reset modal flow for now.
+        displayError = `Invalid login credentials for "${email}". Double-check the exact email and password you used during signup (copy-paste if possible, no extra spaces or case differences). If you just signed up, try waiting 5-10 seconds or use the "Forgot password?" option.`
         showPasswordResetModal()
+        toast.error(displayError)
       } else if (errorMessage.includes('Too many requests')) {
-        alert('Too many login attempts. Please wait a few minutes before trying again.')
+        displayError = 'Too many login attempts. Please wait a few minutes before trying again.'
+        toast.error(displayError)
+      } else if (errorMessage.includes('Database error querying schema')) {
+        displayError = 'Login failed due to a database schema error. This often happens with manually-created test users (missing auth.identities record or broken handle_new_user trigger). Delete the user in Supabase Auth UI and recreate using the Admin API script (scripts/create-groklet-payfast-users.js). Or run a repair for identities.'
+        toast.error(displayError, { duration: 10000 })
       } else {
-        alert('Login failed. Please try again later.')
+        displayError = errorMessage
+        toast.error(`Login failed: ${errorMessage}`)
       }
+
+      setError(displayError)
     } finally {
       setLoading(false)
     }
@@ -149,6 +179,11 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm mb-4">
+                {error}
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
