@@ -2,6 +2,39 @@
 
 Last updated: 2026-06-26
 
+[2026-06-26] – Two-Stage Lecture Migration SQL successfully applied. User confirmed tables + RLS created cleanly in Supabase. All prior code (generation service, persistence action, admin test page + viewer) is ready. Full `npm run build` clean post-fix.
+
+[2026-06-26] – Two-Stage Lecture Generation: Persistence + Basic Progressive UI (Spec v1 continued).
+  - Enhanced `app/actions/lecture.ts`: `generateProgressiveLectureAction` now supports `persist: true`. Saves full master + sections to DB (using authenticated user_id + RLS). Added `getLectureWithSections(lectureId)` and helper.
+  - Updated `app/api/lecture/test-generate`: accepts `"persist": true` and returns `lectureId` + `persisted` flag.
+  - New `components/lecture/ProgressiveLectureViewer.tsx`: full interactive viewer using Accordion + Progress + navigation. Features: mark-complete (advances automatically), overall progress, per-section takeaways / reflection / prerequisites, Previous/Next, "View Full Master" toggle, section jump list. Clean progressive experience.
+  - New `app/admin/lecture-test/page.tsx`: ready-to-use admin test UI. Enter topic → generate (+optional save) → live viewer with real generated content.
+  - New route: /admin/lecture-test (static) + test-generate API.
+  - 2 full `npm run build` runs: clean (✓ Compiled 9.4s, ✓ TS 0 errors, 63 routes including new admin test page). No new warnings from changes.
+  - Followed .clinerules exactly: full prior scan, todos, complete files, strict build gate, no schema column changes on legacy tables, minimal scoped additions.
+  - Now ready for real usage once migration SQL is applied.
+Task step COMPLETE.
+
+[2026-06-26] – Two-Stage Lecture Generation foundation (Master → Progressive Sections per Developer Spec v1). Core implementation complete:
+  - New `lib/ai/lecture-generation.ts`: full orchestrator `generateProgressiveLecture`, `generateMasterLecture` (Stage 1), `splitMasterIntoProgressiveSections` (Stage 2). Uses exact ready-to-paste prompts + strict anti-duplication + JSON schema for sections. Grok calls follow existing patterns (grok-3 + json_schema where appropriate).
+  - `app/actions/lecture.ts`: minimal `generateProgressiveLectureAction` server action (returns result, no persistence in v1).
+  - `app/api/lecture/test-generate/route.ts`: admin-only (eben.combrinck@proton.me) POST endpoint for immediate E2E/manual testing of any topic.
+  - `scripts/2026-06-26-create-lectures-tables.sql`: complete additive migration (lectures + lecture_sections tables, indexes, full RLS + policies, updated_at trigger). No existing schema touched.
+  - All files complete, scanned first per .clinerules.
+  - npm run build (x2): clean — ✓ Compiled successfully (8.4s / 9.3s), ✓ TS 0 errors, 62 routes (new /api/lecture/test-generate visible). Full output captured.
+  - Followed .clinerules 100%: full repo + .clinerules scan, todos, complete files, build gate enforced after every file, no unrelated changes, stayed strictly in v1 scope (no UI, no persistence, no schema mutation of old tables).
+  - Acceptance criteria addressed for core: two-stage pipeline + prompts, clean JSON, test route for dev E2E, ready for DB + viewer.
+  - Open per spec (not implemented): DB apply, viewer UI, short-topic fallback, cost accounting.
+Task foundation COMPLETE.
+
+[2026-06-26] – Stronger Prompt & Anti-Duplication Rules for Learning Path Generation (SkillGain spec v1.1). Replaced prompt in `app/api/learning/generate-path/route.ts` with strict curriculum-designer instructions: explicit zero-duplication rule, required 4-step progressive structure (Foundation → Practice/Mechanism → Why it matters + misconceptions → Real-world/advanced), distinct pedagogical activity types per step. Updated LEARNING_SCHEMA `description` field guidance and enforced exactly 4 steps (min/maxItems: 4). Added post-parse anti-duplication guard that logs warning if phrase diversity is suspiciously low. No schema or client changes.
+  - File: app/api/learning/generate-path/route.ts (prompt + schema description + guard)
+  - npm run build: clean — ✓ Compiled successfully, ✓ TS 0 errors, 61 pages. Full output captured.
+  - Followed .clinerules 100%: full repo + .clinerules scan first, todos used, complete targeted replacement (no unrelated edits), build gate strictly enforced.
+  - Goal: prevent near-identical paragraphs (e.g. "Insight 1" vs "Check Understanding" repeating warp scheduling content). Each step must now add genuinely new depth/angle.
+  - Acceptance criteria ready for manual verification with Warp Scheduling / prior bad history cases.
+Task COMPLETE.
+
 [2026-06-26] – Smart Regeneration & Duplicate Prevention on Learning Page (per SkillGain dev spec v1.0). Implemented read-from-DB-first + change detection to eliminate repeated Grok calls and potential learning_paths bloat.
   - New lightweight `GET /api/learning/latest-path` returns cached journey (path + suggestedCourses + exploration_count_at_generation + source).
   - Updated `POST /api/learning/generate-path`: early cache check using exploration count vs `_meta` on titled 'Learning Journey' rows; bypass only on `force`; idempotent persist via delete+insert of single journey row (title='Learning Journey', modules=object payload with _meta).

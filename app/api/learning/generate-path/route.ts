@@ -35,14 +35,14 @@ const LEARNING_SCHEMA = {
         type: "object",
         properties: {
           title: { type: "string", description: "Clear, engaging title for this learning step" },
-          description: { type: "string", description: "Detailed explanation of what the student should focus on in this step" },
+          description: { type: "string", description: "Specific, non-repetitive explanation of what the student will learn or do in this step. Must introduce new information not covered in other steps and build progressively on the previous step." },
           estimatedTime: { type: "string", description: "Realistic time estimate (e.g. 20-30 min, 1-2 hours)" },
           difficulty: { type: "string", enum: ["Beginner", "Intermediate", "Advanced"] }
         },
         required: ["title", "description", "estimatedTime", "difficulty"]
       },
-      minItems: 3,
-      maxItems: 5
+      minItems: 4,
+      maxItems: 4
     },
     suggestedCourses: {
       type: "array",
@@ -139,20 +139,31 @@ export async function POST(request: Request) {
       )
       .join('\n')
 
-    const prompt = `You are an expert personalized learning coach for Skill-Gain, a gamified AI learning platform.
+    const prompt = `You are an expert curriculum designer specializing in creating non-repetitive, progressive learning experiences for Skill-Gain.
 
-A student has the following recent search and question history from our discovery experience and AI chat interactions:
-
+Student's recent discovery history:
 ${historyContext}
 
-Based ONLY on this real history, generate a highly personalized response with TWO parts:
+Create a **4-step progressive learning path** for this topic. Each step MUST build on the previous one and introduce genuinely new information. 
 
-1. **path**: A 3-5 step progressive learning path. Each step must feel directly connected to what the student has been exploring. Make descriptions specific and actionable.
+Strict rules you MUST follow:
+- NO duplicated sentences, ideas, or explanations across any steps.
+- Each step must add new depth or a new angle.
+- Use different pedagogical formats for each step:
+  - Step 1: Core concept / Foundation (what they must understand first)
+  - Step 2: How it works in practice + mechanism (application)
+  - Step 3: Why it matters + common misconceptions or deeper insight
+  - Step 4: Real-world implications or advanced connection
 
-2. **suggestedCourses**: 3-4 excellent formal online courses from reputable providers (Coursera, edX, Khan Academy, Stanford Online, etc.). 
-   - Only recommend real, currently available courses with accurate direct URLs.
-   - Prioritize courses that complement the student's demonstrated interests and questions.
-   - Include a clear, specific "reason" explaining why it fits THIS student's history.
+For the "description" field of each step:
+- Be highly specific and actionable.
+- Never repeat content from other steps.
+- Write as if teaching a new concept that depends on the previous step.
+
+Also generate 3-4 excellent formal course recommendations that complement this specific path.
+- Only recommend real, currently available courses with accurate direct URLs from reputable providers (Coursera, edX, Khan Academy, Stanford Online, etc.).
+- Prioritize courses that complement the student's demonstrated interests and questions.
+- Include a clear, specific "reason" explaining why it fits THIS student's history.
 
 Return ONLY valid JSON matching the required schema. No extra text.`
 
@@ -202,6 +213,13 @@ Return ONLY valid JSON matching the required schema. No extra text.`
     } catch (parseError) {
       console.error('Failed to parse Grok JSON:', parseError)
       return NextResponse.json({ error: 'Invalid AI response format' }, { status: 502 })
+    }
+
+    // Anti-duplication guard (early warning for prompt/model issues)
+    const allText = parsed.path.map((p: any) => (p.description || '').toLowerCase()).join(' ')
+    const uniquePhrases = new Set(allText.split('. '))
+    if (uniquePhrases.size < parsed.path.length * 2) {
+      console.warn('Possible content duplication detected in generated learning path')
     }
 
     // Final safety validation
