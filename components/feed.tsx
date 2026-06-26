@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { BookOpen, TestTube, MessageSquare, RefreshCw, CheckCircle, Sparkles, Trophy, ArrowRight, Volume2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { markCardComplete } from '@/app/actions/progress';
+import { markCardComplete, markTopicComplete as markTopicCompleteServer } from '@/app/actions/progress';
 import { getUncompletedFeed } from '@/app/actions/feed';
 
 interface QAData {
@@ -67,6 +67,10 @@ export default function Feed() {
 
   // Per-card answer state for inline QA cards (Phase 1)
   const [qaAnswers, setQaAnswers] = useState<Record<string, string>>({});
+
+  // Topic-level completion state (for immediate "Topic completed!" celebration UI before server re-load)
+  // Complements the server marker (topic-complete-*) for instant feedback + reliable hide on refresh.
+  const [completedTopics, setCompletedTopics] = useState<Set<string>>(new Set());
 
   const loadCompletedIds = () => {
     if (typeof window === 'undefined') return new Set<string>();
@@ -259,23 +263,7 @@ export default function Feed() {
       });
     }
 
-    if (mapped.length === 0) {
-      mapped.push({
-        id: 'empty',
-        type: 'lesson',
-        title: 'Start Exploring',
-        description: 'Add topics from the Discover page to begin structured rounds.',
-        mediaUrl: 'https://picsum.photos/id/1015/800/400',
-        mediaType: 'image',
-        learningPathId: 'path-default',
-        learningPathTitle: 'Your Path',
-        completed: false,
-        topic: 'Getting Started',
-        topicId: 'start',
-        round: 1,
-        difficulty: 1,
-      });
-    }
+    // No placeholder cards when empty — the entire feed section will be hidden by the render guard below.
 
     // Server already deduped, but keep strong client dedup as defense
     const seen = new Set<string>();
@@ -288,13 +276,23 @@ export default function Feed() {
 
     setFeedItems(uniqueMapped);
 
+    // Derive sensible starting round per topic:
+    // Start at the lowest round that still has uncompleted cards for that topic.
+    // This ensures that if lower rounds were completed previously (server filter), we land on the active round.
     const initialState: TopicState = {};
     uniqueMapped.forEach(item => {
       if (!initialState[item.topicId]) {
-        initialState[item.topicId] = { currentRound: 1 };
+        const roundsForTopic = uniqueMapped
+          .filter(i => i.topicId === item.topicId)
+          .map(i => i.round);
+        const startRound = roundsForTopic.length > 0 ? Math.min(...roundsForTopic) : 1;
+        initialState[item.topicId] = { currentRound: startRound };
       }
     });
     setTopicState(initialState);
+
+    // Clear any stale local completedTopics on fresh authoritative load (server truth wins)
+    setCompletedTopics(new Set());
 
     setIsLoading(false);
 
@@ -402,15 +400,18 @@ export default function Feed() {
   const getCurrentRound = (topicId: string) => topicState[topicId]?.currentRound || 1;
 
   const advanceToNextRound = (topicId: string) => {
+    // No artificial cap — render logic decides if we are past the real last round for the topic.
+    // Guarded by hasHigherRoundCards checks in the UI so users cannot advance into phantom rounds.
     setTopicState(prev => ({
       ...prev,
-      [topicId]: { currentRound: Math.min((prev[topicId]?.currentRound || 1) + 1, 3) }
+      [topicId]: { currentRound: (prev[topicId]?.currentRound || 1) + 1 }
     }));
   };
 
   const isRoundComplete = (topicId: string, round: number) => {
-    const roundCards = feedItems.filter(i => i.topicId === topicId && i.round === round);
-    return roundCards.length > 0 && roundCards.every(card => card.completed);
+    const roundCards = feedItems.filter(i => i.topicId === topicId && i.round === round && !pendingRemoveIds.has(i.id));
+    // Consider complete only when every card is either server-completed or pending removal (optimistic)
+    return roundCards.length > 0 && roundCards.every(card => card.completed || pendingRemoveIds.has(card.id));
   };
 
   const updateCompleted = (newIds: Set<string>) => {
@@ -437,6 +438,46 @@ export default function Feed() {
       setFeedItems(prev => prev.map(i => (i.id === item.id ? { ...i, completed: true } : i)));
 
       toast.success(result.message || `+${result.xpAwarded} XP`);
+
+      // === Round + Topic completion detection (per spec) ===
+      // After completing a card, check if this was the *last card of the final round* for its topic.
+      // If so: show celebratory "Topic completed!" state + persist via marker so it stays hidden on refresh.
+      setTimeout(() => {
+        const topicId = item.topicId;
+        // Compute remaining visible (non-pending, non-completed) cards for the topic
+        const remainingForTopic = feedItems.filter(i =>
+          i.topicId === topicId &&
+          i.id !== item.id &&
+          !pendingRemoveIds.has(i.id) &&
+          !completedIds.has(i.id)
+        );
+
+        // Also account for the just-completed one
+        const stillActive = remainingForTopic.length;
+
+        if (stillActive === 0) {
+          // No more active cards for this topic in current view → treat as finished
+          // Stabilized check: if there are no uncompleted cards in *higher rounds* than the one just finished,
+          // this was the final round for the topic.
+          const higherCardsRemaining = feedItems.filter(i =>
+            i.topicId === topicId &&
+            i.round > item.round &&
+            !pendingRemoveIds.has(i.id) &&
+            !completedIds.has(i.id)
+          );
+
+          const wasFinal = higherCardsRemaining.length === 0;
+
+          if (wasFinal) {
+            // Show positive topic complete UI + persist marker
+            setCompletedTopics(prev => new Set(prev).add(topicId));
+            // Persist to server (non-blocking; optimistic already applied)
+            markTopicCompleteServer(topicId).catch(() => {});
+            // Clean the topic items from local feed for instant removal of cards
+            setFeedItems(prev => prev.filter(i => i.topicId !== topicId));
+          }
+        }
+      }, 10);
 
       // After server write + revalidate (action already does revalidatePath /discover etc),
       // pull fresh authoritative list from server so UI matches "one source of truth".
@@ -480,13 +521,30 @@ export default function Feed() {
     handleQASubmit(item, answer);
   };
 
-  const markTopicComplete = (topicId: string, topicTitle: string) => {
-    if (!confirm(`Mark entire topic "${topicTitle}" as complete?`)) return;
-
-    const newIds = new Set(completedIds);
-    feedItems.filter(item => item.topicId === topicId).forEach(item => newIds.add(item.id));
-    updateCompleted(newIds);
+  // Reliable topic completion: writes server marker (so getPersonalizedUncompletedFeed excludes forever)
+  // + optimistic client removal + local celebration state.
+  const markTopicComplete = async (topicId: string, topicTitle: string) => {
+    // Optimistic: hide the whole topic immediately
+    setCompletedTopics(prev => new Set(prev).add(topicId));
     setFeedItems(prev => prev.filter(item => item.topicId !== topicId));
+
+    // Also mark any remaining synthetic card ids locally (defense in depth)
+    const topicCardIds = feedItems
+      .filter(item => item.topicId === topicId)
+      .map(item => item.id);
+    const newIds = new Set(completedIds);
+    topicCardIds.forEach(id => newIds.add(id));
+    updateCompleted(newIds);
+
+    try {
+      await markTopicCompleteServer(topicId);
+      toast.success(`Topic "${topicTitle}" marked complete — hidden from feed`);
+    } catch (e) {
+      // Still keep hidden in this session; server marker may have partially applied.
+      // On next load the cards may come back only if marker write failed.
+      console.warn('markTopicCompleteServer failed (topic may reappear after refresh if not persisted)', e);
+      toast('Topic hidden for this session. Server sync may retry on refresh.');
+    }
   };
 
   const handleRefreshFeed = () => loadFeedFromDB();
@@ -663,6 +721,11 @@ Content: ${item.description}`;
     );
   }
 
+  // Hide the entire feed section when there are no cards/topics to show (new users or all completed)
+  if (feedItems.length === 0) {
+    return null;
+  }
+
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between mb-5">
@@ -674,46 +737,123 @@ Content: ${item.description}`;
         </Button>
       </div>
 
-      <p className="text-muted-foreground mb-7">
-        Dynamic cards generated from your explorations. Speaker uses real Grok voice (Rex/Ava).
-      </p>
-
       <div className="space-y-10">
-        {topics.length === 0 && (
-          <Card className="p-12 text-center">
-            <p className="text-xl text-muted-foreground">No active topics. Add more from Discover!</p>
-          </Card>
-        )}
 
         {topics.map(topicId => {
           const topicItems = feedItems.filter(i => i.topicId === topicId);
           if (topicItems.length === 0) return null;
 
+          // Local completion celebration state wins for immediate UX (before re-fetch)
+          if (completedTopics.has(topicId)) {
+            // Already in celebration / hidden state — render a minimal completed banner
+            // (parent topics list + this guard keeps it from re-rendering cards)
+            const titleFromState = topicItems[0]?.topic || feedItems.find(i => i.topicId === topicId)?.topic || 'Topic';
+            return (
+              <div key={topicId} className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-8 text-center border rounded-2xl bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
+                >
+                  <Trophy className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                  <p className="text-lg font-semibold text-green-700 dark:text-green-400 mb-2">
+                    Topic completed!
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-500">
+                    Great work finishing <span className="font-medium">{titleFromState}</span>. This topic has been marked complete and removed from your feed.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      // Ensure server marker and clean local state (idempotent)
+                      markTopicCompleteServer(topicId).catch(() => {});
+                      setCompletedTopics(prev => {
+                        const next = new Set(prev);
+                        next.delete(topicId);
+                        return next;
+                      });
+                    }}
+                  >
+                    Hide completed topic
+                  </Button>
+                </motion.div>
+              </div>
+            );
+          }
+
           const topicTitle = topicItems[0].topic;
           const currentRound = getCurrentRound(topicId);
-          const currentRoundItems = topicItems.filter(i => i.round === currentRound && !i.completed);
-          const roundComplete = isRoundComplete(topicId, currentRound);
-          const allRoundsDone = currentRound === 3 && roundComplete;
 
-          if (allRoundsDone) return null;
+          // Filter pending removes for accurate "remaining" count and empty state
+          const effectiveTopicItems = topicItems.filter(i => !pendingRemoveIds.has(i.id));
+          const currentRoundItems = effectiveTopicItems.filter(i => i.round === currentRound && !i.completed);
+
+          const roundComplete = isRoundComplete(topicId, currentRound);
+
+          // === Stabilized final-round detection (fixes phantom Round 3 + manual close after round 2) ===
+          // "Is final" = there are no uncompleted cards belonging to rounds strictly higher than current.
+          // This works regardless of how many rounds the synthetic generator produced for the topic (2 or 3+).
+          // We also compute maxPresent for safety against advancing past real content.
+          const higherRoundCards = effectiveTopicItems.filter(
+            i => i.round > currentRound && !i.completed && !pendingRemoveIds.has(i.id)
+          );
+          const hasHigherRoundCards = higherRoundCards.length > 0;
+
+          const maxPresentRound = effectiveTopicItems.length > 0
+            ? Math.max(...effectiveTopicItems.map(i => i.round))
+            : currentRound;
+
+          const isBeyondLastRound = currentRound > maxPresentRound;
+          const isFinalRound = !hasHigherRoundCards || isBeyondLastRound;
+
+          // If we somehow landed on a round with no cards and no higher rounds exist, treat the whole topic as done.
+          const noCardsLeftForTopic = effectiveTopicItems.every(i => i.completed || pendingRemoveIds.has(i.id));
+
+          // Extra stabilization: if truly no uncompleted cards remain for this topic, render clean completed UI
+          // without round header or "Complete Topic" button (prevents manual close on phantom rounds).
+          if ((noCardsLeftForTopic || isBeyondLastRound) && currentRoundItems.length === 0) {
+            return (
+              <div key={topicId} className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-8 text-center border rounded-2xl bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
+                >
+                  <Trophy className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                  <p className="text-lg font-semibold text-green-700 dark:text-green-400 mb-2">
+                    Topic completed!
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-500 mb-4">
+                    Great work finishing {topicTitle}. This topic has been marked complete.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => markTopicComplete(topicId, topicTitle)}
+                  >
+                    Hide completed topic
+                  </Button>
+                </motion.div>
+              </div>
+            );
+          }
 
           return (
             <div key={topicId} className="space-y-5">
               <div className="flex items-center justify-between border-b pb-4">
                 <div>
                   <h3 className="text-2xl font-semibold">{topicTitle}</h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <Badge>Round {currentRound}</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {currentRoundItems.length} cards remaining
-                    </span>
-                  </div>
+                  {(isBeyondLastRound || noCardsLeftForTopic) && (
+                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">Completed</span>
+                  )}
                 </div>
 
                 <div className="flex gap-3">
-                  {roundComplete && currentRound < 3 && (
+                  {roundComplete && hasHigherRoundCards && (
                     <Button onClick={() => advanceToNextRound(topicId)} className="gap-2">
-                      Next Round <ArrowRight className="h-4 w-4" />
+                      Next <ArrowRight className="h-4 w-4" />
                     </Button>
                   )}
                   <Button
@@ -728,8 +868,22 @@ Content: ${item.description}`;
               </div>
 
               <div className="grid gap-5">
-                {currentRoundItems.length === 0 && !roundComplete && (
-                  <p className="text-muted-foreground">No active cards in this round.</p>
+                {/* === Stabilized empty state (defense) === */}
+                {/* Primary protection is the early-return complete banner + hasHigher guards above.
+                    This catches any remaining edge cases of 0 cards on/after final round. */}
+                {currentRoundItems.length === 0 && !noCardsLeftForTopic && !isBeyondLastRound && !isFinalRound && (
+                  roundComplete ? (
+                    <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 text-center">
+                      <Trophy className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
+                      <h4 className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">Section Complete!</h4>
+                      <p className="text-emerald-600 dark:text-emerald-400 mt-1">Great work. Ready for the next set?</p>
+                      <Button onClick={() => advanceToNextRound(topicId)} className="mt-4 gap-2">
+                        Continue <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No active cards in this set.</p>
+                  )
                 )}
 
                 {currentRoundItems.map(item => {
@@ -899,17 +1053,6 @@ Content: ${item.description}`;
                   );
                 })}
               </div>
-
-              {roundComplete && currentRound < 3 && (
-                <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 text-center">
-                  <Trophy className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
-                  <h4 className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">Round {currentRound} Complete!</h4>
-                  <p className="text-emerald-600 dark:text-emerald-400 mt-1">Great work. Ready to level up?</p>
-                  <Button onClick={() => advanceToNextRound(topicId)} className="mt-4 gap-2">
-                    Start Round {currentRound + 1} <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
             </div>
           );
         })}

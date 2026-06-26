@@ -69,14 +69,72 @@ export default function LearningPage() {
     }
   }
 
-  const generateLearningPath = async () => {
-    if (savedQueries.length === 0) return
+  const fetchLatestLearningPath = async () => {
+    try {
+      const res = await fetch('/api/learning/latest-path')
+      if (res.ok) {
+        const json = await res.json()
+        return json && !json.error ? json : null
+      }
+    } catch (error) {
+      console.error('Error fetching latest learning path:', error)
+    }
+    return null
+  }
+
+  const getJourneyCacheKey = (uid?: string) => `sg_learning_journey_${uid || 'anon'}`
+
+  // Save successful generation result to localStorage using a signature of the history.
+  // This guarantees we can avoid repeated AI calls even if DB row has issues (e.g. conflicts with other upserts).
+  const saveJourneyToLocal = (path: any[], suggested: any[], sig: string) => {
+    try {
+      if (user?.id) {
+        localStorage.setItem(getJourneyCacheKey(user.id), JSON.stringify({
+          sig,
+          path,
+          suggestedCourses: suggested,
+          savedAt: Date.now()
+        }))
+      }
+    } catch (e) {
+      // localStorage may be unavailable (private mode etc) — non fatal
+    }
+  }
+
+  const loadJourneyFromLocal = (sig: string) => {
+    try {
+      if (!user?.id) return null
+      const raw = localStorage.getItem(getJourneyCacheKey(user.id))
+      if (!raw) return null
+      const cached = JSON.parse(raw)
+      if (cached.sig === sig && Array.isArray(cached.path) && cached.path.length > 0) {
+        return cached
+      }
+    } catch (e) {}
+    return null
+  }
+
+  const generateLearningPath = async (persist: boolean = false, force: boolean = false) => {
+    const currentLength = savedQueries.length
+    if (currentLength === 0) return
+
+    // Build signature for local cache
+    const maxCreated = savedQueries.reduce((max: string, q: any) => {
+      const c = q?.createdAt || ''
+      return c && (!max || c > max) ? c : max
+    }, '' as string)
+    const sig = `${currentLength}|${maxCreated}`
+
     setGeneratingPath(true)
     try {
       const response = await fetch('/api/learning/generate-path', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queries: savedQueries }),
+        body: JSON.stringify({ 
+          queries: savedQueries,
+          persist,
+          force
+        }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -87,6 +145,9 @@ export default function LearningPage() {
         setCoursePage(1)
         setExpandedPathIndex(null)
         setExpandedCourseIndex(null)
+
+        // Persist result locally so future loads skip AI even without reliable DB cache
+        saveJourneyToLocal(data.path || [], data.suggestedCourses || [], sig)
       }
     } catch (error) {
       console.error('Error generating learning path:', error)
@@ -104,12 +165,60 @@ export default function LearningPage() {
     fetchSavedQueries()
   }, [user, authLoading, router])
 
-  // Auto-generate personalized path + courses from history
+  // Smart load: read cached path from DB first (preferred), then localStorage fallback.
+  // Only trigger AI generation (and persist) if *no* matching cached journey exists for this exact history snapshot.
+  // This stops repeated unnecessary Grok calls when the user has not added new explorations.
   useEffect(() => {
-    if (savedQueries.length > 0 && learningPath.length === 0 && !generatingPath) {
-      generateLearningPath()
+    const loadOrGeneratePath = async () => {
+      const currentLength = savedQueries.length
+      if (currentLength === 0) return
+
+      // Strong signature = length + newest exploration timestamp (survives count caps)
+      const currentMaxCreated = savedQueries.reduce((max: string, q: any) => {
+        const c = q?.createdAt || ''
+        return c && (!max || c > max) ? c : max
+      }, '' as string)
+      const sig = `${currentLength}|${currentMaxCreated}`
+
+      // 1. Try DB (source of truth)
+      const existing = await fetchLatestLearningPath()
+      if (existing && !existing.error) {
+        const hasCachedPath = Array.isArray(existing.path) && existing.path.length > 0
+        if (hasCachedPath) {
+          // We have a journey in the DB — use it. Avoids AI call.
+          // (Count/timestamp can be used for "needs regen" hint in future, but we prefer cache to stop spam.)
+          setLearningPath(existing.path || [])
+          setSuggestedCourses(existing.suggestedCourses || [])
+          setPathPage(1)
+          setCoursePage(1)
+          setExpandedPathIndex(null)
+          setExpandedCourseIndex(null)
+          return
+        }
+      }
+
+      // 2. Fallback to localStorage (reliable per-browser cache using signature)
+      const localCached = loadJourneyFromLocal(sig)
+      if (localCached) {
+        setLearningPath(localCached.path || [])
+        setSuggestedCourses(localCached.suggestedCourses || [])
+        setPathPage(1)
+        setCoursePage(1)
+        setExpandedPathIndex(null)
+        setExpandedCourseIndex(null)
+        return
+      }
+
+      // 3. Nothing cached for this history → generate fresh + persist (DB + local)
+      if (!generatingPath) {
+        await generateLearningPath(true, false)
+      }
     }
-  }, [savedQueries.length]) // Only depend on length to avoid unnecessary re-runs
+
+    if (!authLoading && user) {
+      loadOrGeneratePath()
+    }
+  }, [savedQueries.length, user, authLoading]) // length change signals possible new history
 
   // Pagination helpers
   const totalHistoryPages = Math.ceil(savedQueries.length / ITEMS_PER_PAGE)
@@ -130,14 +239,65 @@ export default function LearningPage() {
     coursePage * ITEMS_PER_PAGE
   )
 
-  if (loading && savedQueries.length === 0) {
+  if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
       </div>
     )
   }
 
+  // === Page-level fallback for users with no exploration history ===
+  // A single, welcoming, actionable empty state (per spec). No other sections render.
+  if (savedQueries.length === 0) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950">
+        <main className="py-8 px-4 md:px-8 pb-20 md:pb-8">
+          <div className="max-w-2xl mx-auto text-center pt-16">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-3xl bg-purple-100 dark:bg-purple-950">
+              <BookOpen className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            </div>
+
+            <h1 className="text-4xl font-bold tracking-tight mb-4">
+              Your learning journey starts here
+            </h1>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-8 max-w-md mx-auto">
+              The Learn page becomes magical once you’ve explored a few topics in Discover.
+              Every search and question you save powers personalized paths, recommendations, and progress tracking.
+            </p>
+
+            <Button
+              size="lg"
+              onClick={() => router.push('/discover')}
+              className="px-8"
+            >
+              Start Exploring in Discover
+            </Button>
+
+            <div className="mt-12 text-left">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3">Try exploring these to get started:</p>
+              <div className="flex flex-wrap gap-2">
+                {['Photosynthesis', 'Python basics', 'The solar system', 'How cameras work'].map((topic) => (
+                  <Button
+                    key={topic}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      router.push('/discover')
+                    }}
+                  >
+                    {topic}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Normal rich content only renders when user has history
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <main className="py-8 px-5 md:px-8 pb-20 md:pb-8">
@@ -162,63 +322,57 @@ export default function LearningPage() {
                 Search &amp; Question History
               </CardTitle>
               <CardDescription>
-                {savedQueries.length > 0 
-                  ? `Using your ${savedQueries.length} explorations • Click titles to expand` 
-                  : 'Start exploring in Discover — your questions build this path.'}
+                {`Using your ${savedQueries.length} explorations • Click titles to expand`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {savedQueries.length > 0 ? (
-                <div className="space-y-2">
-                  {paginatedHistory.map((query) => (
-                    <div 
-                      key={query.id}
-                      onClick={() => setExpandedHistoryId(expandedHistoryId === query.id ? null : query.id)}
-                      className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{query.shortSearch}</span>
-                          {query.gradeLevel && <Badge variant="outline" className="text-xs shrink-0">{query.gradeLevel}</Badge>}
-                        </div>
-                        <span className="text-xs text-zinc-400 shrink-0">{new Date(query.createdAt).toLocaleDateString()}</span>
+              <div className="space-y-2">
+                {paginatedHistory.map((query) => (
+                  <div 
+                    key={query.id}
+                    onClick={() => setExpandedHistoryId(expandedHistoryId === query.id ? null : query.id)}
+                    className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{query.shortSearch}</span>
+                        {query.gradeLevel && <Badge variant="outline" className="text-xs shrink-0">{query.gradeLevel}</Badge>}
                       </div>
-
-                      {expandedHistoryId === query.id && (
-                        <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-                          <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">FULL QUESTION</p>
-                          <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">{query.fullQuestion}</p>
-                        </div>
-                      )}
+                      <span className="text-xs text-zinc-400 shrink-0">{new Date(query.createdAt).toLocaleDateString()}</span>
                     </div>
-                  ))}
 
-                  {/* Pagination controls */}
-                  {totalHistoryPages > 1 && (
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => { setHistoryPage(p => Math.max(1, p - 1)); setExpandedHistoryId(null) }} 
-                        disabled={historyPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-                      </Button>
-                      <span className="text-xs text-zinc-500 tabular-nums">Page {historyPage} of {totalHistoryPages}</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => { setHistoryPage(p => Math.min(totalHistoryPages, p + 1)); setExpandedHistoryId(null) }} 
-                        disabled={historyPage === totalHistoryPages}
-                      >
-                        Next <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-zinc-500 dark:text-zinc-400 py-12 text-center">No saved searches yet. Start exploring in Discover to build your path and course suggestions!</p>
-              )}
+                    {expandedHistoryId === query.id && (
+                      <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">FULL QUESTION</p>
+                        <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">{query.fullQuestion}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Pagination controls */}
+                {totalHistoryPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setHistoryPage(p => Math.max(1, p - 1)); setExpandedHistoryId(null) }} 
+                      disabled={historyPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <span className="text-xs text-zinc-500 tabular-nums">Page {historyPage} of {totalHistoryPages}</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => { setHistoryPage(p => Math.min(totalHistoryPages, p + 1)); setExpandedHistoryId(null) }} 
+                      disabled={historyPage === totalHistoryPages}
+                    >
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -233,7 +387,7 @@ export default function LearningPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={generateLearningPath}
+                  onClick={() => generateLearningPath(true, true)} // force fresh AI + persist (manual override)
                   disabled={generatingPath || savedQueries.length === 0}
                 >
                   {generatingPath ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
@@ -242,12 +396,13 @@ export default function LearningPage() {
               </CardTitle>
               <CardDescription>
                 {savedQueries.length > 0 
-                  ? "Step-by-step path generated by Grok from your unique questions and goals • Click any step to drill down" 
-                  : "Step-by-step path tailored to your unique questions and goals"}
+                  ? "Step-by-step path generated by Grok from your unique questions and goals" 
+                  : "Built from your Discover explorations — search anything to begin"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {generatingPath && learningPath.length === 0 ? (
+                // HISTORY EXISTS — safe to show generating state
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <Sparkles className="h-10 w-10 text-amber-500 animate-pulse mb-4" />
                   <p className="text-zinc-600 dark:text-zinc-400 font-medium">Grok is crafting your personalized learning path...</p>
@@ -305,8 +460,9 @@ export default function LearningPage() {
                   )}
                 </>
               ) : (
+                // Fallback when history exists but nothing generated yet
                 <div className="py-12 text-center text-zinc-500 dark:text-zinc-400">
-                  Your learning path will appear here once you have saved searches and questions from Discover.
+                  Your learning path will appear here once Grok finishes analyzing your saved explorations.
                 </div>
               )}
             </CardContent>
@@ -325,6 +481,7 @@ export default function LearningPage() {
             </CardHeader>
             <CardContent>
               {generatingPath && suggestedCourses.length === 0 ? (
+                // HISTORY EXISTS — safe to show generating state for courses
                 <div className="py-10 flex flex-col items-center justify-center text-center">
                   <Sparkles className="h-10 w-10 text-amber-500 animate-pulse mb-4" />
                   <p className="text-zinc-600 dark:text-zinc-400 font-medium">Grok is finding the perfect formal courses matched to your grade and learning history...</p>
@@ -391,7 +548,7 @@ export default function LearningPage() {
                 </div>
               ) : (
                 <div className="py-12 text-center text-zinc-500 dark:text-zinc-400">
-                  Formal course recommendations will appear here once your discovery history and questions are analyzed.
+                  Formal course recommendations will appear here once Grok finishes analyzing your saved explorations.
                 </div>
               )}
               

@@ -51,7 +51,7 @@ const NavigationComponent = () => {
       isActive: pathname === '/discover',
     },
     {
-      label: 'Learning',
+      label: 'Learn',
       href: '/learning',
       icon: BookOpen,
       isActive: pathname === '/learning' || pathname?.startsWith('/learning/'),

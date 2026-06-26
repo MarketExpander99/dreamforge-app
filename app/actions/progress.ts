@@ -115,3 +115,84 @@ export async function markCardComplete(
     score: progressPercentage,
   }
 }
+
+/**
+ * markTopicComplete
+ * Marks an entire topic (from explorations/feed rounds) as completed.
+ * Uses a stable synthetic marker id `topic-complete-${topicId}` written to user_progress.
+ * The feed generator (getPersonalizedUncompletedFeed) skips any topic that has this marker.
+ * This provides satisfying closure + reliable removal on refresh (same as red "Complete Topic").
+ * Revalidates feed paths.
+ */
+export async function markTopicComplete(topicId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const markerId = `topic-complete-${topicId}`;
+
+  // Idempotency
+  const { data: existing } = await supabase
+    .from('user_progress')
+    .select('id, status, progress_percentage')
+    .eq('user_id', user.id)
+    .eq('content_id', markerId)
+    .single();
+
+  if (existing?.status === 'completed' || existing?.progress_percentage === 100) {
+    return { success: true, alreadyCompleted: true };
+  }
+
+  // Ensure placeholder (same defensive pattern)
+  const { data: contentExists } = await supabase
+    .from('content_items')
+    .select('id')
+    .eq('id', markerId)
+    .single();
+
+  if (!contentExists) {
+    try {
+      await supabase.from('content_items').insert({
+        id: markerId,
+        title: `Topic Complete • ${topicId}`,
+        content: 'Marker for full topic/round completion in the personalized feed.',
+        type: 'text',
+        difficulty: 'beginner',
+        tags: ['topic-complete', 'feed'],
+        read_time: 0,
+        is_published: true,
+        likes: 0,
+        views: 0,
+        is_featured: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    } catch {
+      // ignore races
+    }
+  }
+
+  const { error } = await supabase
+    .from('user_progress')
+    .upsert({
+      user_id: user.id,
+      content_id: markerId,
+      status: 'completed',
+      progress_percentage: 100,
+      time_spent: 0,
+      last_accessed_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,content_id' });
+
+  if (error) {
+    console.error('markTopicComplete upsert error', error);
+    throw error;
+  }
+
+  // Revalidate so getPersonalizedUncompletedFeed (server) excludes on next load
+  revalidatePath('/discover');
+  revalidatePath('/learning');
+  revalidatePath('/profile');
+
+  return { success: true };
+}

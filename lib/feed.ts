@@ -70,6 +70,15 @@ export async function getPersonalizedUncompletedFeed(
   explorations.forEach((exp: any, topicIndex: number) => {
     const topicId = exp.id || `topic-${topicIndex}`;
     const topicTitle = exp.label || 'Learning Topic';
+
+    // Topic-level completion marker support (for "Topic completed" final-round flow + red Complete button)
+    // If the user has explicitly completed the whole topic, skip generating any cards for it.
+    // This ensures completed topics are reliably excluded by the authoritative source of truth on refresh.
+    const topicCompleteMarker = `topic-complete-${topicId}`;
+    if (completedIds.has(topicCompleteMarker)) {
+      return; // entire topic hidden (satisfies spec: hide on final round complete, same as red button)
+    }
+
     const baseDesc = (exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`).trim();
 
     const numCards = 3 + (topicIndex % 3);

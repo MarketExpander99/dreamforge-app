@@ -98,10 +98,12 @@ export default function LearningPathPage() {
       if (expl) setExplorations(expl);
 
       // Current saved path (unchanged)
+      // Exclude "Learning Journey" cache rows created by /learning (prevents UI pollution)
       const { data: path } = await supabase
         .from('learning_paths')
         .select('*')
         .eq('user_id', session.user.id)
+        .neq('title', 'Learning Journey')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

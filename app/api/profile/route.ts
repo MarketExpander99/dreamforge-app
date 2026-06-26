@@ -191,10 +191,12 @@ export async function GET(request: NextRequest) {
     // Conservative: latest path + first 3 steps only for a clean profile snapshot
     let activeLearningPath: any = null
     try {
+      // Exclude 'Learning Journey' cache rows managed by the dedicated Learning page
       const { data: pathRow } = await supabase
         .from('learning_paths')
         .select('id, title, description, modules, created_at')
         .eq('user_id', user.id)
+        .neq('title', 'Learning Journey')
         .order('created_at', { ascending: false })
         .limit(1)
         .single()

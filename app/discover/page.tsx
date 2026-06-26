@@ -141,10 +141,12 @@ export default function DiscoverPage() {
   }, [authLoading, user, supabase]);
 
   const loadCurrentPath = async (userId: string) => {
+    // Exclude Learning Journey cache rows (those are owned by the /learning page journey feature)
     const { data: path } = await supabase
       .from('learning_paths')
       .select('*')
       .eq('user_id', userId)
+      .neq('title', 'Learning Journey')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();

@@ -75,12 +75,57 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { queries } = await request.json()
+    const body = await request.json()
+    const queries = body?.queries
+    const persist = !!body?.persist
+    const force = !!body?.force
 
     if (!queries || !Array.isArray(queries) || queries.length === 0) {
       return NextResponse.json({ error: 'No learning history provided' }, { status: 400 })
     }
 
+    const currentCount = queries.length
+
+    // Compute a reliable signature for change detection (count + most recent exploration timestamp)
+    const currentMaxCreated = queries.reduce((max: string, q: any) => {
+      const c = q?.createdAt || q?.created_at || ''
+      return c && (!max || c > max) ? c : max
+    }, '' as string)
+
+    // === SMART CACHE CHECK: Read from DB first (no AI call if up-to-date) ===
+    // Only journey rows (title='Learning Journey') are considered for this cache.
+    // Uses BOTH count and max timestamp so we correctly skip Grok when nothing new was added.
+    if (!force) {
+      const { data: latestJourney } = await supabase
+        .from('learning_paths')
+        .select('modules, created_at')
+        .eq('user_id', user.id)
+        .eq('title', 'Learning Journey')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const meta = (latestJourney?.modules as any)?._meta || {}
+      const previousCount = typeof meta.exploration_count_at_generation === 'number'
+        ? meta.exploration_count_at_generation
+        : 0
+      const previousMax = meta.max_exploration_created_at || ''
+
+      const countOk = currentCount <= previousCount
+      const timeOk = !currentMaxCreated || !previousMax || currentMaxCreated <= previousMax
+
+      if (latestJourney && (countOk || timeOk)) {
+        // Up-to-date (by count or by latest exploration time) — return cached, skip Grok entirely
+        const mods = latestJourney.modules as any
+        return NextResponse.json({
+          path: mods?.path || [],
+          suggestedCourses: mods?.suggestedCourses || [],
+          fromCache: true
+        })
+      }
+    }
+
+    // === Need fresh generation (new history or forced manual regenerate) ===
     const apiKey = process.env.XAI_API_KEY
     if (!apiKey) {
       console.error('XAI_API_KEY is not configured')
@@ -168,9 +213,56 @@ Return ONLY valid JSON matching the required schema. No extra text.`
       parsed.suggestedCourses = []
     }
 
+    // === IDEMPOTENT PERSIST (only when requested) ===
+    // Delete any prior journey cache row then insert exactly one.
+    // Uses existing learning_paths table + title convention (no schema changes).
+    // Prevents duplicates and allows cheap timestamp/count change detection.
+    if (persist) {
+      try {
+        // Remove previous journey row(s) for this user (keep table clean)
+        await supabase
+          .from('learning_paths')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('title', 'Learning Journey')
+
+        const now = new Date().toISOString()
+        const journeyPayload = {
+          user_id: user.id,
+          title: 'Learning Journey',
+          description: 'AI-generated personalized path + course recommendations from exploration history',
+          modules: {
+            path: parsed.path,
+            suggestedCourses: parsed.suggestedCourses,
+            _meta: {
+              exploration_count_at_generation: currentCount,
+              last_generated_at: now,
+              max_exploration_created_at: currentMaxCreated,
+              source: force ? 'manual' : 'auto'
+            }
+          },
+          generated_at: now
+        }
+
+        // Insert new journey row. We keep historical journey rows (latest wins on read).
+        // This is simpler and more robust than delete+insert.
+        const { error: insertError } = await supabase
+          .from('learning_paths')
+          .insert(journeyPayload)
+
+        if (insertError) {
+          console.error('Failed to persist learning journey (non-fatal):', insertError)
+          // Still return fresh data to client even if save failed
+        }
+      } catch (persistErr) {
+        console.error('Persist error in generate-path (non-fatal):', persistErr)
+      }
+    }
+
     return NextResponse.json({
       path: parsed.path,
-      suggestedCourses: parsed.suggestedCourses
+      suggestedCourses: parsed.suggestedCourses,
+      fromCache: false
     })
 
   } catch (error) {
