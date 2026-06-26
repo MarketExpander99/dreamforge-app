@@ -184,9 +184,9 @@ export default function LearningPage() {
       const existing = await fetchLatestLearningPath()
       if (existing && !existing.error) {
         const hasCachedPath = Array.isArray(existing.path) && existing.path.length > 0
-        if (hasCachedPath) {
-          // We have a journey in the DB — use it. Avoids AI call.
-          // (Count/timestamp can be used for "needs regen" hint in future, but we prefer cache to stop spam.)
+        const storedCount = existing.exploration_count_at_generation ?? 0
+        if (hasCachedPath && storedCount >= currentLength) {
+          // Up to date (cached count >= current explorations) — use DB, skip Grok entirely.
           setLearningPath(existing.path || [])
           setSuggestedCourses(existing.suggestedCourses || [])
           setPathPage(1)
@@ -195,6 +195,7 @@ export default function LearningPage() {
           setExpandedCourseIndex(null)
           return
         }
+        // If has cached but storedCount < currentLength: fall through to regenerate (new history detected)
       }
 
       // 2. Fallback to localStorage (reliable per-browser cache using signature)
