@@ -215,6 +215,26 @@ export default function DiscoverPage() {
     return data;
   };
 
+  // Small helper to ensure we never pass raw objects into title/content/short_description when saving or using as cards.
+  // Unwraps the exact shape that was leaking as raw JSON into lesson cards.
+  function unwrapExploration(raw: any) {
+    if (!raw) return raw;
+    if (typeof raw === 'string') {
+      const t = raw.trim();
+      if (t.startsWith('{') && t.includes('"label"') && t.includes('short_description')) {
+        try {
+          const o = JSON.parse(t);
+          if (o && o.label && o.short_description !== undefined) return o;
+        } catch {}
+      }
+      return raw;
+    }
+    if (typeof raw === 'object' && raw.label && raw.short_description !== undefined) {
+      return raw;
+    }
+    return raw;
+  }
+
   // Helper to create specialised/practical content from existing data (no extra Grok call)
   const createSpecialisedContent = (node: Node): string => {
     const base = node.deep_details || node.short_description;
@@ -256,12 +276,20 @@ export default function DiscoverPage() {
       });
 
       let rawData = await response.json();
-      const parsed = safeParse(rawData);
+      let parsed = safeParse(rawData);
+      parsed = unwrapExploration(parsed) || parsed;
+
+      const getShort = (p: any) => {
+        if (!p) return "No description available.";
+        if (typeof p.short_description === 'string') return p.short_description;
+        if (p.short_description && typeof p.short_description === 'object') return JSON.stringify(p.short_description);
+        return "No description available.";
+      };
 
       const newNode: Node = {
         id: Date.now().toString(),
         label: parsed.label || topic,
-        short_description: parsed.short_description || "No description available.",
+        short_description: getShort(parsed),
         main_function: parsed.main_function || "No objective available.",
         components: Array.isArray(parsed.components) ? parsed.components : [],
         self_similar: Array.isArray(parsed.self_similar) ? parsed.self_similar : [],
@@ -330,22 +358,26 @@ export default function DiscoverPage() {
       }
 
       // 2. Create progressive cards — ONLY if we have content (empty guard)
+      // Ensure short_description is always a clean string (never a raw object) before saving or using for cards.
+      const getCleanShort = (val: any) => (typeof val === 'string' ? val : (val && val.short_description ? val.short_description : String(val || '')));
       const progressiveCards = [
         {
           label: `${centerNode.label} - Intro`,
-          short_description: centerNode.short_description,
+          short_description: getCleanShort(centerNode.short_description),
           focus: "Intro"
         },
         {
           label: `${centerNode.label} - Extended`,
-          short_description: centerNode.deep_details 
-            ? centerNode.deep_details.substring(0, 850) 
-            : centerNode.short_description,
+          short_description: getCleanShort(
+            centerNode.deep_details 
+              ? centerNode.deep_details.substring(0, 850) 
+              : centerNode.short_description
+          ),
           focus: "Extended"
         },
         {
           label: `${centerNode.label} - Specialised`,
-          short_description: createSpecialisedContent(centerNode),
+          short_description: getCleanShort(createSpecialisedContent(centerNode)),
           focus: "Specialised"
         }
       ];

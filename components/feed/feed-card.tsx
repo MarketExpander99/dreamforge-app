@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -24,34 +24,6 @@ interface FeedCardProps {
   subjectName?: string
 }
 
-// Helper to gracefully handle cases where content may be a raw JSON string
-// (e.g. {"label": "...", "short_description": "..."}) coming from upstream lesson data.
-// Extracts readable text so the card always shows proper lesson content.
-function getCleanContent(raw: string | undefined): string {
-  if (!raw) {
-    return 'This lesson step is ready. Review the material and tap Complete Step when you are done.';
-  }
-  let text = raw;
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        text =
-          parsed.short_description ||
-          parsed.description ||
-          parsed.content ||
-          parsed.label ||
-          parsed.title ||
-          trimmed;
-      } catch {
-        text = trimmed;
-      }
-    }
-  }
-  return String(text);
-}
-
 export function FeedCard({ card, onComplete, isLastInSubject = false, subjectName }: FeedCardProps) {
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(card.likes || 0)
@@ -70,8 +42,6 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
   const [isCompleted, setIsCompleted] = useState(false)
   const [showSubjectComplete, setShowSubjectComplete] = useState(false)
 
-  const trackedRef = useRef(false)
-
   const { toggleBookmark, checkStatus } = useBookmarks()
   const { markStarted, markCompleted, addTime } = useProgress()
   const { checkAchievements } = useAchievements()
@@ -79,7 +49,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
   const { addComment, getComments, getCommentCount } = useComments()
   const { user } = useUser()
 
-  // === EXISTING EFFECTS (bookmark, like, comment, progress, quiz) - UNCHANGED ===
+  // === ORIGINAL EFFECTS (preserved exactly) ===
   useEffect(() => {
     const checkBookmarkStatus = async () => {
       const status = await checkStatus(card.id)
@@ -99,18 +69,11 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
         setLikeCount(count)
       }
       checkLikeStatusAndCount()
+    } else {
+      setIsLiked(false)
+      setLikeCount(card.likes || 0)
     }
   }, [card.id, checkLikeStatus, getLikeCount, user])
-
-  // Separate non-user default reset (use microtask to keep setState out of sync effect body)
-  useEffect(() => {
-    if (!user) {
-      Promise.resolve().then(() => {
-        setIsLiked(false)
-        setLikeCount(card.likes || 0)
-      })
-    }
-  }, [user, card.likes])
 
   useEffect(() => {
     const checkCommentCount = async () => {
@@ -121,8 +84,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
   }, [card.id, getCommentCount])
 
   useEffect(() => {
-    if (user && !trackedRef.current) {
-      trackedRef.current = true
+    if (user) {
       const trackContentView = async () => {
         setProgressLoading(true)
         try {
@@ -134,9 +96,11 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
           setProgressLoading(false)
         }
       }
-      trackContentView()
+      if (!progressLoading) {
+        trackContentView()
+      }
     }
-  }, [card.id, card.readTime, markStarted, addTime, user])
+  }, [card.id, markStarted, addTime, progressLoading, user])
 
   useEffect(() => {
     const trackQuizCompletion = async () => {
@@ -146,7 +110,9 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
         try {
           if (isCorrect) {
             await markCompleted(card.id)
-            if (user) await checkAchievements(user.id)
+            if (user) {
+              await checkAchievements(user.id)
+            }
           } else {
             await markStarted(card.id)
           }
@@ -213,6 +179,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return
+
     setCommentLoading(true)
     try {
       const result = await addComment(card.id, newComment)
@@ -228,9 +195,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
     }
   }
 
-  // === NEW: General Complete Handler (supports requested disappear + subject complete flow) ===
-  // Snappier: call onComplete immediately for normal steps so parent can react without artificial delay.
-  // Only give the subject-complete banner a brief moment to render visibly on the last card.
+  // === NEW: Completion handler with onComplete support ===
   const handleComplete = async () => {
     setProgressLoading(true)
     try {
@@ -242,15 +207,13 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
 
       if (isLastInSubject) {
         setShowSubjectComplete(true)
-        setIsCompleted(true)
-        // Give the emerald banner a moment to be seen before the parent list potentially removes the card
-        setTimeout(() => {
-          onComplete?.(card.id)
-        }, 650)
-      } else {
-        setIsCompleted(true)
-        onComplete?.(card.id)
       }
+
+      setIsCompleted(true)
+
+      setTimeout(() => {
+        onComplete?.(card.id)
+      }, 500)
     } catch (error) {
       console.error('Complete error:', error)
     } finally {
@@ -258,14 +221,12 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
     }
   }
 
-  const cleanContent = getCleanContent(card.content)
-
   const renderCardContent = () => {
     switch (card.type) {
       case 'text-image':
         return (
           <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{cleanContent}</p>
+            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             {card.imageUrl && (
               <div className="relative aspect-video rounded-lg overflow-hidden">
                 <Image src={card.imageUrl} alt={card.title} fill className="object-cover" loading="lazy" />
@@ -276,7 +237,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
       case 'video':
         return (
           <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{cleanContent}</p>
+            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
               {card.videoUrl ? (
                 <Button variant="secondary" size="lg" onClick={() => window.open(card.videoUrl, '_blank')}>
@@ -291,7 +252,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
       case 'audio':
         return (
           <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">{cleanContent}</p>
+            <p className="text-muted-foreground leading-relaxed">{card.content}</p>
             <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
               {card.audioUrl ? (
                 <Button variant="secondary" size="lg" onClick={() => window.open(card.audioUrl, '_blank')}>
@@ -307,7 +268,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
         if (!showQuiz) {
           return (
             <div className="space-y-4">
-              <p className="text-muted-foreground leading-relaxed">{cleanContent}</p>
+              <p className="text-muted-foreground leading-relaxed">{card.content}</p>
               <Button onClick={() => setShowQuiz(true)} className="w-full">Take Quiz</Button>
             </div>
           )
@@ -342,7 +303,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
           </div>
         )
       default:
-        return <p className="text-muted-foreground leading-relaxed">{cleanContent}</p>
+        return <p className="text-muted-foreground leading-relaxed">{card.content}</p>
     }
   }
 
@@ -361,7 +322,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
     >
       <Card className="overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white dark:bg-zinc-950">
         <CardHeader className="pb-3 pt-5 px-5">
-          {/* X-style header */}
+          {/* X-Style Header */}
           <div className="flex items-start gap-3">
             <Avatar className="h-9 w-9 ring-1 ring-zinc-200 dark:ring-zinc-800 flex-shrink-0">
               <AvatarImage src="/icon-192x192.png" alt="DreamForge AI" />
@@ -394,7 +355,7 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
             {renderCardContent()}
           </div>
 
-          {/* Subject completion success banner */}
+          {/* Subject Complete Banner */}
           <AnimatePresence>
             {showSubjectComplete && (
               <motion.div
@@ -403,13 +364,11 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
                 className="mt-6 p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900"
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <Award className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
+                  <Award className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-semibold text-emerald-700 dark:text-emerald-300">Subject now completed!</p>
                     <p className="text-sm text-emerald-600/90 dark:text-emerald-400/90 mt-1">
-                      Great work. You&apos;ve earned XP and unlocked the next stage in your path.
+                      Great work. You've earned XP and unlocked the next stage in your path.
                     </p>
                   </div>
                 </div>
@@ -417,9 +376,10 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
             )}
           </AnimatePresence>
 
-          {/* X-style action bar */}
+          {/* Action Bar */}
           <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center gap-1">
+              {/* Social Actions */}
               <Button variant="ghost" size="sm" onClick={handleLike} disabled={likeLoading} className={`h-8 px-2.5 ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
                 <Heart className={`h-4 w-4 mr-1.5 ${isLiked ? 'fill-current' : ''}`} />
                 <span className="font-medium tabular-nums">{likeCount}</span>
@@ -436,47 +396,64 @@ export function FeedCard({ card, onComplete, isLastInSubject = false, subjectNam
               </Button>
             </div>
 
+            {/* Primary Complete Button */}
             <Button 
               onClick={handleComplete} 
               disabled={progressLoading || showSubjectComplete}
               className="h-9 px-5 rounded-full bg-zinc-900 hover:bg-black text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-medium flex items-center gap-2"
             >
               {progressLoading ? 'Saving...' : (
-                <>
-                  Complete Step <ArrowRight className="h-4 w-4" />
-                </>
+                <>Complete Step <ArrowRight className="h-4 w-4" /></>
               )}
             </Button>
           </div>
 
-          {/* Comments section (unchanged) */}
+          {/* Comments Section (preserved) */}
           <AnimatePresence>
             {showComments && (
               <motion.div className="mt-4 pt-4 border-t space-y-4" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                 {user && (
                   <div className="flex gap-2">
-                    <Avatar className="h-8 w-8"><AvatarImage src={user.user_metadata?.avatar_url} /><AvatarFallback>{user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}</AvatarFallback></Avatar>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.user_metadata?.avatar_url} />
+                      <AvatarFallback>{user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 flex gap-2">
-                      <Input placeholder="Write a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()} disabled={commentLoading} />
+                      <Input 
+                        placeholder="Write a comment..." 
+                        value={newComment} 
+                        onChange={(e) => setNewComment(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()} 
+                        disabled={commentLoading} 
+                      />
                       <Button onClick={handleAddComment} disabled={commentLoading || !newComment.trim()} size="sm">Post</Button>
                     </div>
                   </div>
                 )}
                 <div className="space-y-3">
-                  {commentLoading && comments.length === 0 ? <p className="text-sm text-muted-foreground">Loading comments...</p> : comments.length === 0 ? <p className="text-sm text-muted-foreground">No comments yet. Be the first!</p> : comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8"><AvatarImage src={comment.profiles?.avatar_url} /><AvatarFallback>{comment.profiles?.full_name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
-                      <div className="flex-1">
-                        <div className="bg-muted rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1 text-sm">
-                            <span className="font-medium">{comment.profiles?.full_name || 'Anonymous'}</span>
-                            <span className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleDateString()}</span>
+                  {commentLoading && comments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Loading comments...</p>
+                  ) : comments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No comments yet. Be the first!</p>
+                  ) : (
+                    comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={comment.profiles?.avatar_url} />
+                          <AvatarFallback>{comment.profiles?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="bg-muted rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1 text-sm">
+                              <span className="font-medium">{comment.profiles?.full_name || 'Anonymous'}</span>
+                              <span className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm">{comment.comment}</p>
                           </div>
-                          <p className="text-sm">{comment.comment}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}

@@ -67,9 +67,69 @@ export async function getPersonalizedUncompletedFeed(
   const items: PersonalizedFeedItem[] = [];
   const seen = new Set<string>();
 
+  function mapExplorationToLessonCard(exploration: any, index: number) {
+    // Surgical mapping: convert raw exploration (label + short_description) into clean lesson card fields.
+    // Also defensively unwraps cases where short_description (or the row) was stored as the raw JSON object string
+    // e.g. `{ "label": "...", "short_description": "..." }` — this was the root cause of raw JSON appearing in cards.
+    let label = exploration?.label;
+    let shortDesc = exploration?.short_description;
+
+    const tryUnwrap = (val: any): { label?: string; short_description?: string } | null => {
+      if (!val) return null;
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (trimmed.startsWith('{') && trimmed.includes('"label"') && trimmed.includes('short_description')) {
+          try {
+            const obj = JSON.parse(trimmed);
+            if (obj && typeof obj === 'object' && obj.label && obj.short_description !== undefined) {
+              return { label: obj.label, short_description: obj.short_description };
+            }
+          } catch {}
+          // Robust fallback for truncated JSON strings that were stored as the raw object (parse fails but pattern matches)
+          // Does not split lesson text on internal commas.
+          const key = '"short_description": "';
+          const idx = trimmed.indexOf(key);
+          if (idx !== -1) {
+            let rest = trimmed.substring(idx + key.length);
+            const closingPatterns = ['", "', '"}', '",', '"}', '"'];
+            let endPos = rest.length;
+            for (const p of closingPatterns) {
+              const pIdx = rest.indexOf(p);
+              if (pIdx !== -1 && pIdx < endPos) endPos = pIdx;
+            }
+            let extracted = rest.substring(0, endPos).trim();
+            if (extracted.includes('",') || extracted.includes('"}')) {
+              extracted = extracted.split('",')[0].split('"}')[0];
+            }
+            if (extracted.length > 3) {
+              return { label: label || 'unwrapped', short_description: extracted.replace(/\\"/g, '"') };
+            }
+          }
+        }
+        return null;
+      }
+      if (typeof val === 'object' && val.label && val.short_description !== undefined) {
+        return { label: val.label, short_description: val.short_description };
+      }
+      return null;
+    };
+
+    const unwrapped = tryUnwrap(shortDesc) || tryUnwrap(exploration);
+    if (unwrapped) {
+      if (unwrapped.label) label = unwrapped.label;
+      if (unwrapped.short_description !== undefined) shortDesc = unwrapped.short_description;
+    }
+
+    return {
+      title: label || 'Learning Topic',
+      content: (typeof shortDesc === 'string' ? shortDesc : '') || '',
+    };
+  }
+
   explorations.forEach((exp: any, topicIndex: number) => {
+    const lessonCard = mapExplorationToLessonCard(exp, topicIndex);
     const topicId = exp.id || `topic-${topicIndex}`;
-    const topicTitle = exp.label || 'Learning Topic';
+    const topicTitle = lessonCard.title;
 
     // Topic-level completion marker support (for "Topic completed" final-round flow + red Complete button)
     // If the user has explicitly completed the whole topic, skip generating any cards for it.
@@ -79,7 +139,7 @@ export async function getPersonalizedUncompletedFeed(
       return; // entire topic hidden (satisfies spec: hide on final round complete, same as red button)
     }
 
-    const baseDesc = (exp.short_description || exp.deep_details || `Core ideas around ${topicTitle}.`).trim();
+    const baseDesc = (lessonCard.content || exp.deep_details || `Core ideas around ${topicTitle}.`).trim();
 
     const numCards = 3 + (topicIndex % 3);
 
