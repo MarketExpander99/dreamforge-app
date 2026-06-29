@@ -1,6 +1,15 @@
 # Skill Gain — Project Status & Task History
 
-Last updated: 2026-06-26
+Last updated: 2026-06-29
+
+[2026-06-29] – PayFast Compliance & Credit Model Transparency (Spec v1.0). Public legal pages created to unblock PayFast merchant onboarding for educational credit-based service.
+  - New public pages (root app/): /terms, /privacy, /refund, /delivery — all fully static, with required sections (credit model clarity, POPIA, refund rules for credits, instant digital delivery).
+  - All pages include consistent contact block: Skill Gain (Pty) Ltd, Ladismith, Western Cape, South Africa, support@skill-gain.com, +27 (0)28 551 0088.
+  - Updated LandingPage.tsx footer (Support section) with real <Link> to the four pages + added compliance contact block. Added required credit model paragraph in hero section.
+  - No changes to protected routes, auth flows, or payment code (strict scope).
+  - Full `npm run build`: clean (exit 0). ✓ Compiled successfully, ✓ TS 0 errors, all 67+ routes including new /terms /privacy /refund /delivery generated as static. Pre-existing warnings only (middleware, sentry).
+  - Scanned repo + all .clinerules first. Todos tracked. Complete files created. Build gate enforced.
+  - Next: manual visit on dev/preview + reply to Vuyisile with live URLs + contact details.
 
 [2026-06-26] – Two-Stage Lecture Migration SQL successfully applied. User confirmed tables + RLS created cleanly in Supabase. All prior code (generation service, persistence action, admin test page + viewer) is ready. Full `npm run build` clean post-fix.
 
