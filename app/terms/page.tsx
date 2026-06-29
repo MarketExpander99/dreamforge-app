@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import PublicLegalHeader from '@/components/PublicLegalHeader';
+
 export const metadata: Metadata = {
   title: 'Terms & Conditions | Skill Gain',
   description: 'Terms and conditions for using the Skill Gain Dreamforge platform and credit system.',
@@ -8,6 +10,9 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
+      <PublicLegalHeader />
+
+      <div className="rounded-2xl border bg-white/95 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mb-10">
         <h1 className="text-4xl font-semibold tracking-tight">Terms &amp; Conditions</h1>
         <p className="text-muted-foreground mt-2">Last updated: 27 June 2026</p>
@@ -60,6 +65,8 @@ export default function TermsPage() {
         <p>
           For any questions regarding these Terms, please contact us at the details below.
         </p>
+      </div>
+
       </div>
 
       <div className="mt-12 pt-8 border-t text-sm text-muted-foreground">

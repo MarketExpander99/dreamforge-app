@@ -137,6 +137,14 @@ const NavigationComponent = () => {
                   <LogOut className="h-4 w-4" />
                   Log out
                 </Button>
+
+                {/* Legal / Compliance links - always accessible when logged in */}
+                <div className="px-2 pt-1 text-[10px] text-zinc-500 flex flex-wrap gap-x-2 gap-y-0.5">
+                  <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+                  <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+                  <Link href="/refund" className="hover:text-zinc-300 transition-colors">Refund</Link>
+                  <Link href="/delivery" className="hover:text-zinc-300 transition-colors">Delivery</Link>
+                </div>
               </div>
             ) : (
               <div className="px-1 space-y-1">
@@ -211,6 +219,16 @@ const NavigationComponent = () => {
             )
           )}
         </div>
+
+        {/* Mobile legal links (small row for discoverability when logged in) */}
+        {!loading && user && (
+          <div className="text-[9px] text-zinc-500 flex justify-center gap-x-3 py-0.5 border-t border-zinc-800 bg-zinc-950/50">
+            <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
+            <Link href="/privacy" className="hover:text-zinc-300">Privacy</Link>
+            <Link href="/refund" className="hover:text-zinc-300">Refund</Link>
+            <Link href="/delivery" className="hover:text-zinc-300">Delivery</Link>
+          </div>
+        )}
       </div>
     </>
   );

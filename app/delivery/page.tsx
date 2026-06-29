@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import PublicLegalHeader from '@/components/PublicLegalHeader';
+
 export const metadata: Metadata = {
   title: 'Delivery Policy | Skill Gain',
   description: 'Delivery policy for digital credit top-ups on the Skill Gain Dreamforge platform.',
@@ -8,6 +10,9 @@ export const metadata: Metadata = {
 export default function DeliveryPage() {
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
+      <PublicLegalHeader />
+
+      <div className="rounded-2xl border bg-white/95 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mb-10">
         <h1 className="text-4xl font-semibold tracking-tight">Delivery Policy</h1>
         <p className="text-muted-foreground mt-2">Last updated: 27 June 2026</p>
@@ -34,6 +39,8 @@ export default function DeliveryPage() {
           A confirmation will be associated with your account. If credits do not appear within a reasonable time after payment, 
           please contact support and we will resolve the issue promptly.
         </p>
+      </div>
+
       </div>
 
       <div className="mt-12 pt-8 border-t text-sm text-muted-foreground">

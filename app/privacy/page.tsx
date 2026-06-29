@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import PublicLegalHeader from '@/components/PublicLegalHeader';
+
 export const metadata: Metadata = {
   title: 'Privacy Policy | Skill Gain',
   description: 'Privacy policy for the Skill Gain Dreamforge platform, including POPIA compliance and data practices.',
@@ -8,6 +10,9 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
+      <PublicLegalHeader />
+
+      <div className="rounded-2xl border bg-white/95 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mb-10">
         <h1 className="text-4xl font-semibold tracking-tight">Privacy Policy</h1>
         <p className="text-muted-foreground mt-2">Last updated: 27 June 2026</p>
@@ -45,6 +50,8 @@ export default function PrivacyPage() {
           To request access to your data, corrections, deletion, or to exercise any other rights under POPIA, please contact us using the details below. 
           We aim to respond within a reasonable timeframe.
         </p>
+      </div>
+
       </div>
 
       <div className="mt-12 pt-8 border-t text-sm text-muted-foreground">

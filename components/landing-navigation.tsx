@@ -39,6 +39,12 @@ export function LandingNavigation() {
             >
               Testimonials
             </Link>
+            <Link
+              href="/terms"
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm font-medium"
+            >
+              Legal
+            </Link>
           </div>
 
           {/* Auth Buttons */}
@@ -96,6 +102,13 @@ export function LandingNavigation() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Testimonials
+              </Link>
+              <Link
+                href="/terms"
+                className="block text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-base font-medium py-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Legal
               </Link>
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button
