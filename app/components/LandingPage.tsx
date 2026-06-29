@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { LandingNavigation } from '@/components/landing-navigation'
 import { BookOpen, GraduationCap, Target, Users, PenTool, CheckCircle, Star, ArrowRight, Play, Award, Shield, Zap, Heart } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,6 +48,11 @@ export default function LandingPage() {
             </h1>
             <p className="text-mobile-body text-slate-300 mb-12 sm:mb-16 max-w-5xl mx-auto leading-relaxed font-light">
               The premier learning platform. Master any subject with AI-powered personalization, interactive content, and network-driven excellence.
+            </p>
+
+            {/* Credit Model Explanation (PayFast compliance + transparency) */}
+            <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto mb-8">
+              Dreamforge uses a flexible credit system. Purchase credits to unlock on-demand AI tools that help you build personalized learning paths, explore the knowledge lattice, and generate lesson content tailored to your goals. No rigid courses — you stay in control.
             </p>
 
             {/* CTA Buttons */}
@@ -656,7 +662,7 @@ export default function LandingPage() {
                 </a>
               </div>
               <p className="text-xs sm:text-sm text-gray-500">
-                © 2024 Skill Gain. All rights reserved.
+                © 2026 Skill Gain. All rights reserved.
               </p>
             </div>
 
@@ -673,12 +679,18 @@ export default function LandingPage() {
             <div>
               <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Support</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Contact Us</a></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Terms</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Privacy</Link></li>
+                <li><Link href="/refund" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Refund Policy</Link></li>
+                <li><Link href="/delivery" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Delivery</Link></li>
+                <li><a href="mailto:support@skill-gain.com" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Contact Us</a></li>
               </ul>
             </div>
+          </div>
+
+          {/* Compliance Contact Block */}
+          <div className="mt-8 pt-6 border-t border-gray-800 text-center text-xs text-gray-500">
+            Skill Gain (Pty) Ltd • Ladismith, Western Cape, South Africa • support@skill-gain.com • +27 (0)28 551 0088
           </div>
         </div>
       </footer>
