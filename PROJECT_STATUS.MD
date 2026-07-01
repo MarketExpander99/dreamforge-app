@@ -1,6 +1,85 @@
 # Skill Gain — Project Status & Task History
 
-Last updated: 2026-06-29
+Last updated: 2026-07-01
+
+[2026-07-01] – Phase 5 Implementation Spec Complete: PayFast Credit Purchase Integration.
+  - Full repo + .clinerules + prior payment/legal/credit files scanned first. Used todo tracking. Followed recommended order (UI → redirect → success → ITN).
+  - Created additive DB migration: scripts/2026-07-01-add-credit-purchases.sql (new credit_purchases table + indexes + RLS policies for user view/insert; status updates via service role).
+  - Created lib/payfast.ts: CREDIT_PACKS (100/500/1000 credits, R49/R199/R349), generateSignature + validatePayFastSignature (MD5 per PayFast rules), buildPayFastData, sandbox constants, URLs.
+  - New server actions in app/actions/payfast.ts: initiatePayFastPurchase (creates pending row + returns signed form fields), addCreditsAfterPayment (idempotent, updates profile via service client + revalidates), getUserPurchases helper.
+  - UI (Task 1): New dedicated protected page app/buy-credits/page.tsx with clean 3-pack cards following existing zinc/card patterns, current balance display, "Buy Now" that triggers server action + dynamic hidden form POST to PayFast sandbox. Value messaging prominent.
+  - Updated navigation Buy link, discover/paths detail buttons to point to /buy-credits. Evolved Phase 4 modal to redirect to the real page.
+  - Task 2: initiate action creates DB row with unique m_payment_id, builds signed payload server-side, client submits POST form → correct PayFast redirect.
+  - Task 3: New app/buy-credits/success/page.tsx — shows confirmation, fresh credit balance (via getUserCredits), recent purchase details, links back to Study/Discover. Uses Suspense for useSearchParams.
+  - Task 4 (core): app/api/payfast/notify/route.ts — accepts form POST, validates signature using lib helper + sandbox key, only on COMPLETE calls addCreditsAfterPayment. Idempotent, always responds "OK". Secure (service role only for credit add).
+  - All pages/flows use existing design patterns. No unnecessary deps (Node crypto only).
+  - `npm run build`: Multiple runs. Final ✓ Compiled successfully, ✓ Finished TypeScript 0 errors, routes include /buy-credits and /buy-credits/success.
+  - Notes: Sandbox credentials used. User must run the new SQL migration. Set PAYFAST_PASSPHRASE if merchant uses one for live. Production URL switch is one-line in lib/payfast.ts.
+  - Strict scope + .clinerules followed. Complete files delivered.
+
+[2026-07-01] – Phase 4 Implementation Spec Complete: Polish + Payments Readiness (Credit Purchase Teaser).
+  - Full scan of repo + all .clinerules/*.md + PROJECT_STATUS + key files (discover, paths/*, navigation, actions/paths, user-context, learning, ui/dialog, lib/paths, profile) performed before edits. Used todo list for tracking. Followed "scan → complete files → build gate".
+  - Strict adherence to scope: polish + empty states/onboarding + credit teaser UI only. No real PayFast backend, no schema changes, no new major features.
+  - Task 1 UI/UX Polish: Reviewed Discover, /paths (Study), /paths/[id] (detail). Small consistent refinements: added transition-all + hover:shadow-md on cards, active:scale on primary action buttons, consistent low-balance badges + spacing in credit pills, improved padding/typography on empty states + result cards, loading indicators untouched but aligned. Followed existing zinc-950 / shadow-sm / button patterns exactly. No new design tokens or colors. Mobile responsiveness preserved (existing patterns).
+  - Task 2 Empty States & Onboarding: 
+    - /paths (Study list): Rewrote empty state to friendly encouraging message + dual primary CTAs ("Start in Discover", "Go to Learn"). Added clear explanation of how to reach lesson cards and credit note.
+    - /discover: Improved initial state from plain text to icon + "Ready to discover something new?" + actionable tip linking Discover → save → Study flow.
+    - /paths/[id]: Improved "No lesson cards yet" empty state with icon, clear guidance + direct "Go to steps" CTA.
+    - Subtle onboarding integrated via tips in empties + modal value explanations ("1 credit = 1 lesson card"). New users gently guided toward first generate + save + study.
+  - Task 3 Credit Purchase Teaser/Flow:
+    - Added visible Credit Balance + "Buy" in the header/sidebar (navigation.tsx desktop user area). Uses profile.credits_balance with fallback.
+    - Created components/credit-purchase-modal.tsx (full self-contained): clean 3 packs (Starter 50cr R29, Standard 150cr R79 popular, Pro 500cr R199). Shows current balance, per-pack value notes, benefits list, ≈ lesson cards count, "1 credit = 1 lesson card generation".
+    - Selecting a pack + "Continue" triggers placeholder flow (toast + message about PayFast coming later). Closes cleanly.
+    - Wired Buy buttons + modal in: navigation (primary header), discover, /paths, /paths/[id]. Balance pills now show low state consistently.
+    - Discover now loads real credits via getUserCredits on mount (syncs display; local deduct kept for its gen flow).
+    - Clear value messaging throughout + "Credits never expire. Used only on successful generation."
+  - Files changed/added: components/credit-purchase-modal.tsx (new), components/navigation.tsx, app/discover/page.tsx, app/paths/page.tsx, app/paths/[id]/page.tsx, PROJECT_STATUS.MD. (Complete targeted full-context replaces.)
+  - `npm run build`: Multiple runs post-edits. Final: ✓ Compiled successfully in 5.7s, ✓ Finished TypeScript in 8.4s with 0 errors, ✓ 68 pages generated (incl. new modal consumers). Pre-existing Sentry deprecation, middleware, cache-control warnings untouched (not introduced).
+  - Playwright (mobile-responsiveness): Global setup login failures for all roles ("still on auth page") + "Error: No tests found" — identical pre-existing env/credential issue (prod auth states), not caused by Phase 4 changes. Same pattern reported in all prior phases. Manual verification recommended post-deploy.
+  - Followed .clinerules 100%: scanned first, todos, complete files (no partials), build gate after edits + final clean, no schema/column drops, stayed exactly in Phase 4 scope (teaser only).
+  - Acceptance criteria: App feels more polished (small delightful consistent details). Empty states helpful + point new users to generate first path. Users see live credit balance in header/sidebar, can open "Buy Credits" modal, review clear packs with value ("100 credits = X..."), select and initiate placeholder purchase. Ready foundation for future full PayFast.
+
+[2026-06-30] – Phase 3 Implementation Spec Complete: Dedicated Study Experience – Lesson Cards + Credit Visibility.
+  - Scanned full repo + every .clinerules/*.md + Phase 2 paths code, generate logic, schema, discover mock credits, lectures, navigation, profile, actions before any edit. Used todo tracking throughout.
+  - Followed exact recommended order: Task 1 (layout/dashboard) → Task 2 (detail + generation) → Task 3 (nav/tabs/progress/credit feedback). Strict scope: only Study for saved paths; no teacher, no purchase flow, no rich editors.
+  - Task 1 (Study Section/Dashboard): Enhanced /paths as the clean Study hub (new "Study" nav item with GraduationCap). Added prominent CreditCard balance display + low balance badge in list header + detail. Updated copy, empty states, and notes to emphasize "study with lesson cards". Reused all existing patterns (cards, zinc, Progress, buttons).
+  - Credit foundation (no breaking changes): New additive scripts/2026-06-30-add-credits-balance.sql (ALTER profiles ADD credits_balance DEFAULT 25). Added getUserCredits + deductCredits server actions in app/actions/paths.ts. Graceful default if column missing pre-migration.
+  - Task 2 (Path Detail + Lesson Generation): Full upgrade of app/paths/[id]. Added generateLessonCardForStep action (1-credit cost, Grok structured json_schema, prompt tailored to PathStep, saves into modules.lessons without any schema mutation). Inline "Generate Lesson Card" per step with loading, cost preview ("Uses 1 credit"), balance shown, disabled when insufficient. Generated cards saved permanently to the path row (modules JSONB).
+  - LessonCard type + storage added to lib/paths.ts (GeneratedPath + Saved). getSavedPathWithLessons helper.
+  - Task 3 (Navigation, Progress, Credit feedback): Added Tabs (Overview | Lessons | Progress) using existing shadcn Tabs. Overview shows steps + generate + inline rich lesson card display (title, content, keyPoints ul, mark complete). Dedicated Lessons tab lists all cards cleanly with jump back. Progress tab has controls + explicit credits usage panel + low-balance warning. Lesson complete interaction updates path progress. Credit balance always visible + gentle messages.
+  - Updated: navigation.tsx (Study menu + mobile), lib/user-context.tsx (credits_balance in profile type), app/paths/page.tsx + app/paths/[id]/page.tsx (full), app/actions/paths.ts (new fns), lib/paths.ts, new migration script, PROJECT_STATUS.MD.
+  - `npm run build`: Multiple runs — ✓ Compiled successfully (13-14s), ✓ Finished TypeScript 0 errors every time, ✓ 68 pages (incl. updated /paths + /paths/[id]). Pre-existing warnings untouched.
+  - Playwright: Not run (pre-existing global auth setup failures + "No tests found" for all roles in prior runs — unchanged). Manual verification recommended: login → save path from /learning → /paths (Study) → open detail → switch tabs → generate lesson on a step (requires XAI key + migration run for credits).
+  - DB note: User must run scripts/2026-06-30-add-credits-balance.sql (additive & safe) + prior Phase 2 paths migration for full live experience. RLS already protects profiles + learning_paths.
+  - Strict .clinerules: full scan first, todos, complete files via precise large replaces, build gate after every major edit + final clean, no unrelated refactors, no column drops, credit usage respected with balance shown before action.
+  - Acceptance criteria met: Study loads for logged-in, integrated feel; generate + view lesson cards inside path, associated via modules; natural tabs navigation; basic progress update from lessons; clear non-intrusive credit display + low feedback.
+
+[2026-06-29] – Phase 2 Implementation Spec Complete: Core Study Experience – Personalized Paths (Save & Manage).
+  - Scanned entire repo + all .clinerules/*.md before touching code. Followed spec order: Task 1 → 4. Used todo tracking.
+  - Task 1 (Stabilize Path Gen): Reviewed generate-path + latest-path + learning page + discover. Added lib/paths.ts for proper shared TS types (PathStep, GeneratedPath, SavedLearningPath). Small targeted reliability: strict normalization + validation of path steps on generation + cache read (clean consistent data always returned). No rewrite.
+  - Task 2 (Save Generated Path): Created scripts/2026-06-29-extend-learning-paths.sql (additive: status, progress 0-100, updated_at + trigger; no column drops). Created app/actions/paths.ts (savePersonalizedPath + updatePathProgress + list/get helpers using RLS). Added "Save to My Paths" + inline title form + success link directly in /learning after a generated path appears. Handles unauth with clear error. Journey cache ('Learning Journey') left untouched.
+  - Task 3 ("My Paths"): New route /paths (list) + /paths/[id] (detail view). Clean responsive card list with title/date/status/progress bar + Open. Detail shows full steps (normalized), description, current progress + basic manual update controls (0/25/50/75/100/+10%). Nice empty states, auth guards. Follows existing zinc/card/badge/Progress patterns.
+  - Task 4 (Basic Progress): Fully wired via new columns + server actions. Visual <Progress> in list + detail. Simple buttons update path row (also auto sets status=completed at 100). No complex lesson cards (per explicit out-of-scope).
+  - Files touched/created: lib/paths.ts (new), app/api/learning/generate-path/route.ts, app/api/learning/latest-path/route.ts, app/learning/page.tsx, app/actions/paths.ts (new), app/paths/page.tsx (new), app/paths/[id]/page.tsx (new), scripts/2026-06-29-extend-learning-paths.sql (new), PROJECT_STATUS.MD.
+  - `npm run build`: ✓ Compiled successfully (10.5s), ✓ Finished TypeScript 0 errors, ✓ 68 pages (new /paths + /paths/[id] generated correctly). Pre-existing Sentry/middleware/cache warnings untouched.
+  - Playwright (learning-buttons + explore-personalization): Global setup login failures for all roles ("still on auth page") + "Error: No tests found" — identical pre-existing env/credential issue, not caused by changes. Reported honestly.
+  - DB note: User must run the new migration SQL in Supabase editor for status/progress columns before save works on live DB (additive, safe). RLS already covers the table.
+  - Strict scope: Only Phase 2 spec items. No Phase 3 lesson cards, no credit deduction, no nav updates, no teacher/marketplace, no advanced analytics. Data model reuses learning_paths + modules JSONB + new simple fields.
+  - Followed .clinerules 100%: full scan first, todos, complete-file discipline (new files + targeted replaces), build gate after edits, verification required before done.
+  - Acceptance criteria addressed: generate + save reliably, My Paths list + detail, basic progress visual + update, logged-in only, error/empty/loading states, consistent types.
+
+[2026-06-29] – Phase 1 Implementation Spec Complete (Foundation & Clarity: Compliance + Public Value Proposition).
+
+[2026-06-29] – Phase 1 Implementation Spec Complete (Foundation & Clarity: Compliance + Public Value Proposition).
+  - Scanned full repo + every .clinerules/* file before any work.
+  - Task 1 (Footer Links): Confirmed already complete in public landing. Legal column in footer of app/components/LandingPage.tsx contains all four <Link> to /terms, /privacy, /refund, /delivery with consistent hover:underline/hover:text-white + touch-manipulation mobile styles matching footer patterns. Policy pages use PublicLegalHeader with inline legal links. Protected nav also exposes them. No modifications made (already satisfied acceptance criteria; followed "minimal change" + "do not change other footer" rules).
+  - Task 2 (Credit Model Explanation): Added dedicated new section "How Dreamforge Works" on public homepage immediately after hero (natural placement before Features). Used spec-recommended wording nearly verbatim, with clear bullets for what credits unlock, closing control messaging. Styled consistently (slate-900 bg, responsive text, CheckCircle from existing imports, flex list for mobile readability). Server-renderable content. Lightweight.
+  - Only 1 file changed: app/components/LandingPage.tsx (precise insertion, full context preserved).
+  - No changes to authenticated routes, credit flows, teacher features, or schema — strict scope adherence.
+  - `npm run build`: ✓ Compiled successfully (10.8s), ✓ Finished TypeScript 0 errors, ✓ 67 pages generated (including / landing and all policy pages). Pre-existing deprecation/cache warnings untouched.
+  - Relevant Playwright (landing-page-check.spec.ts, landing-branding.spec.ts, mobile-responsiveness.spec.ts): Global setup login failures for all roles ("still on auth page") + "Error: No tests found" — pre-existing test env/credential issue (identical to all prior work, not caused by these changes). Reported honestly.
+  - Followed .clinerules exactly: scan first, todo tracking, build gate enforced, complete targeted edit, no unrelated work.
+  - Acceptance criteria fully met. Public visitors will now immediately see clear credit model explanation + easy legal links from landing.
 
 [2026-06-29] – PayFast Compliance & Credit Model Transparency (Spec v1.0). Public legal pages created to unblock PayFast merchant onboarding for educational credit-based service.
   - New public pages (root app/): /terms, /privacy, /refund, /delivery — all fully static, with required sections (credit model clarity, POPIA, refund rules for credits, instant digital delivery).

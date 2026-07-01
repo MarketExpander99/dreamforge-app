@@ -28,7 +28,7 @@ export default function TermsPage() {
         <h2>2. Our Model – Credit-Based Access</h2>
         <p>
           Skill Gain provides a credit-based system. Users purchase credits to access on-demand AI-powered tools including 
-          personalized learning path generation, lattice exploration, lesson card creation, and progress tracking. 
+          personalized learning path generation, personalized knowledge exploration, lesson card creation, and progress tracking. 
           We do not sell fixed courses or guarantee specific educational outcomes or results.
         </p>
 

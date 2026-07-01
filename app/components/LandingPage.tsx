@@ -52,7 +52,7 @@ export default function LandingPage() {
 
             {/* Credit Model Explanation (PayFast compliance + transparency) */}
             <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto mb-8">
-              Dreamforge uses a flexible credit system. Purchase credits to unlock on-demand AI tools that help you build personalized learning paths, explore the knowledge lattice, and generate lesson content tailored to your goals. No rigid courses — you stay in control.
+              Dreamforge uses a flexible credit system. Purchase credits to unlock on-demand AI tools that help you build personalized learning paths, explore knowledge your way, and generate lesson content tailored to your goals. No rigid courses — you stay in control.
             </p>
 
             {/* CTA Buttons */}
@@ -116,6 +116,49 @@ export default function LandingPage() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How Dreamforge Works — Credit model explanation (Phase 1 spec) */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-b border-slate-700">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+            How Dreamforge Works
+          </h2>
+          <p className="text-lg sm:text-xl text-slate-300 mb-8 leading-relaxed">
+            Dreamforge helps you learn more effectively using AI. Instead of fixed courses, you use credits to unlock powerful, personalized learning tools on demand.
+          </p>
+
+          <div className="text-left mb-8">
+            <p className="text-white font-semibold mb-4 text-lg">When you purchase credits, you can:</p>
+            <ul className="space-y-3 text-slate-300 text-base sm:text-lg">
+              <li className="flex items-start gap-3">
+                <CheckCircle className="h-6 w-6 text-emerald-400 mt-0.5 flex-shrink-0" />
+                Generate personalized learning paths tailored to your goals
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle className="h-6 w-6 text-emerald-400 mt-0.5 flex-shrink-0" />
+                Explore the knowledge lattice and discover connected topics
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle className="h-6 w-6 text-emerald-400 mt-0.5 flex-shrink-0" />
+                Create lesson cards and study materials instantly
+              </li>
+              <li className="flex items-start gap-3">
+                <CheckCircle className="h-6 w-6 text-emerald-400 mt-0.5 flex-shrink-0" />
+                Track your progress as you learn
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-4 text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+            <p>
+              You stay in control. Use credits whenever you need them to study with AI assistance — no subscriptions or rigid schedules required.
+            </p>
+            <p>
+              We focus on giving you the best tools to learn, not on promising specific results.
+            </p>
           </div>
         </div>
       </section>
@@ -639,7 +682,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 sm:py-12 mobile-section">
         <div className="mobile-container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8">
             <div className="col-span-1 sm:col-span-2 lg:col-span-2">
               <div className="flex items-center mb-4">
                 <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 mr-2" />
@@ -679,11 +722,17 @@ export default function LandingPage() {
             <div>
               <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Support</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/terms" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Terms</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Privacy</Link></li>
-                <li><Link href="/refund" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Refund Policy</Link></li>
-                <li><Link href="/delivery" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Delivery</Link></li>
                 <li><a href="mailto:support@skill-gain.com" className="hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Contact Us</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Legal</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link href="/terms" className="hover:underline hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Terms</Link></li>
+                <li><Link href="/privacy" className="hover:underline hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Privacy</Link></li>
+                <li><Link href="/refund" className="hover:underline hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Refund Policy</Link></li>
+                <li><Link href="/delivery" className="hover:underline hover:text-white transition-colors touch-manipulation py-1 block min-h-[32px] flex items-center">Delivery</Link></li>
               </ul>
             </div>
           </div>

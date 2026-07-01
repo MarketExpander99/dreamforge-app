@@ -89,7 +89,7 @@ Classic read-after-write inconsistency + synthetic id + client filter.
 ### Non-Goals (respected)
 - No redesign of FeedCard / UI.
 - No new gamification.
-- No changes to E8/lattice in discover.
+- No changes to the discover/explore graph.
 - No schema changes.
 
 ---

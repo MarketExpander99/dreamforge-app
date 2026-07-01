@@ -1,28 +1,14 @@
 // app/api/learning/generate-path/route.ts
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import type { PathStep, SuggestedCourse, GeneratedPath } from '@/lib/paths'
 
 // Production-grade Grok-powered learning path + formal course recommendations
 // Replaces all MVP hardcoded logic. Uses real Grok API with structured output.
-
-interface LearningPathItem {
-  title: string
-  description: string
-  estimatedTime: string
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
-}
-
-interface SuggestedCourse {
-  title: string
-  provider: string
-  url: string
-  estimatedTime: string
-  level: string
-  reason: string
-}
+// Stabilized: strict types, post-parse normalization for clean/consistent path data.
 
 interface GrokLearningResponse {
-  path: LearningPathItem[]
+  path: PathStep[]
   suggestedCourses: SuggestedCourse[]
 }
 
@@ -117,8 +103,17 @@ export async function POST(request: Request) {
       if (latestJourney && (countOk || timeOk)) {
         // Up-to-date (by count or by latest exploration time) — return cached, skip Grok entirely
         const mods = latestJourney.modules as any
+        // Normalize cached legacy data to consistent shape on read (reliability)
+        const cachedPath: PathStep[] = Array.isArray(mods?.path)
+          ? mods.path.map((s: any) => ({
+              title: String(s.title || 'Untitled Step').trim(),
+              description: String(s.description || '').trim(),
+              estimatedTime: String(s.estimatedTime || '30 min').trim(),
+              difficulty: (['Beginner','Intermediate','Advanced'].includes(s.difficulty) ? s.difficulty : 'Intermediate') as PathStep['difficulty'],
+            }))
+          : []
         return NextResponse.json({
-          path: mods?.path || [],
+          path: cachedPath,
           suggestedCourses: mods?.suggestedCourses || [],
           fromCache: true
         })
@@ -216,13 +211,13 @@ Return ONLY valid JSON matching the required schema. No extra text.`
     }
 
     // Anti-duplication guard (early warning for prompt/model issues)
-    const allText = parsed.path.map((p: any) => (p.description || '').toLowerCase()).join(' ')
+    const allText = (parsed.path || []).map((p: any) => (p.description || '').toLowerCase()).join(' ')
     const uniquePhrases = new Set(allText.split('. '))
-    if (uniquePhrases.size < parsed.path.length * 2) {
+    if (uniquePhrases.size < (parsed.path || []).length * 2) {
       console.warn('Possible content duplication detected in generated learning path')
     }
 
-    // Final safety validation
+    // Final safety validation + normalization for clean consistent data
     if (!parsed.path || !Array.isArray(parsed.path) || parsed.path.length === 0) {
       return NextResponse.json({ error: 'AI returned invalid learning path' }, { status: 502 })
     }
@@ -230,6 +225,14 @@ Return ONLY valid JSON matching the required schema. No extra text.`
     if (!parsed.suggestedCourses || !Array.isArray(parsed.suggestedCourses)) {
       parsed.suggestedCourses = []
     }
+
+    // Normalize steps for consistency (guarantee required fields, trim strings)
+    const normalizedPath: PathStep[] = parsed.path.map((step: any) => ({
+      title: String(step.title || 'Untitled Step').trim(),
+      description: String(step.description || '').trim(),
+      estimatedTime: String(step.estimatedTime || '30 min').trim(),
+      difficulty: (['Beginner', 'Intermediate', 'Advanced'].includes(step.difficulty) ? step.difficulty : 'Intermediate') as PathStep['difficulty'],
+    }))
 
     // === IDEMPOTENT PERSIST (only when requested) ===
     // Delete any prior journey cache row then insert exactly one.
@@ -250,7 +253,7 @@ Return ONLY valid JSON matching the required schema. No extra text.`
           title: 'Learning Journey',
           description: 'AI-generated personalized path + course recommendations from exploration history',
           modules: {
-            path: parsed.path,
+            path: normalizedPath,
             suggestedCourses: parsed.suggestedCourses,
             _meta: {
               exploration_count_at_generation: currentCount,
@@ -277,8 +280,9 @@ Return ONLY valid JSON matching the required schema. No extra text.`
       }
     }
 
+    // Always return the clean normalized path
     return NextResponse.json({
-      path: parsed.path,
+      path: normalizedPath,
       suggestedCourses: parsed.suggestedCourses,
       fromCache: false
     })

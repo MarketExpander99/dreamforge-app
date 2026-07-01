@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import PublicLegalHeader from '@/components/PublicLegalHeader';
 
 export const metadata: Metadata = {
-  title: 'Refund Policy | Skill Gain',
-  description: 'Refund policy for credit purchases on the Skill Gain Dreamforge platform.',
+  title: 'Refund &amp; Cancellation Policy | Skill Gain',
+  description: 'Refund and cancellation policy for credit purchases on the Skill Gain Dreamforge platform.',
 };
 
 export default function RefundPage() {
@@ -14,34 +14,39 @@ export default function RefundPage() {
 
       <div className="rounded-2xl border bg-white/95 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mb-10">
-        <h1 className="text-4xl font-semibold tracking-tight">Refund Policy</h1>
-        <p className="text-muted-foreground mt-2">Last updated: 27 June 2026</p>
+        <h1 className="text-4xl font-semibold tracking-tight">Refund &amp; Cancellation Policy</h1>
+        <p className="text-muted-foreground mt-2">Last updated: 29 June 2026</p>
       </div>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none">
         <h2>1. Credit-Based Model</h2>
         <p>
-          Skill Gain Dreamforge uses a flexible credit system. Users purchase credits to unlock on-demand AI tools including 
-          personalized learning paths, lattice exploration, lesson content generation, and progress features. 
-          We do not sell fixed courses.
+          Skill Gain operates on a credit system. Users purchase credits to access on-demand AI-powered learning tools. 
+          Credits are digital and non-transferable.
         </p>
 
-        <h2>2. Refund Policy for Credits</h2>
+        <h2>2. General Refund Policy</h2>
         <p>
-          Credits are generally non-refundable once used.
-        </p>
-        <p>
-          Unused credits: refund requests will be considered within 14 days of purchase for technical issues or other exceptional circumstances, 
-          at Skill Gain’s sole discretion.
-        </p>
-        <p>
-          No refunds are provided for change of mind after credits have been used.
+          Credit purchases are generally final. Once credits have been used to generate content or access features, 
+          they are considered consumed and are non-refundable.
         </p>
 
-        <h2>3. How to Request a Refund Review</h2>
+        <h2>3. Unused Credits</h2>
         <p>
-          To request a review of a potential refund for unused credits, please contact support with your purchase details and reason. 
-          We will assess each request fairly and respond promptly.
+          Requests for refunds on unused credits will be considered within <strong>14 days</strong> of purchase 
+          in cases of technical issues or exceptional circumstances, at our discretion. Change of mind after 
+          purchase does not qualify for a refund.
+        </p>
+
+        <h2>4. How to Request a Refund Review</h2>
+        <p>
+          Please email <strong>support@skill-gain.com</strong> with your purchase details and reason for the request. 
+          We aim to respond within 5 business days.
+        </p>
+
+        <h2>5. Cancellations</h2>
+        <p>
+          There are currently no recurring subscriptions. All credit purchases are one-time top-ups.
         </p>
       </div>
 

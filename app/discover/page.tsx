@@ -12,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Search, BookOpen, Plus, CreditCard, Crown, Loader2, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Plus, CreditCard, Loader2, Sparkles } from 'lucide-react';
 import Feed from '@/components/feed';
+import { getUserCredits } from '@/app/actions/paths';
+import Link from 'next/link';
 
 const LESSON_PROMPT_TEMPLATE = `You are an expert educational assistant for Skill Gain, a safe and gamified learning platform for students.
 
@@ -81,7 +83,7 @@ export default function DiscoverPage() {
   const [centerNode, setCenterNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [credits, setCredits] = useState<number>(8);
+  const [credits, setCredits] = useState<number>(25);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -139,6 +141,15 @@ export default function DiscoverPage() {
     };
     fetchProfile();
   }, [authLoading, user, supabase]);
+
+  // Phase 4: Load real credits balance for display + teaser (graceful fallback)
+  useEffect(() => {
+    if (authLoading || !user) return;
+    (async () => {
+      const res = await getUserCredits();
+      if (typeof res.credits === 'number') setCredits(res.credits);
+    })();
+  }, [authLoading, user]);
 
   const loadCurrentPath = async (userId: string) => {
     // Exclude Learning Journey cache rows (those are owned by the /learning page journey feature)
@@ -493,13 +504,16 @@ export default function DiscoverPage() {
             <p className="text-muted-foreground mt-1">Personalized lessons • Adapted to your level</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-xl text-sm">
+            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-xl text-sm transition-colors">
               <CreditCard className="h-4 w-4 text-emerald-600" />
               <span className="font-semibold tabular-nums">{credits}</span>
               <span className="text-xs text-muted-foreground">credits</span>
+              {credits < 5 && (
+                <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">low</span>
+              )}
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Crown className="h-4 w-4" /> Buy Credits
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href="/buy-credits">Buy Credits</Link>
             </Button>
           </div>
         </div>
@@ -507,10 +521,10 @@ export default function DiscoverPage() {
         <div className="max-w-2xl mx-auto space-y-3 mb-8">
           <Input ref={searchInputRef} placeholder="Search anything... (bees, starship heat shield, fractions...)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !isLoading && exploreNormal()} className="py-5 text-base w-full" />
           <div className="flex gap-3">
-            <Button onClick={exploreNormal} disabled={isLoading} className="flex-1">
+            <Button onClick={exploreNormal} disabled={isLoading} className="flex-1 transition-all active:scale-[0.985]">
               {isLoading ? <Loader2 className="animate-spin h-4 w-4" /> : 'Get Lesson'}
             </Button>
-            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1">Deep Lesson</Button>
+            <Button onClick={exploreDeep} disabled={isLoading} variant="default" className="flex-1 transition-all active:scale-[0.985]">Deep Lesson</Button>
           </div>
         </div>
 
@@ -535,7 +549,7 @@ export default function DiscoverPage() {
             </div>
           </div>
         ) : centerNode ? (
-          <Card className="w-full">
+          <Card className="w-full transition-all">
             <CardHeader>
               <CardTitle className="text-2xl">{centerNode.label}</CardTitle>
             </CardHeader>
@@ -608,8 +622,13 @@ export default function DiscoverPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="p-20 text-center w-full">
-            <p className="text-xl text-muted-foreground">Search a topic above to get your personalized lesson</p>
+          <Card className="p-16 md:p-20 text-center w-full border-0 shadow-sm">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-950">
+              <Sparkles className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-semibold tracking-tight mb-2">Ready to discover something new?</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">Search any topic above — science, history, math, or a hobby. Grok will build a personalized lesson just for you.</p>
+            <p className="text-xs text-muted-foreground mt-4">Tip: Save interesting lessons to My Paths (Study) to generate full step-by-step lesson cards later.</p>
           </Card>
         )}
 

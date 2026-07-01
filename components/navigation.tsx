@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Search, User, BookOpen, LogIn, LogOut } from 'lucide-react';
+import { Search, User, BookOpen, LogIn, LogOut, GraduationCap, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/user-context';
 
@@ -43,6 +43,8 @@ const NavigationComponent = () => {
   const router = useRouter();
   const { user, profile, authLoading: loading, signOut } = useAuth();
 
+  const currentCredits = (profile as any)?.credits_balance ?? 25;
+
   const menuItems = [
     {
       label: 'Discover',
@@ -55,6 +57,12 @@ const NavigationComponent = () => {
       href: '/learning',
       icon: BookOpen,
       isActive: pathname === '/learning' || pathname?.startsWith('/learning/'),
+    },
+    {
+      label: 'Study',
+      href: '/paths',
+      icon: GraduationCap,
+      isActive: pathname === '/paths' || pathname?.startsWith('/paths/'),
     },
     {
       label: 'Profile',
@@ -84,7 +92,7 @@ const NavigationComponent = () => {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
             Skill Gain
           </h1>
-          <p className="text-[10px] text-zinc-500 mt-0.5">Discover the lattice</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Learn your way</p>
         </div>
 
         <nav className="flex-1 space-y-1.5">
@@ -127,6 +135,21 @@ const NavigationComponent = () => {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Phase 4: Visible credit balance in nav (header/sidebar) + Buy teaser */}
+                <div className="px-2 flex items-center justify-between text-xs text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="font-medium tabular-nums text-zinc-200">{currentCredits}</span>
+                    <span>credits</span>
+                  </div>
+                  <Link
+                    href="/buy-credits"
+                    className="text-[10px] px-2 py-0.5 rounded text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800 transition-colors"
+                  >
+                    Buy
+                  </Link>
                 </div>
 
                 <Button
@@ -230,6 +253,7 @@ const NavigationComponent = () => {
           </div>
         )}
       </div>
+
     </>
   );
 };

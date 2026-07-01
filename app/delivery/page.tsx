@@ -4,7 +4,7 @@ import PublicLegalHeader from '@/components/PublicLegalHeader';
 
 export const metadata: Metadata = {
   title: 'Delivery Policy | Skill Gain',
-  description: 'Delivery policy for digital credit top-ups on the Skill Gain Dreamforge platform.',
+  description: 'How credits are delivered after purchase on the Skill Gain Dreamforge platform.',
 };
 
 export default function DeliveryPage() {
@@ -15,29 +15,37 @@ export default function DeliveryPage() {
       <div className="rounded-2xl border bg-white/95 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/95">
       <div className="mb-10">
         <h1 className="text-4xl font-semibold tracking-tight">Delivery Policy</h1>
-        <p className="text-muted-foreground mt-2">Last updated: 27 June 2026</p>
+        <p className="text-muted-foreground mt-2">Last updated: 29 June 2026</p>
       </div>
 
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <h2>1. Digital Service Only</h2>
+        <h2>1. Digital Delivery Only</h2>
         <p>
-          Skill Gain Dreamforge is a digital SaaS platform. Upon successful payment for any credit pack, credits are added directly 
-          to your account balance. There is no physical product and no physical delivery involved.
+          Skill Gain is a digital platform. All purchases are for credits that unlock on-demand AI learning tools. 
+          There is no physical product or shipping involved.
         </p>
 
         <h2>2. Instant Credit Delivery</h2>
         <p>
-          Upon successful payment, credits are added to your account balance instantly or within a few minutes.
-        </p>
-        <p>
-          You can immediately access and use your credits from your dashboard to generate lessons, build learning paths, 
-          explore the knowledge lattice, and more.
+          Upon successful payment confirmation, credits are added to your account balance <strong>instantly</strong> 
+          (or within a few minutes). You can immediately use them in your dashboard to generate learning paths, 
+          lesson cards, and explore knowledge your way.
         </p>
 
-        <h2>3. Confirmation &amp; Access</h2>
+        <h2>3. Checking Your Balance</h2>
         <p>
-          A confirmation will be associated with your account. If credits do not appear within a reasonable time after payment, 
-          please contact support and we will resolve the issue promptly.
+          Your current credit balance is always visible in your account dashboard after logging in.
+        </p>
+
+        <h2>4. Issues with Delivery</h2>
+        <p>
+          If credits do not appear in your account within 15 minutes of a successful payment, please contact 
+          support@skill-gain.com with your transaction reference. We will investigate and resolve the issue promptly.
+        </p>
+
+        <h2>5. No Physical Delivery</h2>
+        <p>
+          This policy applies only to digital credit top-ups. There are no physical goods or course materials shipped.
         </p>
       </div>
 

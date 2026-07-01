@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/user-context'
 import { useRouter } from 'next/navigation'
+import type { PathStep, SuggestedCourse, GeneratedPath } from '@/lib/paths'
+import { savePersonalizedPath } from '@/app/actions/paths'
 
 interface SavedQuery {
   id: string
@@ -16,29 +18,13 @@ interface SavedQuery {
   createdAt: string
 }
 
-interface LearningPathItem {
-  title: string
-  description: string
-  estimatedTime: string
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
-}
-
-interface SuggestedCourse {
-  title: string
-  provider: string
-  url: string
-  estimatedTime: string
-  level: string
-  reason: string
-}
-
 const ITEMS_PER_PAGE = 5
 
 export default function LearningPage() {
   const { user, authLoading } = useAuth()
   const router = useRouter()
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([])
-  const [learningPath, setLearningPath] = useState<LearningPathItem[]>([])
+  const [learningPath, setLearningPath] = useState<PathStep[]>([])
   const [suggestedCourses, setSuggestedCourses] = useState<SuggestedCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [generatingPath, setGeneratingPath] = useState(false)
@@ -52,6 +38,12 @@ export default function LearningPage() {
 
   const [coursePage, setCoursePage] = useState(1)
   const [expandedCourseIndex, setExpandedCourseIndex] = useState<number | null>(null)
+
+  // Save path (Task 2)
+  const [isSavingPath, setIsSavingPath] = useState(false)
+  const [saveTitle, setSaveTitle] = useState('')
+  const [showSaveForm, setShowSaveForm] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   const fetchSavedQueries = async () => {
     try {
@@ -145,6 +137,8 @@ export default function LearningPage() {
         setCoursePage(1)
         setExpandedPathIndex(null)
         setExpandedCourseIndex(null)
+        setShowSaveForm(false)
+        setSaveMessage(null)
 
         // Persist result locally so future loads skip AI even without reliable DB cache
         saveJourneyToLocal(data.path || [], data.suggestedCourses || [], sig)
@@ -154,6 +148,47 @@ export default function LearningPage() {
     } finally {
       setGeneratingPath(false)
     }
+  }
+
+  // Save the currently displayed generated path as a named user path (Phase 2)
+  const handleSaveCurrentPath = async () => {
+    if (!learningPath.length) return
+
+    const defaultTitle = saveTitle.trim() || `My Path - ${new Date().toLocaleDateString()}`
+    setIsSavingPath(true)
+    setSaveMessage(null)
+
+    const pathData: GeneratedPath = {
+      path: learningPath,
+      suggestedCourses: suggestedCourses,
+    }
+
+    const result = await savePersonalizedPath({
+      title: defaultTitle,
+      description: 'Saved from Study with Grok personalized path',
+      pathData,
+    })
+
+    if (result.success) {
+      setSaveMessage('✅ Path saved! You can find it in My Paths.')
+      setShowSaveForm(false)
+      setSaveTitle('')
+      // Clear message after a bit
+      setTimeout(() => setSaveMessage(null), 4000)
+    } else {
+      setSaveMessage(result.error || 'Failed to save path')
+    }
+    setIsSavingPath(false)
+  }
+
+  const openSaveForm = () => {
+    // Prefill a sensible title from first step if available
+    const suggested = learningPath[0]?.title
+      ? learningPath[0].title.slice(0, 60)
+      : `Personalized Path ${new Date().toLocaleDateString()}`
+    setSaveTitle(suggested)
+    setShowSaveForm(true)
+    setSaveMessage(null)
   }
 
   useEffect(() => {
@@ -193,6 +228,8 @@ export default function LearningPage() {
           setCoursePage(1)
           setExpandedPathIndex(null)
           setExpandedCourseIndex(null)
+          setShowSaveForm(false)
+          setSaveMessage(null)
           return
         }
         // If has cached but storedCount < currentLength: fall through to regenerate (new history detected)
@@ -207,6 +244,8 @@ export default function LearningPage() {
         setCoursePage(1)
         setExpandedPathIndex(null)
         setExpandedCourseIndex(null)
+        setShowSaveForm(false)
+        setSaveMessage(null)
         return
       }
 
@@ -385,21 +424,70 @@ export default function LearningPage() {
                   <Lightbulb className="h-5 w-5" />
                   Personalized Learning Path
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateLearningPath(true, true)} // force fresh AI + persist (manual override)
-                  disabled={generatingPath || savedQueries.length === 0}
-                >
-                  {generatingPath ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Regenerate
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openSaveForm}
+                    disabled={generatingPath || !learningPath.length || isSavingPath}
+                  >
+                    Save to My Paths
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateLearningPath(true, true)} // force fresh AI + persist (manual override)
+                    disabled={generatingPath || savedQueries.length === 0}
+                  >
+                    {generatingPath ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Regenerate
+                  </Button>
+                </div>
               </CardTitle>
               <CardDescription>
                 {savedQueries.length > 0 
                   ? "Step-by-step path generated by Grok from your unique questions and goals" 
                   : "Built from your Discover explorations — search anything to begin"}
               </CardDescription>
+
+              {/* Save Path form (appears when user clicks Save) */}
+              {showSaveForm && (
+                <div className="mt-2 mb-1 rounded-lg border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-950/50">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      type="text"
+                      value={saveTitle}
+                      onChange={(e) => setSaveTitle(e.target.value)}
+                      placeholder="Path title"
+                      className="flex-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                      disabled={isSavingPath}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveCurrentPath}
+                        disabled={isSavingPath || !saveTitle.trim()}
+                      >
+                        {isSavingPath ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                        Save
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setShowSaveForm(false); setSaveMessage(null); }}
+                        disabled={isSavingPath}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">This saves a copy of the current generated path to your account.</p>
+                </div>
+              )}
+
+              {saveMessage && (
+                <div className="text-sm text-emerald-600 dark:text-emerald-400 mb-2">{saveMessage} <a href="/paths" className="underline">View My Paths →</a></div>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               {generatingPath && learningPath.length === 0 ? (

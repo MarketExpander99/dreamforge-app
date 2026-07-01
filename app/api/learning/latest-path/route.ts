@@ -2,9 +2,11 @@
 // Lightweight read endpoint for the cached "Learning Journey" (path + suggested courses)
 // generated on the Learning page. Uses existing learning_paths table (no schema change).
 // Journey rows are identified by title === 'Learning Journey' and modules as object payload.
+// Stabilized: returns normalized clean PathStep data for consistency.
 
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import type { PathStep } from '@/lib/paths'
 
 export async function GET() {
   try {
@@ -37,13 +39,23 @@ export async function GET() {
     const mods = journey.modules as any
 
     // Support both legacy array (should not happen for journey) and new object payload
-    const path = Array.isArray(mods) ? [] : (mods.path || mods.modules || [])
+    const rawPath = Array.isArray(mods) ? [] : (mods.path || mods.modules || [])
     const suggestedCourses = Array.isArray(mods) ? [] : (mods.suggestedCourses || mods.courses || [])
+
+    // Normalize to clean consistent PathStep shape (Task 1 stabilization)
+    const path: PathStep[] = Array.isArray(rawPath)
+      ? rawPath.map((s: any) => ({
+          title: String(s.title || 'Untitled Step').trim(),
+          description: String(s.description || '').trim(),
+          estimatedTime: String(s.estimatedTime || '30 min').trim(),
+          difficulty: (['Beginner','Intermediate','Advanced'].includes(s.difficulty) ? s.difficulty : 'Intermediate') as PathStep['difficulty'],
+        }))
+      : []
 
     const meta = (mods && !Array.isArray(mods) ? mods._meta : null) || {}
 
     return NextResponse.json({
-      path: Array.isArray(path) ? path : [],
+      path: path,
       suggestedCourses: Array.isArray(suggestedCourses) ? suggestedCourses : [],
       exploration_count_at_generation: meta.exploration_count_at_generation ?? 0,
       max_exploration_created_at: meta.max_exploration_created_at || null,

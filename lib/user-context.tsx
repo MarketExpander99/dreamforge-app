@@ -14,6 +14,7 @@ interface UserProfile {
   interests?: string[]
   learning_goals?: string
   teacher_onboarding_completed?: boolean
+  credits_balance?: number
 }
 
 interface AuthContextType {
