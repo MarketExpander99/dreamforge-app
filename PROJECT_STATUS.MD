@@ -1,6 +1,15 @@
 # Skill Gain — Project Status & Task History
 
-Last updated: 2026-07-01
+Last updated: 2026-07-09
+
+[2026-07-09] – Phase 6 Slice 1 Complete: Gamification Data Foundation + awardXP.
+  - Full repo scan first: existing user_achievements schema, lib/achievements.ts (client/stale), profile derived XP, markCardComplete client-only XP, sonner toasts, app/actions/* pattern, profiles(id) FKs.
+  - Additive migration: scripts/2026-07-09-add-gamification.sql — xp_transactions (append-only, unique user+source+ref), user_gamification (snapshot), RLS SELECT/INSERT (and UPDATE for gamification). Reuses existing user_achievements (no recreate). Ensures insert policy on user_achievements.
+  - lib/gamification.ts: LEVEL_XP_BASE=150, XP rewards (path 50 / lesson 15 / daily 20), Phase 6 achievement defs (5 badges + bonuses), computeLevelProgress, applyStreakOnActivity (UTC server-day).
+  - app/actions/gamification.ts: awardXP (SSoT — idempotent, path daily cap, streak, lazy daily_login, achievement unlock + bonus XP without recursion), getUserGamification (read API for Slice 4), ensureGamificationRow for legacy users.
+  - Not wired into path save / lesson complete yet (Slice 2). No UI yet (Slice 4).
+  - `npm run build`: ✓ Compiled successfully, ✓ Finished TypeScript 0 errors, 70 pages.
+  - Action required: run scripts/2026-07-09-add-gamification.sql in Supabase SQL Editor before testing awards.
 
 [2026-07-01] – Phase 5 Implementation Spec Complete: PayFast Credit Purchase Integration.
   - Full repo + .clinerules + prior payment/legal/credit files scanned first. Used todo tracking. Followed recommended order (UI → redirect → success → ITN).
