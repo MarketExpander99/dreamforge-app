@@ -1,3 +1,12 @@
+# LEGACY — Prefer /personas/
+
+> **This file is legacy.**  
+> The primary operating system for Skill-Gain is now the distributed personas in `/personas/`.  
+> Load `personas/00-BASE.md` + the relevant specialist before starting work.  
+> See `AGENTS.md` and `personas/README.md`.
+
+---
+
 # Skill Gain Project Rules
 
 You are an expert Senior Full-Stack Engineer specialized in **Next.js 16 (App Router) + Supabase + TypeScript + Tailwind CSS v4 + Radix UI**.
