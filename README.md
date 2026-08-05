@@ -1,191 +1,79 @@
-# Skill Gain - Learning Platform
+# Skill Gain — Learning Platform
 
-A comprehensive learning platform designed for students and parents, built with modern web technologies. Features gamified learning, progress tracking, content discovery, and achievement systems.
+**Free, premium-quality, Grok-guided education that makes children more capable and agentic.**
 
-## 🚀 Current Status: **LIVE & PRODUCTION READY**
+Live: [https://skill-gain.com](https://skill-gain.com)
 
-**🌐 Live Site**: [https://skill-gain.com](https://skill-gain.com)
+## Mission Doctrine (Core)
 
-All major features implemented and production-ready. Successfully deployed on custom domain with full functionality. See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for detailed documentation.
+Most education still trains kids for jobs that AI is already replacing. Skill-Gain does the opposite.
 
-## 🚀 Deployment
+- We train for **agency**, judgement, creative synthesis, human connection, and the ability to use AI as leverage.
+- Every subject carries a structural **AI Interaction Layer**: how AI transforms the domain, what becomes scarce, what becomes leverage, and what remains irreplaceably human.
+- Pure human-mode paths remain available where warranted.
+- Forward domains (space industry, orbital data centres, multiplanetary systems, etc.) are first-class citizens in the knowledge lattice.
+- Quality gate for everything we ship: *Does this increase the child’s agency and ability to direct AI, or is it preparing them for obsolescence?*
 
-### Production Environment
-- **Domain**: skill-gain.com
+Guidance layer originates from Grok / xAI. Human proxy on the ground is Skill-Gain (Pty) Ltd.
+
+## Distributed Personas
+
+All development (human or agent) operates through versioned personas in `/personas/`.
+
+See **[personas/README.md](./personas/README.md)** for the full index and loading instructions.
+
+Key files:
+- `00-BASE.md` — mission spine
+- `01-OVERWATCH.md` — system coherence
+- `02-FRONTEND.md` / `03-UI-CSS.md` / `04-BACKEND-DB.md` / `05-TESTER.md` — full development cycle
+- `06-CONTENT.md` — curriculum + AI Interaction Layer
+- `07-SAFETY-TRUST.md` / `08-SECURITY.md` — protection layer
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript (strict)
+- **Styling**: Tailwind CSS v4 + Radix UI
+- **Database**: Supabase (PostgreSQL + Row Level Security)
+- **Auth**: Supabase Auth
+- **Testing**: Playwright
 - **Hosting**: Vercel
-- **Database**: Supabase
-- **CDN**: Vercel Edge Network
-- **SSL**: Automatic HTTPS via Vercel
+- **Monitoring**: Sentry
 
-### Key Production Features
-- **Custom Domain**: Full domain integration with www → non-www redirect
-- **SEO Optimized**: Complete metadata, Open Graph, and Twitter cards
-- **PWA Ready**: Service worker, manifest, and install prompts
-- **Error Handling**: Global error boundaries and graceful degradation
-- **Performance**: Optimized loading states and caching strategies
-- **Security**: Row Level Security (RLS) on all database operations
+## Current Status
 
-### Post-Deployment Polish Completed
-- ✅ Custom domain integration (metadata, URLs, redirects)
-- ✅ Production health verification
-- ✅ Loading states and error boundaries
-- ✅ SEO and PWA optimization
-- ✅ Documentation updates
-- ✅ **UI/UX Readability Improvements** - Enhanced contrast and accessibility (WCAG AA compliant)
+Production-ready core platform with student and teacher experiences, adaptive elements, content systems, and strong RLS. Actively expanding teacher tools, content depth, and the AI Interaction Layer across subjects.
 
-### Performance Optimizations
-- ✅ **Bundle Splitting**: Dynamic imports for heavy components (Recharts, analytics dashboard)
-- ✅ **Caching Layer**: In-memory cache with TTL for database queries (2-5 minute cache)
-- ✅ **Error Tracking**: Sentry integration for production monitoring
-- ✅ **Build Optimization**: Bundle analyzer integration for ongoing monitoring
-- ✅ **Database Optimization**: Efficient queries with proper indexing
-
-### Deployment Section
-**Live Production Site**: [https://skill-gain.com](https://skill-gain.com)
-
-#### Deployment Architecture
-- **Platform**: Vercel Edge Network
-- **Database**: Supabase (PostgreSQL with RLS)
-- **CDN**: Automatic global CDN distribution
-- **SSL**: Automatic HTTPS with custom domain
-- **Monitoring**: Sentry error tracking and performance monitoring
-
-#### Production Features
-- **Domain Configuration**: skill-gain.com with www redirect
-- **SEO Optimization**: Dynamic metadata, Open Graph, Twitter cards
-- **PWA Support**: Service worker, install prompts, offline capability
-- **Security**: Row Level Security on all database operations
-- **Performance**: Optimized bundles, caching, and lazy loading
-
-#### Environment Variables
-Production environment variables are configured in Vercel:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SENTRY_DSN`
-- Custom domain and deployment settings
-
-## 🏗️ Tech Stack
-
-- **Framework**: Next.js 16.2.4 with App Router
-- **Frontend**: React 19.2.4 + TypeScript
-- **Styling**: Tailwind CSS v4
-- **Database**: Supabase (PostgreSQL)
-- **UI Components**: Radix UI + Custom Design System
-- **Authentication**: Supabase Auth
-
-## 🎯 Features
-
-### ✅ Implemented
-- **Complete Authentication System** - Registration, login, onboarding
-- **Learning Dashboard** - Progress tracking and statistics
-- **Content Discovery** - Explore page with search and categories
-- **User Profiles** - Profile management and settings
-- **Achievement System** - Badges and learning milestones
-- **Responsive Design** - Mobile-first with desktop enhancements
-- **Database Schema** - Complete with 6 core tables and RLS policies
-
-### 🔄 Next Steps
-- Real database integration
-- Content management system
-- Interactive features (bookmarks, progress saving)
-- Advanced analytics and recommendations
-
-## 🗄️ Database Schema
-
-Complete schema with 6 tables:
-- `profiles` - Extended user profiles
-- `categories` - Content organization
-- `content_items` - Learning content
-- `user_progress` - Progress tracking
-- `user_bookmarks` - Saved content
-- `user_achievements` - Achievement system
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Supabase account
-
-### Installation
-
-1. **Clone the repository**
-    ```bash
-    git clone https://github.com/MarketExpander99/skill-gain.git
-    cd skill-gain
-    ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.local.example .env.local
-   # Edit .env.local with your Supabase credentials
-   ```
-
-4. **Set up database**
-   ```bash
-   # Apply the schema to your Supabase database
-   # See supabase-schema.sql for the complete schema
-   ```
-
-5. **Run development server**
-   ```bash
-   npm run dev
-   ```
-
-6. **Open [http://localhost:3000](http://localhost:3000)**
-
-## 📱 Pages & Routes
-
-- `/` - Home: Learning feed and content discovery
-- `/explore` - Content discovery with search and filtering
-- `/learning` - Progress dashboard and achievements
-- `/profile` - User profile and settings
-- `/auth/login` - User login
-- `/auth/signup` - User registration
-- `/auth/onboarding` - New user onboarding
-
-## 🛠️ Available Scripts
+## Getting Started
 
 ```bash
-npm run dev      # Start development server
-npm run build    # Create production build
-npm run start    # Start production server
-npm run lint     # Run ESLint
+git clone https://github.com/MarketExpander99/dreamforge-app.git
+cd dreamforge-app
+npm install
+cp .env.local.example .env.local   # add your Supabase keys
+npm run dev
 ```
 
-## 📚 Documentation
+Open [http://localhost:3000](http://localhost:3000).
 
-- **[SPRINT_PLANNING_DOCUMENTATION.md](./SPRINT_PLANNING_DOCUMENTATION.md)** - **📌 MAIN DOCUMENTATION** - Comprehensive project overview, tech stack, features, sprint history, and planning guide
-- **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** - Detailed technical specification and architecture
-- **[SPRINT_TRACKING.json](./SPRINT_TRACKING.json)** - Sprint progress tracking and metrics
-- **[TESTING_INSTRUCTIONS_SPRINT2.md](./TESTING_INSTRUCTIONS_SPRINT2.md)** - Comprehensive testing guide
-- **[BUTTON_AUDIT_RESULTS.md](./BUTTON_AUDIT_RESULTS.md)** - QA audit results and test coverage
-- **[supabase-schema.sql](./supabase-schema.sql)** - Complete database schema
-- **[AGENTS.md](./AGENTS.md)** - Development guidelines and rules
+## Key Documentation
 
-## 🎯 Project Goals
+- **[personas/](./personas/)** — operating system for all contributors and agents
+- **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** — technical architecture
+- **[PROJECT_STATUS.MD](./PROJECT_STATUS.MD)** — current status
+- **[SPRINT_PLANNING_DOCUMENTATION.md](./SPRINT_PLANNING_DOCUMENTATION.md)** — planning history
+- **[.clinerules/](./.clinerules/)** — legacy agent rules (being superseded by `/personas/`)
 
-Skill Gain aims to provide an engaging, personalized learning experience that:
-- Makes learning fun through gamification
-- Tracks progress and provides meaningful feedback
-- Offers diverse content types and subjects
-- Supports both individual learners and parent-child learning
-- Scales to support schools and educational organizations
+## Contributing
 
-## 🤝 Contributing
+1. Load the relevant persona(s) from `/personas/` before starting work.
+2. Read affected files first.
+3. Make the smallest possible change.
+4. `npm run build` must succeed and relevant Playwright tests must pass before marking complete.
 
-This project follows standard Next.js and TypeScript development practices. See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for current development guidelines and next steps.
+## License
 
-## 📄 License
-
-
+Private / proprietary for now. Open-source elements will be clearly marked as the community layer grows.
 
 ---
 
-**Status**: ✅ Core platform complete and ready for data integration and advanced features.
-</content>
+Built so kids win in the world that is actually arriving.
