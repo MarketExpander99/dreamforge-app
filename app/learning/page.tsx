@@ -170,11 +170,20 @@ export default function LearningPage() {
     })
 
     if (result.success) {
-      setSaveMessage('✅ Path saved! You can find it in My Paths.')
+      const xp = result.xp
+      if (xp?.success && xp.message && ((xp.xpGained ?? 0) > 0 || xp.leveledUp || (xp.newAchievements?.length ?? 0) > 0)) {
+        setSaveMessage(`✅ Path saved! ${xp.message} — find it in Study / My Paths.`)
+      } else if (xp?.success && xp.skipped && xp.skipReason === 'daily_cap') {
+        setSaveMessage('✅ Path saved! Daily path XP already earned today — find it in Study / My Paths.')
+      } else if (xp?.errorCode === 'missing_migration') {
+        setSaveMessage('✅ Path saved! (XP tracking not set up yet) — find it in Study / My Paths.')
+      } else {
+        setSaveMessage('✅ Path saved! You can find it in My Paths.')
+      }
       setShowSaveForm(false)
       setSaveTitle('')
       // Clear message after a bit
-      setTimeout(() => setSaveMessage(null), 4000)
+      setTimeout(() => setSaveMessage(null), 5000)
     } else {
       setSaveMessage(result.error || 'Failed to save path')
     }

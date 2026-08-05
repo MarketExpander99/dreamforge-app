@@ -6,12 +6,18 @@ import {
   type AwardableXpSource,
   type UserGamificationRow,
   type AchievementDefinition,
+  type AwardSkipReason,
+  type AwardErrorCode,
   XP_REWARDS,
+  DAILY_CAPS,
   PHASE6_ACHIEVEMENTS,
   levelFromTotalXp,
   computeLevelProgress,
   utcDateString,
   applyStreakOnActivity,
+  resolvePrimaryXpAmount,
+  requiresReferenceId,
+  formatAwardFeedback,
 } from '@/lib/gamification'
 
 // ---------------------------------------------------------------------------
@@ -29,11 +35,16 @@ export interface NewAchievementResult {
 export interface AwardXpResult {
   success: boolean
   error?: string
+  errorCode?: AwardErrorCode
   /** True when any XP was granted or achievements unlocked. */
   awarded?: boolean
   skipped?: boolean
-  skipReason?: string
+  skipReason?: AwardSkipReason
   xpGained?: number
+  /** Primary action XP only (before daily bonus + achievement bonuses). */
+  primaryXp?: number
+  dailyXp?: number
+  achievementBonusXp?: number
   newTotalXp?: number
   newLevel?: number
   leveledUp?: boolean
@@ -42,13 +53,20 @@ export interface AwardXpResult {
   longestStreak?: number
   dailyLoginAwarded?: boolean
   newAchievements?: NewAchievementResult[]
+  /** Ready-to-show toast / inline message */
+  message?: string
 }
 
 export interface GetGamificationResult {
   success: boolean
   error?: string
+  errorCode?: AwardErrorCode
   stats?: UserGamificationRow | null
   progress?: ReturnType<typeof computeLevelProgress>
+  /** True when last_activity_date is today (UTC) — streak is "alive" for the day. */
+  streakActiveToday?: boolean
+  /** True when daily_login XP already earned for today (UTC). */
+  dailyBonusClaimedToday?: boolean
   achievements?: Array<{
     type: string
     title: string
@@ -77,14 +95,27 @@ function emptyGamification(userId: string): UserGamificationRow {
   }
 }
 
+function isMissingTableError(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false
+  const msg = String(err.message || '')
+  return (
+    err.code === '42P01' ||
+    msg.includes('relation') ||
+    msg.includes('does not exist') ||
+    msg.includes('Could not find the table') ||
+    msg.toLowerCase().includes('schema cache')
+  )
+}
+
 /**
  * Ensures a user_gamification row exists (legacy users). Idempotent.
+ * Fail-closed: any error is returned so callers do not overwrite real stats with zeros.
  */
 async function ensureGamificationRow(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string
-): Promise<{ row: UserGamificationRow; error?: string }> {
+): Promise<{ row: UserGamificationRow | null; error?: string; errorCode?: AwardErrorCode }> {
   const { data: existing, error: selectErr } = await supabase
     .from('user_gamification')
     .select('*')
@@ -93,15 +124,18 @@ async function ensureGamificationRow(
 
   if (selectErr) {
     console.error('ensureGamificationRow select:', selectErr)
-    const missingTable =
-      selectErr.code === '42P01' ||
-      String(selectErr.message || '').includes('relation') ||
-      String(selectErr.message || '').includes('does not exist')
+    if (isMissingTableError(selectErr)) {
+      return {
+        row: null,
+        error:
+          'Gamification tables not found. Run scripts/2026-07-09-add-gamification.sql in Supabase SQL Editor.',
+        errorCode: 'missing_migration',
+      }
+    }
     return {
-      row: emptyGamification(userId),
-      error: missingTable
-        ? 'Gamification tables not found. Run scripts/2026-07-09-add-gamification.sql in Supabase SQL Editor.'
-        : selectErr.message || 'Failed to load gamification stats',
+      row: null,
+      error: selectErr.message || 'Failed to load gamification stats',
+      errorCode: 'db_error',
     }
   }
 
@@ -118,7 +152,7 @@ async function ensureGamificationRow(
 
   if (insertErr) {
     // Race: another request may have inserted first
-    const { data: retry } = await supabase
+    const { data: retry, error: retryErr } = await supabase
       .from('user_gamification')
       .select('*')
       .eq('user_id', userId)
@@ -126,10 +160,19 @@ async function ensureGamificationRow(
 
     if (retry) return { row: retry as UserGamificationRow }
 
-    console.error('ensureGamificationRow insert:', insertErr)
+    console.error('ensureGamificationRow insert:', insertErr, retryErr)
+    if (isMissingTableError(insertErr)) {
+      return {
+        row: null,
+        error:
+          'Gamification tables not found. Run scripts/2026-07-09-add-gamification.sql in Supabase SQL Editor.',
+        errorCode: 'missing_migration',
+      }
+    }
     return {
-      row: seed,
+      row: null,
       error: insertErr.message || 'Failed to create gamification row',
+      errorCode: 'db_error',
     }
   }
 
@@ -164,7 +207,7 @@ async function insertXpTransaction(
   amount: number,
   source: string,
   referenceId: string | null
-): Promise<{ ok: boolean; duplicate: boolean; error?: string }> {
+): Promise<{ ok: boolean; duplicate: boolean; error?: string; errorCode?: AwardErrorCode }> {
   const { error } = await supabase.from('xp_transactions').insert({
     user_id: userId,
     amount,
@@ -177,7 +220,16 @@ async function insertXpTransaction(
       return { ok: false, duplicate: true }
     }
     console.error('insertXpTransaction:', error)
-    return { ok: false, duplicate: false, error: error.message }
+    if (isMissingTableError(error)) {
+      return {
+        ok: false,
+        duplicate: false,
+        error:
+          'Gamification tables not found. Run scripts/2026-07-09-add-gamification.sql in Supabase SQL Editor.',
+        errorCode: 'missing_migration',
+      }
+    }
+    return { ok: false, duplicate: false, error: error.message, errorCode: 'db_error' }
   }
 
   return { ok: true, duplicate: false }
@@ -192,7 +244,7 @@ async function countSourceToday(
 ): Promise<number> {
   const dayStart = `${today}T00:00:00.000Z`
   const dayEnd = `${today}T23:59:59.999Z`
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('xp_transactions')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -200,6 +252,11 @@ async function countSourceToday(
     .gt('amount', 0) // only count real awards toward daily cap
     .gte('created_at', dayStart)
     .lte('created_at', dayEnd)
+
+  if (error) {
+    console.error('countSourceToday:', error)
+    return 0
+  }
 
   return count || 0
 }
@@ -305,6 +362,33 @@ async function checkAndUnlockAchievements(
   return { newAchievements, bonusXp, stats: working }
 }
 
+function skippedResult(
+  stats: UserGamificationRow,
+  previousLevel: number,
+  skipReason: AwardSkipReason
+): AwardXpResult {
+  const base: AwardXpResult = {
+    success: true,
+    awarded: false,
+    skipped: true,
+    skipReason,
+    xpGained: 0,
+    primaryXp: 0,
+    dailyXp: 0,
+    achievementBonusXp: 0,
+    newTotalXp: stats.total_xp,
+    newLevel: stats.current_level,
+    leveledUp: false,
+    previousLevel,
+    currentStreak: stats.current_streak,
+    longestStreak: stats.longest_streak,
+    dailyLoginAwarded: false,
+    newAchievements: [],
+  }
+  base.message = formatAwardFeedback(base)
+  return base
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -312,10 +396,14 @@ async function checkAndUnlockAchievements(
 /**
  * Single source of truth for XP, level, streak, and Phase 6 achievements.
  *
- * @param source - path_generated | lesson_completed | daily_login
- * @param referenceId - path id, card/lesson id; daily_login uses UTC date automatically
- *
- * Never throws to the client — always returns a structured result.
+ * Guards (Slice 3):
+ * - Auth required
+ * - Stable referenceId required for path_generated / lesson_completed
+ * - Idempotent per (user, source, reference_id)
+ * - Per-source daily caps (UTC)
+ * - daily_login once per UTC day (lazy on first action, or explicit call)
+ * - Fail-closed if migration missing (never zeros out real stats)
+ * - Never throws to the client
  */
 export async function awardXP(
   source: AwardableXpSource,
@@ -327,7 +415,13 @@ export async function awardXP(
       source !== 'lesson_completed' &&
       source !== 'daily_login'
     ) {
-      return { success: false, error: 'Invalid XP source' }
+      const result: AwardXpResult = {
+        success: false,
+        error: 'Invalid XP source',
+        errorCode: 'invalid_source',
+      }
+      result.message = formatAwardFeedback(result)
+      return result
     }
 
     const supabase = await createClient()
@@ -336,19 +430,42 @@ export async function awardXP(
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'You must be signed in to earn XP' }
+      const result: AwardXpResult = {
+        success: false,
+        error: 'You must be signed in to earn XP',
+        errorCode: 'unauthenticated',
+      }
+      result.message = formatAwardFeedback(result)
+      return result
     }
 
     const today = utcDateString()
     const baseAmount: number = XP_REWARDS[source]
+
+    // Idempotency: require stable refs for path/lesson (no silent random awards)
+    const trimmedRef = referenceId?.trim() || ''
+    if (requiresReferenceId(source) && !trimmedRef) {
+      const result: AwardXpResult = {
+        success: false,
+        error: 'A stable reference id is required to award XP for this action',
+        errorCode: 'missing_reference',
+      }
+      result.message = formatAwardFeedback(result)
+      return result
+    }
+
     const effectiveRef =
-      source === 'daily_login'
-        ? today
-        : referenceId?.trim() || `${source}-${today}-${user.id.slice(0, 8)}`
+      source === 'daily_login' ? today : trimmedRef || today
 
     const ensured = await ensureGamificationRow(supabase, user.id)
-    if (ensured.error?.includes('not found')) {
-      return { success: false, error: ensured.error }
+    if (!ensured.row) {
+      const result: AwardXpResult = {
+        success: false,
+        error: ensured.error || 'Failed to load gamification stats',
+        errorCode: ensured.errorCode || 'db_error',
+      }
+      result.message = formatAwardFeedback(result)
+      return result
     }
 
     let stats = { ...ensured.row }
@@ -356,39 +473,18 @@ export async function awardXP(
 
     // Idempotency: same event already recorded
     if (await hasExistingTransaction(supabase, user.id, source, effectiveRef)) {
-      return {
-        success: true,
-        awarded: false,
-        skipped: true,
-        skipReason: 'already_awarded',
-        xpGained: 0,
-        newTotalXp: stats.total_xp,
-        newLevel: stats.current_level,
-        leveledUp: false,
-        previousLevel,
-        currentStreak: stats.current_streak,
-        longestStreak: stats.longest_streak,
-        newAchievements: [],
-      }
+      return skippedResult(stats, previousLevel, 'already_awarded')
     }
 
-    // Daily cap: max 1 path_generated award (amount > 0) per UTC day
-    let primaryXp: number = baseAmount
-    let skipReason: string | undefined
-    if (source === 'path_generated') {
-      const awardedToday = await countSourceToday(
-        supabase,
-        user.id,
-        'path_generated',
-        today
-      )
-      if (awardedToday >= 1) {
-        primaryXp = 0 // marker row still written for idempotency + counter
-        skipReason = 'daily_cap'
-      }
-    }
+    // Daily cap (positive XP awards only)
+    const awardsToday = await countSourceToday(supabase, user.id, source, today)
+    const resolved = resolvePrimaryXpAmount(source, baseAmount, awardsToday)
+    const primaryXp = resolved.amount
+    let skipReason: AwardSkipReason | undefined = resolved.capped
+      ? 'daily_cap'
+      : undefined
 
-    // Primary transaction (amount 0 allowed when daily-capped)
+    // Primary transaction (amount 0 allowed when daily-capped — keeps idempotency)
     const primaryTx = await insertXpTransaction(
       supabase,
       user.id,
@@ -397,26 +493,16 @@ export async function awardXP(
       effectiveRef
     )
     if (primaryTx.duplicate) {
-      return {
-        success: true,
-        awarded: false,
-        skipped: true,
-        skipReason: 'already_awarded',
-        xpGained: 0,
-        newTotalXp: stats.total_xp,
-        newLevel: stats.current_level,
-        leveledUp: false,
-        previousLevel,
-        currentStreak: stats.current_streak,
-        longestStreak: stats.longest_streak,
-        newAchievements: [],
-      }
+      return skippedResult(stats, previousLevel, 'already_awarded')
     }
     if (!primaryTx.ok) {
-      return {
+      const result: AwardXpResult = {
         success: false,
         error: primaryTx.error || 'Failed to record XP transaction',
+        errorCode: primaryTx.errorCode || 'db_error',
       }
+      result.message = formatAwardFeedback(result)
+      return result
     }
 
     // Counters (once per unique reference after idempotency)
@@ -433,10 +519,10 @@ export async function awardXP(
     stats.longest_streak = streak.longest_streak
     stats.last_activity_date = streak.last_activity_date
 
-    // Daily login bonus: first qualifying action of the UTC day
+    // Daily login bonus: once per UTC day (independent of isNewDay for recovery safety)
     let dailyLoginAwarded = false
     let dailyXp = 0
-    if (source !== 'daily_login' && streak.isNewDay) {
+    if (source !== 'daily_login') {
       const alreadyDaily = await hasExistingTransaction(
         supabase,
         user.id,
@@ -444,19 +530,33 @@ export async function awardXP(
         today
       )
       if (!alreadyDaily) {
-        const dailyTx = await insertXpTransaction(
+        // Respect daily_login cap (should always be free if no row)
+        const dailyCount = await countSourceToday(
           supabase,
           user.id,
-          XP_REWARDS.daily_login,
           'daily_login',
           today
         )
-        if (dailyTx.ok) {
-          dailyXp = XP_REWARDS.daily_login
-          dailyLoginAwarded = true
+        const dailyResolved = resolvePrimaryXpAmount(
+          'daily_login',
+          XP_REWARDS.daily_login,
+          dailyCount
+        )
+        if (dailyResolved.amount > 0) {
+          const dailyTx = await insertXpTransaction(
+            supabase,
+            user.id,
+            dailyResolved.amount,
+            'daily_login',
+            today
+          )
+          if (dailyTx.ok) {
+            dailyXp = dailyResolved.amount
+            dailyLoginAwarded = true
+          }
         }
       }
-    } else if (source === 'daily_login' && primaryXp > 0) {
+    } else if (primaryXp > 0) {
       dailyLoginAwarded = true
     }
 
@@ -486,10 +586,13 @@ export async function awardXP(
 
     if (updateErr) {
       console.error('user_gamification update failed:', updateErr)
-      return {
+      const result: AwardXpResult = {
         success: false,
         error: updateErr.message || 'Failed to update gamification stats',
+        errorCode: isMissingTableError(updateErr) ? 'missing_migration' : 'db_error',
       }
+      result.message = formatAwardFeedback(result)
+      return result
     }
 
     try {
@@ -498,12 +601,22 @@ export async function awardXP(
       // ignore outside request context
     }
 
-    return {
+    // Pure daily-cap skip (no XP at all this call)
+    const fullySkippedForCap =
+      primaryXp === 0 &&
+      skipReason === 'daily_cap' &&
+      totalXpGained === 0 &&
+      achResult.newAchievements.length === 0
+
+    const result: AwardXpResult = {
       success: true,
       awarded: totalXpGained > 0 || achResult.newAchievements.length > 0,
-      skipped: primaryXp === 0 && skipReason === 'daily_cap' && totalXpGained === 0,
-      skipReason: primaryXp === 0 ? skipReason : undefined,
+      skipped: fullySkippedForCap || (primaryXp === 0 && skipReason === 'daily_cap' && dailyXp === 0 && achResult.bonusXp === 0),
+      skipReason: primaryXp === 0 && skipReason === 'daily_cap' ? 'daily_cap' : undefined,
       xpGained: totalXpGained,
+      primaryXp,
+      dailyXp,
+      achievementBonusXp: achResult.bonusXp,
       newTotalXp: stats.total_xp,
       newLevel,
       leveledUp,
@@ -513,13 +626,27 @@ export async function awardXP(
       dailyLoginAwarded,
       newAchievements: achResult.newAchievements,
     }
+    result.message = formatAwardFeedback(result, 'Activity recorded')
+    return result
   } catch (err) {
     console.error('awardXP exception:', err)
-    return {
+    const result: AwardXpResult = {
       success: false,
       error: err instanceof Error ? err.message : 'Unexpected error awarding XP',
+      errorCode: 'unknown',
     }
+    result.message = formatAwardFeedback(result)
+    return result
   }
+}
+
+/**
+ * Lightweight explicit daily activity claim (optional).
+ * Prefer relying on lazy daily bonus inside awardXP from path/lesson actions.
+ * Safe to call on app open for authenticated users; fully idempotent per UTC day.
+ */
+export async function claimDailyActivity(): Promise<AwardXpResult> {
+  return awardXP('daily_login')
 }
 
 /**
@@ -534,16 +661,32 @@ export async function getUserGamification(): Promise<GetGamificationResult> {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Unauthorized' }
+      return { success: false, error: 'Unauthorized', errorCode: 'unauthenticated' }
     }
 
     const ensured = await ensureGamificationRow(supabase, user.id)
-    if (ensured.error?.includes('not found')) {
-      return { success: false, error: ensured.error, stats: null }
+    if (!ensured.row) {
+      return {
+        success: false,
+        error: ensured.error || 'Failed to load stats',
+        errorCode: ensured.errorCode || 'db_error',
+        stats: null,
+      }
     }
 
     const stats = ensured.row
     const progress = computeLevelProgress(stats.total_xp || 0)
+    const today = utcDateString()
+    const last = stats.last_activity_date
+      ? String(stats.last_activity_date).slice(0, 10)
+      : null
+    const streakActiveToday = last === today
+    const dailyBonusClaimedToday = await hasExistingTransaction(
+      supabase,
+      user.id,
+      'daily_login',
+      today
+    )
 
     const { data: earnedRows } = await supabase
       .from('user_achievements')
@@ -579,6 +722,8 @@ export async function getUserGamification(): Promise<GetGamificationResult> {
       success: true,
       stats,
       progress,
+      streakActiveToday,
+      dailyBonusClaimedToday,
       achievements,
     }
   } catch (err) {
@@ -586,6 +731,8 @@ export async function getUserGamification(): Promise<GetGamificationResult> {
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Unexpected error',
+      errorCode: 'unknown',
     }
   }
 }
+

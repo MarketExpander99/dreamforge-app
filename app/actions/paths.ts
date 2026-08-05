@@ -3,17 +3,19 @@
 import { createClient } from '@/lib/supabase-server'
 import type { GeneratedPath, SavedLearningPath, PathStep, LessonCard } from '@/lib/paths'
 import { revalidatePath } from 'next/cache'
+import { awardXP, type AwardXpResult } from '@/app/actions/gamification'
 
 /**
  * Saves a generated personalized path for the logged-in user.
  * Uses existing learning_paths table (extended with status + progress).
  * Stores full path data in modules (matches generate-path convention).
+ * Phase 6: awards path_generated XP after successful save (non-fatal if gamification fails).
  */
 export async function savePersonalizedPath(input: {
   title: string
   description?: string
   pathData: GeneratedPath
-}): Promise<{ success: boolean; id?: string; error?: string }> {
+}): Promise<{ success: boolean; id?: string; error?: string; xp?: AwardXpResult }> {
   try {
     if (!input.title || !input.pathData || !Array.isArray(input.pathData.path)) {
       return { success: false, error: 'Invalid path data or title' }
@@ -48,12 +50,26 @@ export async function savePersonalizedPath(input: {
       return { success: false, error: 'Failed to save path. Please try again.' }
     }
 
+    // Phase 6: award XP for successful path save (idempotent on path id; non-fatal)
+    let xp: AwardXpResult | undefined
+    if (data?.id) {
+      try {
+        xp = await awardXP('path_generated', data.id)
+        if (xp && !xp.success) {
+          console.warn('savePersonalizedPath awardXP soft-fail:', xp.errorCode, xp.error)
+        }
+      } catch (xpErr) {
+        console.error('savePersonalizedPath awardXP non-fatal:', xpErr)
+      }
+    }
+
     // Revalidate paths-related pages so lists update
     revalidatePath('/paths')
     revalidatePath('/learning')
     revalidatePath('/path')
+    revalidatePath('/profile')
 
-    return { success: true, id: data?.id }
+    return { success: true, id: data?.id, xp }
   } catch (err) {
     console.error('savePersonalizedPath exception:', err)
     return { success: false, error: 'Unexpected error saving path' }
@@ -96,6 +112,100 @@ export async function updatePathProgress(pathId: string, progress: number): Prom
   } catch (err) {
     console.error('updatePathProgress exception:', err)
     return { success: false, error: 'Unexpected error' }
+  }
+}
+
+/**
+ * Phase 6: Mark a Study path lesson step complete.
+ * Updates path progress + awards lesson_completed XP (idempotent per path+step).
+ */
+export async function markPathLessonComplete(input: {
+  pathId: string
+  stepIndex: number
+  totalSteps: number
+  currentProgress?: number
+}): Promise<{
+  success: boolean
+  progress?: number
+  error?: string
+  xp?: AwardXpResult
+  message?: string
+}> {
+  try {
+    const { pathId, stepIndex, totalSteps } = input
+    if (!pathId || stepIndex < 0 || !totalSteps) {
+      return { success: false, error: 'Invalid path or step' }
+    }
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Sign in required' }
+
+    // Load current progress if not provided
+    let current = typeof input.currentProgress === 'number' ? input.currentProgress : 0
+    if (input.currentProgress === undefined) {
+      const { data: row } = await supabase
+        .from('learning_paths')
+        .select('progress')
+        .eq('id', pathId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      current = typeof row?.progress === 'number' ? row.progress : 0
+    }
+
+    const target = Math.min(
+      100,
+      Math.max(current, Math.round(((stepIndex + 1) / Math.max(1, totalSteps)) * 100))
+    )
+
+    const { error } = await supabase
+      .from('learning_paths')
+      .update({
+        progress: target,
+        status: target >= 100 ? 'completed' : 'active',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', pathId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('markPathLessonComplete update error:', error)
+      return { success: false, error: 'Failed to update progress' }
+    }
+
+    // Stable reference for idempotent XP (one award per path step)
+    const lessonRef = `path-${pathId}-step-${stepIndex}`
+    let xp: AwardXpResult | undefined
+    try {
+      xp = await awardXP('lesson_completed', lessonRef)
+      if (xp && !xp.success) {
+        console.warn('markPathLessonComplete awardXP soft-fail:', xp.errorCode, xp.error)
+      }
+    } catch (xpErr) {
+      console.error('markPathLessonComplete awardXP non-fatal:', xpErr)
+    }
+
+    revalidatePath('/paths')
+    revalidatePath(`/paths/${pathId}`)
+    revalidatePath('/learning')
+    revalidatePath('/profile')
+
+    const xpGained = xp?.success ? (xp.xpGained ?? 0) : 0
+    let message = `Progress updated to ${target}%`
+    if (xp?.success && xp.message && (xpGained > 0 || xp.leveledUp || (xp.newAchievements?.length ?? 0) > 0)) {
+      message = `Lesson complete! ${xp.message} · Progress ${target}%`
+    } else if (xp?.success && xp.skipped && xp.skipReason === 'already_awarded') {
+      message = `Already completed · Progress ${target}%`
+    } else if (xp?.success && xp.skipped && xp.skipReason === 'daily_cap') {
+      message = `Lesson complete · Daily XP limit reached · Progress ${target}%`
+    } else if (xp?.errorCode === 'missing_migration') {
+      message = `Progress updated to ${target}% (XP tracking not set up yet)`
+    }
+
+    return { success: true, progress: target, xp, message }
+  } catch (err) {
+    console.error('markPathLessonComplete exception:', err)
+    return { success: false, error: 'Unexpected error completing lesson' }
   }
 }
 

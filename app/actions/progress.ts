@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
+import { awardXP, type AwardXpResult } from '@/app/actions/gamification'
 
 /**
  * markCardComplete
@@ -10,7 +11,7 @@ import { revalidatePath } from 'next/cache'
  * - Supports optional qaAnswer for QA cards (effort-based scoring)
  * - Idempotent
  * - Uses existing user_progress (content_id) and maps to progress_percentage
- * - No new DB columns touched in Phase 1
+ * Phase 6: awards real lesson_completed XP via awardXP (persisted).
  */
 export async function markCardComplete(
   cardId: string,
@@ -98,20 +99,46 @@ export async function markCardComplete(
     throw error
   }
 
-  // 5. Award XP (client-facing only for Phase 1; no dedicated XP table yet)
-  const xpAwarded = qaAnswer ? 20 : 15
+  // 5. Phase 6: persist XP via single source of truth (non-fatal if tables missing)
+  let xp: AwardXpResult | undefined
+  let xpAwarded = 0
+  try {
+    xp = await awardXP('lesson_completed', cardId)
+    // Only trust xp when award path succeeded (migration present)
+    if (xp?.success) {
+      xpAwarded = xp.xpGained ?? 0
+    } else if (xp?.errorCode === 'missing_migration') {
+      console.warn('markCardComplete: gamification migration not applied')
+    } else if (xp?.error) {
+      console.error('markCardComplete awardXP failed:', xp.error)
+    }
+  } catch (xpErr) {
+    console.error('markCardComplete awardXP non-fatal:', xpErr)
+  }
 
   // 6. Revalidate relevant paths (discover hosts the main feed)
   revalidatePath('/discover')
   revalidatePath('/learning')
   revalidatePath('/profile')
 
+  const leveledUp = Boolean(xp?.success && xp?.leveledUp)
+  const prefix = qaAnswer ? 'Great effort on the question!' : 'Card completed!'
+  let message = prefix
+  if (xp?.success && xp.message && (xpAwarded > 0 || xp.leveledUp || (xp.newAchievements?.length ?? 0) > 0)) {
+    message = `${prefix} ${xp.message}`
+  } else if (xp?.errorCode === 'missing_migration') {
+    message = `${prefix} (XP tracking not set up yet)`
+  } else if (xp?.success && xp.skipped && xp.skipReason === 'daily_cap') {
+    message = `${prefix} Daily lesson XP limit reached — progress still saved.`
+  }
+
   return {
     success: true,
     xpAwarded,
-    message: qaAnswer
-      ? `Great effort on the question! +${xpAwarded} XP`
-      : `Card completed! +${xpAwarded} XP`,
+    xp,
+    leveledUp,
+    newAchievements: xp?.newAchievements ?? [],
+    message,
     score: progressPercentage,
   }
 }

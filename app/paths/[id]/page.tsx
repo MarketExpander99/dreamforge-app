@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/user-context'
-import { getSavedPath, updatePathProgress, getUserCredits, generateLessonCardForStep } from '@/app/actions/paths'
+import { getSavedPath, updatePathProgress, getUserCredits, generateLessonCardForStep, markPathLessonComplete } from '@/app/actions/paths'
 import type { SavedLearningPath, PathStep, LessonCard } from '@/lib/paths'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -142,12 +142,30 @@ export default function SavedPathDetailPage() {
     return lessons[`step-${idx}`] || null
   }
 
-  // Basic completion interaction on a lesson card bumps path progress slightly
+  // Phase 6: complete lesson step → update progress + award lesson XP
   const markLessonComplete = async (idx: number) => {
     if (!path || !pathId) return
-    const current = path.progress ?? 0
-    const target = Math.min(100, Math.max(current, Math.round((idx + 1) / Math.max(1, steps.length) * 100)))
-    await handleProgressUpdate(target)
+    setUpdating(true)
+    setMessage(null)
+    const res = await markPathLessonComplete({
+      pathId,
+      stepIndex: idx,
+      totalSteps: Math.max(1, steps.length),
+      currentProgress: path.progress ?? 0,
+    })
+    if (res.success && typeof res.progress === 'number') {
+      setPath({
+        ...path,
+        progress: res.progress,
+        status: res.progress >= 100 ? 'completed' : 'active',
+      })
+      setMessage(res.message || `Progress updated to ${res.progress}%`)
+      setTimeout(() => setMessage(null), 3200)
+    } else {
+      setMessage(res.error || 'Could not mark lesson complete')
+      setTimeout(() => setMessage(null), 4000)
+    }
+    setUpdating(false)
   }
 
   if (loading || authLoading) {

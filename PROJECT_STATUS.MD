@@ -2,6 +2,24 @@
 
 Last updated: 2026-07-09
 
+[2026-07-09] – Phase 6 Slice 3 Complete: Daily streak, rate limits, error hardening.
+  - lib/gamification.ts: DAILY_CAPS (path 1/day, lesson 50/day, daily_login 1/day UTC), resolvePrimaryXpAmount, requiresReferenceId, formatAwardFeedback, AwardErrorCode/SkipReason types. Streak helpers documented as UTC server-day.
+  - awardXP hardening: fail-closed on missing migration (never zero-overwrite stats), require stable ref for path/lesson, structured errorCode, daily_login claim independent of isNewDay (recovery-safe), primary/daily/achievement XP breakdown on result, ready-made result.message.
+  - claimDailyActivity() optional explicit daily claim (idempotent).
+  - getUserGamification: streakActiveToday + dailyBonusClaimedToday flags for UI.
+  - Call sites (paths, progress, learning page): honest messages for daily_cap / missing_migration / already_awarded; no fake +15 XP when migration missing.
+  - `npm run build`: ✓ Compiled successfully, ✓ TypeScript 0 errors.
+
+[2026-07-09] – Phase 6 Slice 2 Complete: Wire awardXP into core earning actions.
+  - savePersonalizedPath (app/actions/paths.ts): after successful path insert → awardXP('path_generated', pathId); returns xp on result; non-fatal if gamification tables missing.
+  - markCardComplete (app/actions/progress.ts): after user_progress upsert → awardXP('lesson_completed', cardId); real xpAwarded + level-up/achievement hints in message; feed toast continues to work via existing result.message.
+  - New markPathLessonComplete (app/actions/paths.ts): Study path lesson complete → updates progress + awardXP with ref path-{id}-step-{idx} (idempotent).
+  - app/paths/[id]/page.tsx: markLessonComplete uses markPathLessonComplete; shows XP message.
+  - app/learning/page.tsx: save success message includes +XP / level-up / first achievement when awarded.
+  - Daily activity XP still lazy-awarded inside awardXP on first action of UTC day.
+  - `npm run build`: ✓ Compiled successfully, ✓ TypeScript 0 errors.
+  - Requires Slice 1 migration run in Supabase for XP to persist.
+
 [2026-07-09] – Phase 6 Slice 1 Complete: Gamification Data Foundation + awardXP.
   - Full repo scan first: existing user_achievements schema, lib/achievements.ts (client/stale), profile derived XP, markCardComplete client-only XP, sonner toasts, app/actions/* pattern, profiles(id) FKs.
   - Additive migration: scripts/2026-07-09-add-gamification.sql — xp_transactions (append-only, unique user+source+ref), user_gamification (snapshot), RLS SELECT/INSERT (and UPDATE for gamification). Reuses existing user_achievements (no recreate). Ensures insert policy on user_achievements.
