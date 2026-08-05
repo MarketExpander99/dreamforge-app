@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
@@ -38,9 +38,25 @@ export default function LoginPage() {
   } | null>(null)
   const router = useRouter()
 
+  // Source of truth for autofill: browser dropdown may update the DOM without
+  // always firing React onChange. We read emailRef on submit / password-reset.
+  const emailRef = useRef<HTMLInputElement>(null)
+
   // ONE stable Supabase client for the component (from the singleton helper).
   // Prevents multiple client instances breaking the session.
   const supabase = useMemo(() => createBrowserSupabaseClient(), [])
+
+  /** Live email from DOM (autofill-safe), trimmed + lower-cased. */
+  const getLiveEmail = () => {
+    const fromDom = emailRef.current?.value
+    const raw = (fromDom !== undefined && fromDom !== '' ? fromDom : formData.email) || ''
+    return raw.trim().toLowerCase()
+  }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement> | React.FormEvent<HTMLInputElement>) => {
+    const value = (e.target as HTMLInputElement).value
+    setFormData(prev => ({ ...prev, email: value }))
+  }
 
   const showPasswordResetModal = () => {
     setModalConfig({
@@ -48,13 +64,14 @@ export default function LoginPage() {
       description: 'Invalid email or password. Would you like us to reset your password?',
       onConfirm: async () => {
         try {
+          const email = getLiveEmail()
           const response = await fetch('/api/auth/send-password-reset', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              email: formData.email
+              email
             }),
           })
 
@@ -83,8 +100,14 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const email = formData.email.trim()
+    // Autofill-safe: prefer live DOM value over React state
+    const email = getLiveEmail()
     const password = formData.password
+
+    // Keep state in sync for any subsequent UI that reads formData.email
+    if (email && email !== formData.email.trim().toLowerCase()) {
+      setFormData(prev => ({ ...prev, email }))
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -113,7 +136,7 @@ export default function LoginPage() {
           try {
             const { error: resendError } = await supabase.auth.resend({
               type: 'signup',
-              email: formData.email
+              email
             })
 
             if (resendError) throw resendError
@@ -184,15 +207,19 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="Enter your email"
+                  ref={emailRef}
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={handleEmailChange}
+                  onInput={handleEmailChange}
                   required
                 />
               </div>
@@ -210,7 +237,9 @@ export default function LoginPage() {
                 </div>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}

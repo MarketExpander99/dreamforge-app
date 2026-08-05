@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
@@ -28,9 +28,25 @@ export default function SignupPage() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
+  // Source of truth for autofill: browser dropdown may update the DOM without
+  // always firing React onChange. We read emailRef on submit.
+  const emailRef = useRef<HTMLInputElement>(null)
+
   // ONE stable Supabase client for the whole component lifetime.
   // This prevents the classic "new client every render" auth bugs.
   const supabase = useMemo(() => createBrowserSupabaseClient(), [])
+
+  /** Live email from DOM (autofill-safe), trimmed + lower-cased. */
+  const getLiveEmail = () => {
+    const fromDom = emailRef.current?.value
+    const raw = (fromDom !== undefined && fromDom !== '' ? fromDom : formData.email) || ''
+    return raw.trim().toLowerCase()
+  }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement> | React.FormEvent<HTMLInputElement>) => {
+    const value = (e.target as HTMLInputElement).value
+    setFormData(prev => ({ ...prev, email: value }))
+  }
 
   // Check if user is already signed in → redirect
   useEffect(() => {
@@ -55,10 +71,17 @@ export default function SignupPage() {
     setSuccess('')
     setSubmitting(true)
 
+    // Autofill-safe: prefer live DOM value over React state
+    const email = getLiveEmail()
+    const password = formData.password
+
+    // Keep state in sync for any subsequent UI that reads formData.email
+    if (email && email !== formData.email.trim().toLowerCase()) {
+      setFormData(prev => ({ ...prev, email }))
+    }
+
     // Email format validation removed for beta/dev testing.
     // Dummy addresses like a@a.com, abc@mail.com, abc@abc.com are now allowed.
-    const email = formData.email.trim()
-    const password = formData.password
 
     if (password.length < 6) {
       const msg = 'Password must be at least 6 characters long'
@@ -145,7 +168,7 @@ export default function SignupPage() {
         message = 'Password must be at least 6 characters long.'
       } else if (error?.message?.toLowerCase().includes('is invalid') || error?.message?.includes('Unable to validate email')) {
         // Special handling for Supabase rejecting the email (common with custom domains like @skillgain.dev that lack MX records)
-        message = `Supabase rejected "${formData.email}" as invalid.
+        message = `Supabase rejected "${email}" as invalid.
 
 This usually means:
 • The domain (skillgain.dev) has no MX records set up for email delivery, or
@@ -202,15 +225,19 @@ Raw Supabase error: ${error?.message}`
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="Enter your email"
+                  ref={emailRef}
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={handleEmailChange}
+                  onInput={handleEmailChange}
                   required
                   disabled={submitting}
                 />
@@ -220,7 +247,9 @@ Raw Supabase error: ${error?.message}`
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Create a password"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
